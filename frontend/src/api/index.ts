@@ -33,6 +33,38 @@ export interface User {
   updated_at: string;
 }
 
+export type AdminUserRole = 'admin' | 'member';
+export type AdminUserStatus = 'active' | 'disabled';
+
+export interface AdminUser {
+  id: number;
+  username: string;
+  role: AdminUserRole;
+  status: AdminUserStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminUserListResponse {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminInvite {
+  id: number;
+  created_by: number;
+  status: string;
+  max_uses: number | null;
+  used_count: number;
+  expires_at: string | null;
+}
+
+export interface CreatedAdminInvite extends Omit<AdminInvite, 'created_by'> {
+  code: string;
+}
+
 export interface Category {
   id: number;
   name: string;
@@ -245,10 +277,54 @@ export const api = {
     }),
   logout: () => fetchJson<null>('/admin/auth/logout', { method: 'POST' }),
   getMe: () => fetchJson<User>('/admin/auth/me'),
+  updateCredentials: (data: { username: string; current_password: string; new_password?: string }) =>
+    fetchJson<null>('/admin/auth/credentials', { method: 'PATCH', body: JSON.stringify(data) }),
   updateProfile: (data: { nickname?: string; email?: string; avatar?: string; old_password?: string; new_password?: string }) =>
     fetchJson<null>('/admin/auth/profile', {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+
+  // Admin User API
+  listAdminUsers: (params: { q?: string; role?: AdminUserRole; status?: AdminUserStatus; page?: number; page_size?: number }) => {
+    const query = new URLSearchParams();
+    if (params.q) query.set('q', params.q);
+    if (params.role) query.set('role', params.role);
+    if (params.status) query.set('status', params.status);
+    if (params.page) query.set('page', String(params.page));
+    if (params.page_size) query.set('page_size', String(params.page_size));
+    return fetchJson<AdminUserListResponse>(`/admin/users?${query.toString()}`);
+  },
+  createAdminUser: (data: { username: string; password: string; role: AdminUserRole }) =>
+    fetchJson<Pick<AdminUser, 'id' | 'username' | 'role' | 'status'>>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateAdminUserRole: (id: number, role: AdminUserRole) =>
+    fetchJson<Pick<AdminUser, 'id' | 'role'>>(`/admin/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+  updateAdminUserStatus: (id: number, status: AdminUserStatus) =>
+    fetchJson<Pick<AdminUser, 'id' | 'status'>>(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  resetAdminUserPassword: (id: number, password: string) =>
+    fetchJson<Pick<AdminUser, 'id'>>(`/admin/users/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
+  listAdminInvites: () => fetchJson<{ items: AdminInvite[] }>('/admin/invites'),
+  createAdminInvite: (data: { max_uses: number; expires_at?: string }) =>
+    fetchJson<CreatedAdminInvite>('/admin/invites', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  disableAdminInvite: (id: number) =>
+    fetchJson<Pick<AdminInvite, 'id' | 'status'>>(`/admin/invites/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'disabled' }),
     }),
 
   // Admin Document API

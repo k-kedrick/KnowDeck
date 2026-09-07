@@ -687,7 +687,7 @@ export const AdminDocumentEditor: React.FC = () => {
         }
 
         setTimeout(() => {
-          navigate(`/admin/documents/${created.id}`, { replace: true });
+          navigate(`/wang/documents/${created.id}`, { replace: true });
         }, 600);
       }
     } catch (err: any) {
@@ -718,7 +718,7 @@ export const AdminDocumentEditor: React.FC = () => {
           <button
             onClick={() => {
               flushLocalDraft();
-              navigate('/admin/documents');
+              navigate('/wang/documents');
             }}
             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
             title="返回文档列表"

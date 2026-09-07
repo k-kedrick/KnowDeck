@@ -162,7 +162,7 @@ export const AdminDocTreeSidebar: React.FC<AdminDocTreeSidebarProps> = ({
   const handleSelectDoc = (id: number) => {
     if (currentDocId === id) return;
     if (onBeforeSwitch) onBeforeSwitch();
-    navigate(`/admin/documents/${id}`);
+    navigate(`/wang/documents/${id}`);
   };
 
   const handleNewDoc = () => {

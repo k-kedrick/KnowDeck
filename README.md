@@ -7,7 +7,7 @@
 - 首页、文章列表与单篇文档页面，支持响应式布局、主题切换和文章大纲。
 - GFM Markdown 与受控 HTML 混合内容渲染，支持 KaTeX、表格、任务列表、代码块复制、图片、视频、iframe 和 Callout。
 - SQLite FTS5 全文搜索，公开接口只返回已发布内容。
-- JWT 管理后台：文档状态、分类树、标签、媒体文件夹、站点设置及管理员资料。
+- JWT 管理后台：文档状态、分类树、标签、媒体文件夹、站点设置、管理员资料，以及 `/wang/users` 用户与邀请码管理。
 - 文档编辑器支持两套引擎：默认 `DocumentVisualEditor`，设置 `VITE_EDITOR_ENGINE=tiptap` 可启用 Tiptap 实现。
 - 本地草稿恢复、图片上传与外链图片本地化。
 - 首页/文章 SEO HTML 外壳、`robots.txt` 与 `sitemap.xml`。
@@ -68,6 +68,8 @@ boke/
 
 ```powershell
 cd backend
+Copy-Item .env.example .env
+# 在未跟踪的 .env 中填写本机开发凭证后启动
 go run ./cmd/server
 ```
 
@@ -79,7 +81,7 @@ npm install
 npm run dev
 ```
 
-Vite 开发服务器默认监听 `3000` 并将 `/api`、`/uploads` 代理到后端 `8090`。
+Vite 开发服务器监听 `3788`（`http://127.0.0.1:3788`），并将 `/api`、`/uploads` 代理到后端 `3799`（`http://127.0.0.1:3799`）。管理页面入口为 `http://127.0.0.1:3788/wang`。
 
 可用的验证命令：
 
@@ -109,7 +111,7 @@ docker compose --project-name knowledge-base \
   up -d --build
 ```
 
-前端只映射到宿主机 `127.0.0.1:8080`，后端仅暴露在 Compose 网络的 `8090`。
+前端只映射到宿主机 `127.0.0.1:5185`，后端仅暴露在 Compose 网络的 `8090`。
 
 生产环境必须配置：
 

@@ -11,8 +11,10 @@ type User struct {
 	Avatar       string    `json:"avatar" db:"avatar"`
 	Email        string    `json:"email" db:"email"`
 	Role         string    `json:"role" db:"role"`
+	Status       string    `json:"status" db:"status"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	AuthVersion  int64     `json:"-" db:"auth_version"`
 }
 
 // Category 分类模型 (支持树状层级)
@@ -148,6 +150,12 @@ type LoginResp struct {
 	User  *User  `json:"user"`
 }
 
+type UpdateCredentialsReq struct {
+	Username        string `json:"username" binding:"required"`
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password"`
+}
+
 type UpdateProfileReq struct {
 	Nickname    string `json:"nickname"`
 	Email       string `json:"email"`
@@ -196,4 +204,16 @@ type SiteInfoResp struct {
 	DocCount      int    `json:"doc_count"`
 	CategoryCount int    `json:"category_count"`
 	TagCount      int    `json:"tag_count"`
+}
+
+type InviteCode struct {
+	ID        int64
+	CodeHash  string
+	CreatedBy int64
+	Status    string
+	MaxUses   *int
+	UsedCount int
+	ExpiresAt *time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

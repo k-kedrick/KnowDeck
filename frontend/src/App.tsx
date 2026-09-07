@@ -20,6 +20,7 @@ const AdminCategoryManager = lazy(() => import('./pages/admin/AdminCategoryManag
 const AdminTagManager = lazy(() => import('./pages/admin/AdminTagManager').then((module) => ({ default: module.AdminTagManager })));
 const AdminMediaManager = lazy(() => import('./pages/admin/AdminMediaManager').then((module) => ({ default: module.AdminMediaManager })));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage').then((module) => ({ default: module.AdminSettingsPage })));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage').then((module) => ({ default: module.AdminUsersPage })));
 
 const RouteFallback = () => (
   <div className="flex min-h-[50vh] flex-1 items-center justify-center text-sm text-slate-500 dark:text-slate-400">加载中…</div>
@@ -134,10 +135,10 @@ export const App: React.FC = () => (
           <Route path="*" element={<NotFoundPage />} />
         </Route>
 
-        <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route path="/admin" element={<AdminAuthGuard />}>
+        <Route path="/wang/login" element={<AdminLoginPage />} />
+        <Route path="/wang" element={<AdminAuthGuard />}>
           <Route element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/documents" replace />} />
+            <Route index element={<Navigate to="/wang/documents" replace />} />
             <Route path="documents" element={<AdminDocumentList />} />
             <Route path="documents/new" element={<AdminDocumentEditorRoute />} />
             <Route path="documents/:id" element={<AdminDocumentEditorRoute />} />
@@ -145,6 +146,7 @@ export const App: React.FC = () => (
             <Route path="tags" element={<AdminTagManager />} />
             <Route path="media" element={<AdminMediaManager />} />
             <Route path="settings" element={<AdminSettingsPage />} />
+			<Route path="users" element={<AdminUsersPage />} />
           </Route>
         </Route>
       </Routes>

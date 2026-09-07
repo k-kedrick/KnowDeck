@@ -7,7 +7,7 @@
 - Lightweight personal blog and read-only knowledge base with an authenticated administration SPA.
 - Backend: Go 1.26.4, Gin, pure-Go SQLite (`modernc.org/sqlite`), local media storage.
 - Frontend: React 19, TypeScript 6, Vite 8, Tailwind CSS; Markdown/HTML rendering with DOMPurify and rehype sanitization.
-- Deployment: two Docker services. Frontend Nginx binds `127.0.0.1:8080`; backend is internal on `8090`; named volumes hold SQLite data and uploads.
+- Deployment: two Docker services. Frontend Nginx binds `127.0.0.1:5185`; backend is internal on `8090`; named volumes hold SQLite data and uploads. Local development uses frontend `3788` and backend `3799`.
 - Local Git is initialized on branch `main`; initial project baseline: `1a48894`.
 - Repository-wide Codex behavior is defined by `AGENTS.md`.
 - `.agents/skills/project-owner/SKILL.md` is the default repository maintenance workflow.
@@ -25,7 +25,10 @@
 - Backend flow: Gin route/handler -> service -> repository -> SQLite; media operations additionally use `internal/storage`.
 - Public surface: SEO HTML shells plus read-only `/api/public/*` endpoints. Mutations live under JWT-protected `/api/admin/*` routes.
 - Persistence: users, categories, tags, documents, document-tags, media, media-folders, settings, plus an FTS5 document index and synchronization triggers. SQLite uses WAL and one open connection.
-- Frontend entry/routes: `frontend/src/main.tsx` -> `frontend/src/App.tsx`; public routes are `/`, `/blog`, `/docs/:slug`; admin routes are lazy-loaded under `/admin`.
+- Frontend entry/routes: `frontend/src/main.tsx` -> `frontend/src/App.tsx`; public routes are `/`, `/blog`, `/docs/:slug`; admin routes are lazy-loaded under `/wang`; backend management APIs remain under `/api/admin/*`.
+- User/auth: `users` supports admin/member roles, active/disabled status and auth-version invalidation. Public `/api/auth/register` requires an atomically consumed invite, `/api/auth/login` shares the existing JWT system, and authenticated `/api/auth/me` returns the database-current safe user.
+- Invites: plaintext codes are generated with `crypto/rand`, stored only as SHA-256 hashes, and consumed with a conditional SQLite update in the member-creation transaction.
+- User System: **COMPLETED** through U2. Admin user management and admin invite management are **COMPLETED**; `/wang/users` provides Users and Invites tabs backed by `/api/admin/users*` and `/api/admin/invites*`.
 - Editor: `AdminDocumentEditor` defaults to the legacy `DocumentVisualEditor`; the Tiptap implementation is selected only when `VITE_EDITOR_ENGINE=tiptap`. Drafts are stored locally through `useDocumentDraft`.
 - Critical paths: database/schema (`repository/db.go`), auth (`middleware/auth.go`, `service/auth_service.go`), file storage/media, document persistence, and the `DocViewer` sanitization/rendering pipeline.
 
@@ -35,14 +38,14 @@ Aggregate SHA-256 over sorted relevant inputs. The maintained-documentation fing
 
 | Scope | Fingerprint |
 | --- | --- |
-| Backend Go source + modules | `8432394b925318eaccc9db674e0379f384dca6f541509b85587b6271a6a95406` |
-| Frontend source/config | `61312ac496ccd726824b1ccb05e29cf0c25b3bed70bd75282cd0daea3eaed2f5` |
-| Deployment config | `cd8572d412957a41bee4321b907c61657f0fccb96a7bbdf8c1a3a1771d0551fe` |
-| Maintained Markdown except this state file | `INVALIDATED — refresh after the current AGENTS.md / project-owner workflow changes` |
+| Backend Go source + modules | `dc0d0dbb7145685c62dbcf0eaa328d79bd3d5bf119204c8e7177724f95f7aba3` |
+| Frontend source/config | `3762ad5d2b22440c8991214e52f81b445cbbf363705f7fb53cd3294ed970cb81` |
+| Deployment config | `80e147f0b82e2f40ec518eb83a42c15a71e0a8131a2c81ffe4a7f28df965ff6f` |
+| Maintained Markdown except this state file | `4678ec9641749f161437dc742703457639c2ef2d26efe5dfdc83c76cfe8f8d03` |
 
 The backend, frontend, and deployment fingerprints above remain valid only while their recorded input scopes remain unchanged.
 
-The maintained Markdown fingerprint must be recomputed from the real repository after the current workflow-document changes are finalized. Do not invent or manually approximate this hash.
+All four fingerprints were recomputed on 2026-09-08 from sorted tracked and nonignored pending-addition scope paths plus raw contents, with NUL separators between path/content records; the Markdown scope excludes this state file.
 
 ## Documentation Map
 
@@ -62,22 +65,21 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 
 ### backend-tests
 
-- Command: `go test ./...`
-- Result: **PASS** on 2026-09-07; package results were cached by Go.
+- Full-suite command: `go test ./...`
+- Result: **PASS** on 2026-09-08 after U2 user/invite administration and security regression coverage.
 - Valid for the backend fingerprint above.
 - Invalidate when relevant backend Go source, modules, shared schema behavior, or affected callers change.
 
 ### backend-vet
 
 - Command: `go vet ./...`
-- Result: **PASS** on 2026-09-07.
-- Valid for the backend fingerprint above.
+- Result: **PASS** on 2026-09-08 after U2 completion.
 - Invalidate when relevant backend Go source or modules change.
 
 ### frontend-build
 
 - Command: `npm.cmd run build`
-- Result: **PASS** on 2026-09-07 (`tsc -b && vite build`).
+- Result: **PASS** on 2026-09-08 after `/wang/users` and the user/invite administration UI (`tsc -b && vite build`).
 - Note: Vite reports the lazy Tiptap chunk at 544.30 kB minified, above its 500 kB advisory threshold.
 - Valid for the frontend fingerprint above.
 - Invalidate when relevant frontend source, build configuration, TypeScript configuration, or dependencies change.
@@ -85,37 +87,43 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 ### frontend-lint
 
 - Command: `npm.cmd run lint`
-- Result: **PASS with 12 warnings** on 2026-09-07.
+- Result: **PASS** on 2026-09-08 with 12 pre-existing warnings and no U2 page warning.
 - Warnings: 10 `react(set-state-in-effect)`, one `react(refs)` in `TiptapEditor.tsx`, and one `react(only-export-components)` in `DocumentVisualEditor.tsx`.
 - Valid for the frontend fingerprint above.
 - Invalidate when affected frontend source or lint configuration changes.
 
 ### frontend-tests
 
-- Full command: `npm.cmd test -- --reporter=dot`
-- Result: **UNSTABLE** on 2026-09-07: 212 passed, 2 failed, 1 skipped.
-- Failures: `App.test.tsx` document routing and `DocViewer.security.test.tsx` lazy KaTeX rendering.
-- Targeted rerun: `npm.cmd test -- src/App.test.tsx src/components/DocViewer.security.test.tsx --reporter=dot` -> **17/17 PASS**.
-- Interpretation: the two cases are suite-load/timing-sensitive rather than consistently failing.
-- Do not record the full frontend suite as passing until a fresh full run succeeds reliably.
-- Invalidate affected targeted evidence when the related routing, rendering, lazy-loading, tests, configuration, or dependencies change.
+- U2 focused command: `npm.cmd test -- src/pages/admin/AdminUsersPage.test.tsx src/api/index.test.ts --reporter=dot`
+- U2 focused result: **15/15 PASS** on 2026-09-08.
+- Full-suite command: `npm.cmd test -- --reporter=dot`
+- Full-suite result: **UNSTABLE** on 2026-09-08: 226 passed, 1 failed, 1 skipped. The unrelated `App.test.tsx` StrictMode/lazy document-title synchronization test timed out while the route remained in its loading state; the same file passed 6/6 when rerun in isolation.
+- Do not record the full frontend suite as passing until that existing async/lazy synchronization test succeeds reliably.
+
+### deployment-compose-config
+
+- Command: `docker compose --env-file .env.production.example -f deploy/docker/docker-compose.yml config`
+- Result: **PASS** on 2026-09-07 with required production placeholders supplied; frontend publishes `127.0.0.1:5185:80` and backend remains Compose-internal on `8090`.
+- Valid for the deployment fingerprint above.
 
 ### Not Verified
 
-- Browser/E2E behavior.
+- Browser interaction/E2E behavior. HTTP runtime checks returned 200 for `/`, `/wang`, `/wang/users`, and backend `/api/health` on 2026-09-08.
 - Real Docker image/runtime behavior.
 - Production Nginx/domain/TLS integration.
 - Backup/restore.
 - Real-server resource usage.
 - Local production-data migration.
+- Race detector: unavailable in the current environment because `go test -race` requires CGO.
 
 ## Known Risks / TODO
 
-1. **P2 - Frontend test reliability:** two async/lazy-render tests fail in the full suite but pass in isolation; stabilize their synchronization and rerun the full suite.
+1. **P2 - Frontend test reliability:** one async/lazy document-route test in `App.test.tsx` failed in the full suite while U2 focused tests passed; stabilize its synchronization and rerun the full suite.
 2. **P3 - Frontend quality debt:** resolve the 12 lint warnings incrementally in affected modules.
 3. **P3 - Tiptap bundle size:** assess the lazy Tiptap chunk size before making Tiptap the default editor.
 4. **Operational:** production deployment, persistent-volume migration, backup/restore, and browser acceptance remain unverified.
-5. **Maintenance metadata:** recompute the maintained Markdown fingerprint after the current `AGENTS.md` and `project-owner` workflow changes are finalized.
+5. **Operational:** manual browser acceptance remains available at `http://127.0.0.1:3788`, with the protected management entry at `/wang`.
+6. **Planned U3+:** article/search/SEO access controls and member login/register frontend UI are not implemented.
 
 ## Incremental Rules
 

@@ -447,7 +447,7 @@ export const AdminDocumentList: React.FC = () => {
                       {doc.status === 'published' ? '下架' : '发布'}
                     </button>
                     <button
-                      onClick={() => navigate(`/admin/documents/${doc.id}`)}
+                      onClick={() => navigate(`/wang/documents/${doc.id}`)}
                       className="inline-flex items-center space-x-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md text-[11px] transition font-medium"
                     >
                       <Edit className="w-3 h-3" />

@@ -13,6 +13,7 @@ const (
 	ContextUserIDKey   = "user_id"
 	ContextUsernameKey = "username"
 	ContextUserRoleKey = "user_role"
+	ContextUserKey     = "current_user"
 )
 
 func AuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
@@ -38,10 +39,28 @@ func AuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		user, err := authService.GetUserByID(claims.UserID)
+		if err != nil || user == nil || user.Status != "active" || user.AuthVersion != claims.AuthVersion {
+			response.Unauthorized(c, "Token 无效或已过期")
+			c.Abort()
+			return
+		}
 
-		c.Set(ContextUserIDKey, claims.UserID)
-		c.Set(ContextUsernameKey, claims.Username)
-		c.Set(ContextUserRoleKey, claims.Role)
+		c.Set(ContextUserIDKey, user.ID)
+		c.Set(ContextUsernameKey, user.Username)
+		c.Set(ContextUserRoleKey, user.Role)
+		c.Set(ContextUserKey, user)
+		c.Next()
+	}
+}
+
+func RequireAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.GetString(ContextUserRoleKey) != "admin" {
+			response.Forbidden(c, "需要管理员权限")
+			c.Abort()
+			return
+		}
 		c.Next()
 	}
 }

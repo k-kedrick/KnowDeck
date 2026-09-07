@@ -48,7 +48,7 @@ export const AdminAuthGuard: React.FC = () => {
   }
 
   if (!authenticated) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/wang/login" replace />;
   }
 
   return <Outlet context={{ user: currentUser }} />;

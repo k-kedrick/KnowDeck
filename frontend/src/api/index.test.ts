@@ -58,4 +58,36 @@ describe('api', () => {
     await expect(api.getAdminCategories()).resolves.toEqual([]);
     await expect(api.getKnowledgeTree()).resolves.toEqual([]);
   });
+
+  it('uses the authenticated admin-user mutation endpoints with narrow payloads', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: 0, message: 'success', data: { id: 7 } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await api.updateAdminUserRole(7, 'admin');
+    await api.updateAdminUserStatus(7, 'disabled');
+    await api.resetAdminUserPassword(7, 'password-1234');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/users/7/role', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ role: 'admin' }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/users/7/status', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'disabled' }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/admin/users/7/reset-password', expect.objectContaining({ method: 'POST', body: JSON.stringify({ password: 'password-1234' }) }));
+  });
+
+  it('uses the existing client for invite list, create, and disable requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: 0, message: 'success', data: { items: [] } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await api.listAdminInvites();
+    await api.createAdminInvite({ max_uses: 3 });
+    await api.disableAdminInvite(9);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/invites', expect.any(Object));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/invites', expect.objectContaining({ method: 'POST', body: JSON.stringify({ max_uses: 3 }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/admin/invites/9/status', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'disabled' }) }));
+  });
 });

@@ -73,6 +73,24 @@ func (h *AdminAuthHandler) UpdateProfile(c *gin.Context) {
 	response.SuccessMsg(c, "资料更新成功", nil)
 }
 
+func (h *AdminAuthHandler) UpdateCredentials(c *gin.Context) {
+	userID, exists := c.Get(middleware.ContextUserIDKey)
+	if !exists {
+		response.Unauthorized(c, "未登录")
+		return
+	}
+	var req model.UpdateCredentialsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数格式错误")
+		return
+	}
+	if err := h.authService.UpdateCredentials(userID.(int64), req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "管理员账户已更新，请重新登录", nil)
+}
+
 // Logout 退出登录
 func (h *AdminAuthHandler) Logout(c *gin.Context) {
 	response.SuccessMsg(c, "退出登录成功", nil)

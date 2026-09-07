@@ -12,7 +12,7 @@ import (
 
 const (
 	developmentJWTSecret = "feishu-kb-secret-key-change-in-production-2026"
-	developmentAdminPass = "admin123456"
+	developmentAdminPass = "change-me"
 )
 
 type Config struct {
@@ -38,8 +38,10 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
+	loadDotEnv(".env")
+
 	environment := strings.ToLower(getEnv("APP_ENV", "development"))
-	port := getEnvInt("PORT", 8090)
+	port := getEnvInt("PORT", 3799)
 	host := getEnv("HOST", "0.0.0.0")
 
 	// Determine data directory (default to ../data or ./data)
@@ -61,19 +63,15 @@ func LoadConfig() *Config {
 	maxVideoMB := int64(getEnvInt("MAX_VIDEO_MB", 1024))
 	maxFileMB := int64(getEnvInt("MAX_FILE_MB", 100))
 
-	adminUser := getEnv("ADMIN_USER", "wang")
+	adminUser := getEnv("ADMIN_USER", "change-me")
 	adminPass := getEnv("ADMIN_PASSWORD", developmentAdminPass)
 	siteName := getEnv("SITE_NAME", "知识库")
-	siteURL := strings.TrimRight(getEnv("SITE_URL", "http://localhost:8090"), "/")
+	siteURL := strings.TrimRight(getEnv("SITE_URL", "http://127.0.0.1:3799"), "/")
 	frontendIndexPath := getEnv("FRONTEND_INDEX_PATH", "../frontend/dist/index.html")
 	frontendIndexURL := getEnv("FRONTEND_INDEX_URL", "")
 	corsOrigins := getEnvList("CORS_ALLOWED_ORIGINS", []string{
-		"http://localhost:3709",
-		"http://127.0.0.1:3709",
 		"http://localhost:3788",
 		"http://127.0.0.1:3788",
-		"http://localhost:3000",
-		"http://127.0.0.1:3000",
 	})
 	trustedProxies := getEnvList("TRUSTED_PROXIES", []string{"127.0.0.1", "::1"})
 
@@ -145,6 +143,26 @@ func (c *Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+func loadDotEnv(path string) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, found := strings.Cut(line, "=")
+		key = strings.TrimSpace(key)
+		if !found || key == "" || os.Getenv(key) != "" {
+			continue
+		}
+		value = strings.Trim(strings.TrimSpace(value), "\"'")
+		_ = os.Setenv(key, value)
+	}
 }
 
 func getEnv(key, defaultVal string) string {

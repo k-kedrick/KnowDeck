@@ -10,16 +10,16 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 3709,
+    port: 3788,
     strictPort: true,
     cors: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8090',
+        target: 'http://127.0.0.1:3799',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:8090',
+        target: 'http://127.0.0.1:3799',
         changeOrigin: true,
       },
     },

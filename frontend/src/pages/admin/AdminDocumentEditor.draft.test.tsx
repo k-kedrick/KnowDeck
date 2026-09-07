@@ -63,8 +63,8 @@ describe('AdminDocumentEditor published draft behavior', () => {
 
   it('stores published edits locally without taking the article offline', async () => {
     render(
-      <MemoryRouter initialEntries={['/admin/documents/9']}>
-        <Routes><Route path="/admin/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
       </MemoryRouter>,
     );
 
@@ -79,8 +79,8 @@ describe('AdminDocumentEditor published draft behavior', () => {
 
   it('does not create a local draft when nothing changed', async () => {
     render(
-      <MemoryRouter initialEntries={['/admin/documents/9']}>
-        <Routes><Route path="/admin/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
       </MemoryRouter>,
     );
 
@@ -91,8 +91,8 @@ describe('AdminDocumentEditor published draft behavior', () => {
 
   it('updates the server and clears the matching local draft when publishing', async () => {
     render(
-      <MemoryRouter initialEntries={['/admin/documents/9']}>
-        <Routes><Route path="/admin/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
       </MemoryRouter>,
     );
 
@@ -110,8 +110,8 @@ describe('AdminDocumentEditor published draft behavior', () => {
 
   it('shows a visible error when browser draft storage fails', async () => {
     render(
-      <MemoryRouter initialEntries={['/admin/documents/9']}>
-        <Routes><Route path="/admin/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
       </MemoryRouter>,
     );
 

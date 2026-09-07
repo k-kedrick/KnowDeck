@@ -230,7 +230,7 @@ export const AdminTagManager: React.FC = () => {
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono shrink-0">/{t.slug}</span>
                       <Link
-                        to={`/admin/documents?tag=${encodeURIComponent(t.slug)}`}
+                        to={`/wang/documents?tag=${encodeURIComponent(t.slug)}`}
                         className="px-1.5 py-0.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-[10px] rounded font-semibold shrink-0 transition"
                         title={`查看使用 #${t.name} 的文档`}
                       >

@@ -94,7 +94,7 @@ export const getDraftKey = (docId?: string | number, localDraftId?: string): str
 };
 
 export const createNewDocumentDraftPath = (localDraftId = createLocalDraftId()): string => (
-  `/admin/documents/new?draft=${encodeURIComponent(localDraftId)}`
+  `/wang/documents/new?draft=${encodeURIComponent(localDraftId)}`
 );
 
 const normalizeDraft = (value: unknown, key: string): LocalDraftData | null => {

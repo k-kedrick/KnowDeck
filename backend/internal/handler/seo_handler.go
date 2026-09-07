@@ -246,7 +246,7 @@ func (h *SEOHandler) Article(c *gin.Context) {
 }
 
 func (h *SEOHandler) Robots(c *gin.Context) {
-	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: "+h.siteURL+"/sitemap.xml\n"))
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("User-agent: *\nAllow: /\nDisallow: /wang\nDisallow: /api/\n\nSitemap: "+h.siteURL+"/sitemap.xml\n"))
 }
 
 type sitemapURL struct {

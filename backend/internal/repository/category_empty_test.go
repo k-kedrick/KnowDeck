@@ -29,7 +29,7 @@ func TestRestartDoesNotReseedCategoriesDeletedByAdministrator(t *testing.T) {
 		DBPath:       filepath.Join(dir, "app.db"),
 		UploadDir:    filepath.Join(dir, "uploads"),
 		AdminUser:    "admin",
-		AdminPass:    "admin123456",
+		AdminPass:    "test-admin-password",
 		JWTSecret:    "test-secret",
 		JWTExpireHrs: 1,
 		MaxUploadMB:  10,

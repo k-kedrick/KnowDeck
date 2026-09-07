@@ -68,8 +68,8 @@ describe('AdminDocumentEditor compact properties', () => {
 
   it('keeps one set of controlled fields, preserves values across close, and saves the unchanged payload shape', async () => {
     render(
-      <MemoryRouter initialEntries={['/admin/documents/9']}>
-        <Routes><Route path="/admin/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
       </MemoryRouter>,
     );
 

@@ -54,7 +54,9 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 		nickname TEXT NOT NULL,
 		avatar TEXT DEFAULT '',
 		email TEXT DEFAULT '',
-		role TEXT NOT NULL DEFAULT 'admin',
+		role TEXT NOT NULL DEFAULT 'member',
+		status TEXT NOT NULL DEFAULT 'active',
+		auth_version INTEGER NOT NULL DEFAULT 1,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
@@ -148,6 +150,20 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_media_folders_doc ON media_folders (document_id);
+
+	CREATE TABLE IF NOT EXISTS invite_codes (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		code_hash TEXT NOT NULL UNIQUE,
+		created_by INTEGER NOT NULL,
+		status TEXT NOT NULL DEFAULT 'active',
+		max_uses INTEGER DEFAULT 1 CHECK (max_uses IS NULL OR max_uses > 0),
+		used_count INTEGER NOT NULL DEFAULT 0 CHECK (used_count >= 0),
+		expires_at DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (created_by) REFERENCES users(id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_invite_codes_status ON invite_codes (status);
 	`
 
 	if _, err := db.Exec(schema); err != nil {
@@ -163,6 +179,23 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 		}
 	}
 	_, _ = db.Exec("CREATE INDEX IF NOT EXISTS idx_media_folder ON media (folder_id)")
+
+	var statusColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='status'").Scan(&statusColCount)
+	if statusColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'"); err != nil {
+			return fmt.Errorf("添加 users.status 列失败: %w", err)
+		}
+	}
+	_, _ = db.Exec("UPDATE users SET role = 'admin', status = 'active' WHERE role IS NULL OR role = '' OR role = 'admin'")
+
+	var authVersionColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='auth_version'").Scan(&authVersionColCount)
+	if authVersionColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1"); err != nil {
+			return fmt.Errorf("添加 users.auth_version 列失败: %w", err)
+		}
+	}
 
 	// 初始化 FTS5 全文搜索表与触发器 (容错处理)
 	ftsSchema := `
@@ -298,7 +331,7 @@ func (db *DB) seedInitialData(cfg *config.Config) error {
 				"\t\"net/http\"\n" +
 				")\n\n" +
 				"func main() {\n" +
-				"\tfmt.Println(\"🚀 Knowledge Base Server Running on :8090\")\n" +
+				"\tfmt.Println(\"🚀 Knowledge Base Server Running on :3799\")\n" +
 				"\thttp.ListenAndServe(\":8090\", nil)\n" +
 				"}\n" +
 				"```\n\n" +

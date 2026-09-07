@@ -126,7 +126,7 @@ docker compose --project-name knowledge-base \
 docker compose --project-name knowledge-base \
   --env-file .env.production \
   -f deploy/docker/docker-compose.yml up -d
-curl --fail http://127.0.0.1:8080/api/health
+curl --fail http://127.0.0.1:5185/api/health
 ```
 
 `ADMIN_PASSWORD` 只用于数据库中尚无用户时创建首个管理员。修改环境变量不会重置已有管理员密码；已有账号必须登录管理后台并提供原密码后修改。

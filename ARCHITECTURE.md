@@ -7,10 +7,10 @@
 ```text
 Browser
   ├─ public React routes: /, /blog, /docs/:slug
-  └─ protected React routes: /admin/*
+  └─ protected React routes: /wang/*
             │
             ▼
-Nginx frontend container (:80, host 127.0.0.1:8080)
+Nginx frontend container (:80, host 127.0.0.1:5185)
   ├─ static SPA assets
   ├─ /api/* -> backend:8090
   └─ /uploads/* -> read-only upload volume
@@ -24,7 +24,7 @@ Go/Gin backend (:8090, Compose network only)
   └─ local media storage /uploads
 ```
 
-开发环境由 Vite 在 `3000` 提供 SPA，并代理 API 与上传资源到 `8090`。
+开发环境由 Vite 在 `3788` 提供 SPA，并代理 API 与上传资源到后端 `3799`。
 
 ## 前端
 
@@ -40,7 +40,7 @@ Go/Gin backend (:8090, Compose network only)
 
 ### 管理端
 
-`AdminAuthGuard` 保护 `/admin/*`，`AdminLayout` 提供统一布局。页面覆盖文档、分类、标签、媒体、媒体文件夹、站点设置与管理员资料。
+`AdminAuthGuard` 保护 `/wang/*`，`AdminLayout` 提供统一布局；后端管理 API 仍为 `/api/admin/*`。页面覆盖文档、分类、标签、媒体、媒体文件夹、站点设置、管理员资料与用户管理。`/wang/users` 以 Users/Invites 两个 Tab 提供用户查询、创建、状态/角色变更、密码重置，以及邀请码创建、一次性明文展示、列表和禁用流程。
 
 `frontend/src/api/index.ts` 是统一 HTTP 客户端和前端 API 类型边界。管理请求使用 localStorage 中的 Bearer JWT。
 
@@ -61,7 +61,12 @@ HTTP request
 
 ### 主要领域
 
-- Authentication：bcrypt 密码验证、HS256 JWT 签发与解析。
+- Authentication：bcrypt 密码验证、HS256 JWT 签发与解析；`users.auth_version` 写入 JWT 并在认证时校验，凭据变更会递增该版本。
+- Users：`users` 区分 `admin`/`member` 与 `active`/`disabled`；认证中间件以数据库当前用户、状态、角色和 `auth_version` 为授权事实。
+- Invites：`invite_codes` 仅存 SHA-256 哈希；管理员创建、列表、禁用邀请码，注册通过 `RegistrationService` 在同一 SQLite 事务中消费邀请码并创建固定为 member 的用户。
+- Admin user management：`GET/POST /api/admin/users` 提供查询与创建，`PATCH /api/admin/users/:id/status`、`PATCH /api/admin/users/:id/role` 和 `POST /api/admin/users/:id/reset-password` 提供受保护的账号变更；事务规则阻止自禁用、自降级和最后一个 active admin 被禁用或降级。
+- Admin invite management：`GET/POST /api/admin/invites` 提供列表与创建，`PATCH /api/admin/invites/:id/status` 提供幂等禁用；列表不返回明文邀请码或 `code_hash`。
+- Public auth：`/api/auth/register`、`/api/auth/login` 为公开入口，`/api/auth/me` 需要 JWT；`/api/admin/*` 继续经过 `AuthMiddleware` 与 `RequireAdmin`。
 - Documents：草稿/发布/归档、分类、标签、排序、置顶、前后篇和浏览量。
 - Categories/Tags：层级分类和多对多标签。
 - Search：SQLite FTS5；失败时由仓储实现降级查询。

@@ -44,7 +44,7 @@ describe('local document drafts', () => {
   it('creates a distinct draft URL for each new document', () => {
     const first = createNewDocumentDraftPath();
     const second = createNewDocumentDraftPath();
-    expect(first).toMatch(/^\/admin\/documents\/new\?draft=/);
+    expect(first).toMatch(/^\/wang\/documents\/new\?draft=/);
     expect(second).not.toBe(first);
   });
 

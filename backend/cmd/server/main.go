@@ -52,6 +52,7 @@ func main() {
 	mediaFolderRepo := repository.NewMediaFolderRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
 	searchRepo := repository.NewSearchRepository(db)
+	inviteRepo := repository.NewInviteRepository(db)
 
 	// 4. 初始化服务层
 	authService := service.NewAuthService(userRepo, cfg)
@@ -69,6 +70,10 @@ func main() {
 	adminDocHandler := handler.NewAdminDocumentHandler(docService)
 	adminMediaHandler := handler.NewAdminMediaHandler(mediaService)
 	adminSettingHandler := handler.NewAdminSettingHandler(settingService)
+	adminInviteHandler := handler.NewAdminInviteHandler(service.NewInviteService(inviteRepo))
+	registrationHandler := handler.NewRegistrationHandler(service.NewRegistrationService(userRepo, inviteRepo))
+	adminUserHandler := handler.NewAdminUserHandler(userRepo)
+	memberAuthHandler := handler.NewMemberAuthHandler(authService)
 
 	// 6. 初始化限流器
 	loginLimiter := middleware.NewRateLimiter(10, 1*time.Minute)
@@ -117,6 +122,17 @@ func main() {
 		apiPublic.GET("/external-image", imageProxyLimiter.Middleware("图片请求过于频繁，请稍后再试"), publicHandler.ProxyExternalImage)
 	}
 
+	apiAuth := r.Group("/api/auth")
+	{
+		apiAuth.POST("/register", registrationHandler.Register)
+		apiAuth.POST("/login", loginLimiter.Middleware("登录尝试过于频繁，请稍后再试"), memberAuthHandler.Login)
+	}
+	apiAuthProtected := r.Group("/api/auth")
+	apiAuthProtected.Use(middleware.AuthMiddleware(authService))
+	{
+		apiAuthProtected.GET("/me", memberAuthHandler.Me)
+	}
+
 	// 管理员认证 API
 	apiAdminAuth := r.Group("/api/admin/auth")
 	{
@@ -126,11 +142,17 @@ func main() {
 
 	// 管理员受保护业务 API (需要 JWT Token)
 	apiAdmin := r.Group("/api/admin")
-	apiAdmin.Use(middleware.AuthMiddleware(authService))
+	apiAdmin.Use(middleware.AuthMiddleware(authService), middleware.RequireAdmin())
 	{
+		apiAdmin.GET("/users", adminUserHandler.List)
+		apiAdmin.POST("/users", adminUserHandler.Create)
+		apiAdmin.PATCH("/users/:id/status", adminUserHandler.UpdateStatus)
+		apiAdmin.PATCH("/users/:id/role", adminUserHandler.UpdateRole)
+		apiAdmin.POST("/users/:id/reset-password", adminUserHandler.ResetPassword)
 		// 资料与状态
 		apiAdmin.GET("/auth/me", adminAuthHandler.Me)
 		apiAdmin.PUT("/auth/profile", adminAuthHandler.UpdateProfile)
+		apiAdmin.PATCH("/auth/credentials", adminAuthHandler.UpdateCredentials)
 
 		// 分类管理
 		apiAdmin.GET("/categories", adminCategoryHandler.List)
@@ -164,6 +186,11 @@ func main() {
 		apiAdmin.DELETE("/media/folders/:id", adminMediaHandler.DeleteFolder)
 		apiAdmin.POST("/media/save-external", adminMediaHandler.SaveExternal)
 		apiAdmin.POST("/media/localize-images", adminMediaHandler.LocalizeImages)
+
+		// 邀请码
+		apiAdmin.POST("/invites", adminInviteHandler.Create)
+		apiAdmin.GET("/invites", adminInviteHandler.List)
+		apiAdmin.PATCH("/invites/:id/status", adminInviteHandler.Disable)
 
 		// 系统设置
 		apiAdmin.GET("/settings", adminSettingHandler.GetAll)

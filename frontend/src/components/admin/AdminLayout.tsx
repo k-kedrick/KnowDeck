@@ -10,6 +10,7 @@ import {
   ExternalLink,
   BookOpen,
   User as UserIcon,
+	Users,
   Menu,
   X,
 } from 'lucide-react';
@@ -33,18 +34,19 @@ export const AdminLayout: React.FC = () => {
       // ignore
     } finally {
       localStorage.removeItem('kb_token');
-      navigate('/admin/login', { replace: true });
+      navigate('/wang/login', { replace: true });
     }
   };
 
   const navItems = [
-    { to: '/admin/documents', label: '文档管理', icon: FileText, end: true },
-    { to: '/admin/categories', label: '分类管理', icon: FolderTree },
-    { to: '/admin/tags', label: '标签管理', icon: TagIcon },
-    { to: '/admin/media', label: '媒体资源库', icon: ImageIcon },
-    { to: '/admin/settings', label: '系统配置', icon: Settings },
+    { to: '/wang/documents', label: '文档管理', icon: FileText, end: true },
+    { to: '/wang/categories', label: '分类管理', icon: FolderTree },
+    { to: '/wang/tags', label: '标签管理', icon: TagIcon },
+    { to: '/wang/media', label: '媒体资源库', icon: ImageIcon },
+    { to: '/wang/settings', label: '系统配置', icon: Settings },
+	{ to: '/wang/users', label: '用户管理', icon: Users },
   ];
-  const isEditorWorkspace = /^\/admin\/documents\/(?:new|\d+)$/.test(location.pathname);
+  const isEditorWorkspace = /^\/wang\/documents\/(?:new|\d+)$/.test(location.pathname);
   const currentPage = isEditorWorkspace
     ? '文档编辑'
     : navItems.find((item) => location.pathname.startsWith(item.to))?.label || '管理控制台';

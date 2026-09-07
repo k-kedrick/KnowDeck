@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"knowledge-base/backend/internal/config"
@@ -18,10 +19,16 @@ type AuthService struct {
 	cfg      *config.Config
 }
 
+var (
+	ErrInvalidCredentials = errors.New("INVALID_CREDENTIALS")
+	ErrAccountDisabled    = errors.New("ACCOUNT_DISABLED")
+)
+
 type JWTClaims struct {
-	UserID   int64  `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID      int64  `json:"user_id"`
+	Username    string `json:"username"`
+	Role        string `json:"role"`
+	AuthVersion int64  `json:"auth_version"`
 	jwt.RegisteredClaims
 }
 
@@ -33,16 +40,20 @@ func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *Au
 }
 
 func (s *AuthService) Login(username, password string) (*model.LoginResp, error) {
+	username = strings.TrimSpace(username)
 	user, err := s.userRepo.GetByUsername(username)
 	if err != nil {
 		return nil, err
 	}
 	if user == nil {
-		return nil, errors.New("用户名或密码错误")
+		return nil, ErrInvalidCredentials
 	}
 
 	if !utils.CheckPasswordHash(password, user.PasswordHash) {
-		return nil, errors.New("用户名或密码错误")
+		return nil, ErrInvalidCredentials
+	}
+	if user.Status != "active" {
+		return nil, ErrAccountDisabled
 	}
 
 	token, err := s.GenerateToken(user)
@@ -59,9 +70,10 @@ func (s *AuthService) Login(username, password string) (*model.LoginResp, error)
 func (s *AuthService) GenerateToken(user *model.User) (string, error) {
 	expireTime := time.Now().Add(time.Duration(s.cfg.JWTExpireHrs) * time.Hour)
 	claims := JWTClaims{
-		UserID:   user.ID,
-		Username: user.Username,
-		Role:     user.Role,
+		UserID:      user.ID,
+		Username:    user.Username,
+		Role:        user.Role,
+		AuthVersion: user.AuthVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expireTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -95,6 +107,50 @@ func (s *AuthService) ParseToken(tokenStr string) (*JWTClaims, error) {
 
 func (s *AuthService) GetUserByID(id int64) (*model.User, error) {
 	return s.userRepo.GetByID(id)
+}
+
+func (s *AuthService) ValidateAuthVersion(id, version int64) bool {
+	current, err := s.userRepo.GetAuthVersion(id)
+	return err == nil && current == version
+}
+func (s *AuthService) UpdateCredentials(id int64, req model.UpdateCredentialsReq) error {
+	user, err := s.userRepo.GetByID(id)
+	if err != nil || user == nil {
+		return errors.New("用户不存在")
+	}
+	username := strings.TrimSpace(req.Username)
+	if len(username) < 3 || len(username) > 32 {
+		return errors.New("管理员账号长度需为 3 到 32 个字符")
+	}
+	if !utils.CheckPasswordHash(req.CurrentPassword, user.PasswordHash) {
+		return errors.New("当前密码不正确")
+	}
+	if username != user.Username {
+		existing, err := s.userRepo.GetByUsername(username)
+		if err != nil {
+			return err
+		}
+		if existing != nil && existing.ID != id {
+			return errors.New("该管理员账号已被使用")
+		}
+	}
+	var hash string
+	if req.NewPassword != "" {
+		if len(req.NewPassword) < 12 {
+			return errors.New("新密码至少需要 12 个字符")
+		}
+		if utils.CheckPasswordHash(req.NewPassword, user.PasswordHash) {
+			return errors.New("新密码不能与当前密码相同")
+		}
+		hash, err = utils.HashPassword(req.NewPassword)
+		if err != nil {
+			return err
+		}
+	}
+	if username == user.Username && hash == "" {
+		return errors.New("账号或密码没有变化")
+	}
+	return s.userRepo.UpdateCredentials(id, username, hash)
 }
 
 func (s *AuthService) UpdateProfile(id int64, req model.UpdateProfileReq) error {

@@ -5,7 +5,7 @@ import { api } from '../../api';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState<string>('admin');
+  const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -25,7 +25,7 @@ export const AdminLoginPage: React.FC = () => {
       const data = await api.login(username, password);
       if (data.token) {
         localStorage.setItem('kb_token', data.token);
-        navigate('/admin/documents', { replace: true });
+        navigate('/wang/documents', { replace: true });
       } else {
         setErrorMsg('登录失败：未收到有效签名令牌');
       }

@@ -19,7 +19,7 @@ func TestAdminTagDeleteRequiresExplicitForceForUsedTag(t *testing.T) {
 		DBPath:       filepath.Join(directory, "tag-handler.db"),
 		UploadDir:    filepath.Join(directory, "uploads"),
 		AdminUser:    "admin",
-		AdminPass:    "admin123456",
+		AdminPass:    "test-admin-password",
 		JWTSecret:    "test-secret",
 		JWTExpireHrs: 1,
 		MaxUploadMB:  10,

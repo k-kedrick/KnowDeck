@@ -619,7 +619,7 @@ export const AdminMediaManager: React.FC = () => {
                 </h2>
                 {currentFolder.type === 'doc' && currentFolder.document_id && (
                   <a
-                    href={`/admin/documents/${currentFolder.document_id}`}
+                    href={`/wang/documents/${currentFolder.document_id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-[11px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 transition shadow-xs"

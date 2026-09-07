@@ -38,7 +38,7 @@ import { AdminLayout } from './AdminLayout';
 import { AdminDocumentList } from '../../pages/admin/AdminDocumentList';
 import { getDraftKey, writeLocalDraft } from '../../hooks/useDocumentDraft';
 
-const AuthOutlet = () => <Outlet context={{ user: { username: 'wang', nickname: '管理员' } }} />;
+const AuthOutlet = () => <Outlet context={{ user: { username: 'test-admin', nickname: '管理员' } }} />;
 
 describe('admin document navigation', () => {
   afterEach(() => {
@@ -48,10 +48,10 @@ describe('admin document navigation', () => {
 
   it('keeps creation out of the global module navigation', () => {
     render(
-      <MemoryRouter initialEntries={['/admin/documents']}>
+      <MemoryRouter initialEntries={['/wang/documents']}>
         <Routes>
           <Route element={<AuthOutlet />}>
-            <Route path="/admin" element={<AdminLayout />}>
+            <Route path="/wang" element={<AdminLayout />}>
               <Route path="documents" element={<div>文档列表内容</div>} />
             </Route>
           </Route>
@@ -66,11 +66,11 @@ describe('admin document navigation', () => {
 
   it('keeps create and edit actions in document management', async () => {
     render(
-      <MemoryRouter initialEntries={['/admin/documents']}>
+      <MemoryRouter initialEntries={['/wang/documents']}>
         <Routes>
-          <Route path="/admin/documents" element={<AdminDocumentList />} />
-          <Route path="/admin/documents/new" element={<div>新建页面</div>} />
-          <Route path="/admin/documents/:id" element={<div>编辑页面</div>} />
+          <Route path="/wang/documents" element={<AdminDocumentList />} />
+          <Route path="/wang/documents/new" element={<div>新建页面</div>} />
+          <Route path="/wang/documents/:id" element={<div>编辑页面</div>} />
         </Routes>
       </MemoryRouter>,
     );
@@ -85,9 +85,9 @@ describe('admin document navigation', () => {
   it('passes a tag URL filter to the document query', async () => {
     apiMocks.getAdminDocuments.mockClear();
     render(
-      <MemoryRouter initialEntries={['/admin/documents?tag=gpt']}>
+      <MemoryRouter initialEntries={['/wang/documents?tag=gpt']}>
         <Routes>
-          <Route path="/admin/documents" element={<AdminDocumentList />} />
+          <Route path="/wang/documents" element={<AdminDocumentList />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -117,10 +117,10 @@ describe('admin document navigation', () => {
     });
 
     render(
-      <MemoryRouter initialEntries={['/admin/documents']}>
+      <MemoryRouter initialEntries={['/wang/documents']}>
         <Routes>
-          <Route path="/admin/documents" element={<AdminDocumentList />} />
-          <Route path="/admin/documents/new" element={<div>继续本地草稿</div>} />
+          <Route path="/wang/documents" element={<AdminDocumentList />} />
+          <Route path="/wang/documents/new" element={<div>继续本地草稿</div>} />
         </Routes>
       </MemoryRouter>,
     );

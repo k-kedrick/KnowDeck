@@ -35,7 +35,7 @@ func TestProductionRejectsUnsafeSecretsAndOrigins(t *testing.T) {
 		{"short admin password", func(c *Config) { c.AdminPass = "short" }},
 		{"wildcard cors", func(c *Config) { c.CORSOrigins = []string{"*"} }},
 		{"trust all proxies", func(c *Config) { c.TrustedProxies = []string{"0.0.0.0/0"} }},
-		{"localhost site url", func(c *Config) { c.SiteURL = "http://localhost:8090" }},
+		{"localhost site url", func(c *Config) { c.SiteURL = "http://localhost:3799" }},
 		{"invalid site url", func(c *Config) { c.SiteURL = "kb.example.com" }},
 	}
 	for _, tt := range tests {
