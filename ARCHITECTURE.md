@@ -52,7 +52,7 @@ Go/Gin backend (:8090, Compose network only)
 HTTP request
   -> Gin recovery / CORS / security headers / optional rate limit / auth
   -> handler: bind and validate transport data
-  -> service: business rules and multi-repository orchestration
+  -> service: business rules and multi-repository orcheschestration
   -> repository: parameterized SQL and transactions
   -> SQLite
 ```
