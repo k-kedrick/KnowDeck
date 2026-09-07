@@ -8,12 +8,13 @@
 - Backend: Go 1.26.4, Gin, pure-Go SQLite (`modernc.org/sqlite`), local media storage.
 - Frontend: React 19, TypeScript 6, Vite 8, Tailwind CSS; Markdown/HTML rendering with DOMPurify and rehype sanitization.
 - Deployment: two Docker services. Frontend Nginx binds `127.0.0.1:8080`; backend is internal on `8090`; named volumes hold SQLite data and uploads.
-- Local Git is initialized on branch `main`; the baseline is staged but the first commit is pending Git user identity.
+- Local Git is initialized on branch `main`; initial project baseline: `1a48894`.
 
 ## Version Control
 
 - Git repository: initialized.
-- Baseline: commit pending; Git user name/email are not configured.
+- Branch: `main`.
+- Initial Project Baseline: `1a48894`.
 - Purpose: incremental change tracking and verification-cache invalidation.
 
 ## Architecture Map
@@ -97,6 +98,6 @@ Aggregate SHA-256 over sorted relevant inputs. The documentation fingerprint exc
 
 - Start with this file, then inspect `git status` and the relevant diff.
 - Reuse a cached result only when the scoped source, tests, config, and dependencies are unchanged.
-- After the baseline commit exists, new cache entries should record the validated commit and affected paths; invalidate only entries whose inputs changed from that commit.
+- New cache entries should record the validated commit and affected paths; invalidate only entries whose inputs changed from that commit.
 - Use targeted tests first. Expand to full frontend tests for shared rendering/routing/toolchain changes and to full backend tests for schema/auth/shared repository changes.
 - Update durable architecture facts, risks, and verification results here; do not append a chronological activity log.
