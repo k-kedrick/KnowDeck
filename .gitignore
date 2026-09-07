@@ -1,0 +1,40 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Backend Binaries & Data
+backend/server.exe
+backend/server
+backend/*.exe
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+data/*
+!data/.gitkeep
+backend/data/*
+!backend/data/.gitkeep
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs and local caches
+*.log
+.cache/
+coverage/
+
+# Frontend Dependencies & Build
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/src/components/admin/tiptap/historicalRealDocument.json

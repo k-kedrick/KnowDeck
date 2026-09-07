@@ -1,0 +1,41 @@
+.git
+.gitignore
+.dockerignore
+
+# Secrets and local environment overrides
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Frontend dependencies and generated output
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/coverage
+frontend/.vite
+frontend/*.tsbuildinfo
+
+# Runtime data must only enter containers through volumes
+data
+uploads
+backend/data
+backend/uploads
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+
+# Local binaries, logs, caches, and editor files
+backend/*.exe
+backend/kb-server
+*.log
+*.tmp
+*.temp
+coverage
+.cache
+.pytest_cache
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+

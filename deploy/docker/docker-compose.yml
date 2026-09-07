@@ -1,0 +1,73 @@
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    environment:
+      APP_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8090
+      DATA_DIR: /data
+      DB_PATH: /data/app.db
+      UPLOAD_DIR: /uploads
+      SITE_NAME: ${SITE_NAME:-知识库}
+      SITE_URL: ${SITE_URL:?Set SITE_URL to the public HTTPS origin in .env.production}
+      FRONTEND_INDEX_PATH: ""
+      FRONTEND_INDEX_URL: http://frontend/index.html
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-1024}
+      MAX_IMAGE_MB: ${MAX_IMAGE_MB:-20}
+      MAX_VIDEO_MB: ${MAX_VIDEO_MB:-1024}
+      MAX_FILE_MB: ${MAX_FILE_MB:-100}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-72}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env.production}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS in .env.production}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
+    volumes:
+      - kb-data:/data
+      - kb-uploads:/uploads
+    restart: unless-stopped
+    cpus: 1.5
+    mem_limit: 768m
+    pids_limit: 256
+    stop_grace_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    expose:
+      - "8090"
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/frontend.Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - kb-uploads:/uploads:ro
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 192m
+    pids_limit: 128
+    stop_grace_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  kb-data:
+    name: docker_kb-data
+  kb-uploads:
+    name: docker_kb-uploads
