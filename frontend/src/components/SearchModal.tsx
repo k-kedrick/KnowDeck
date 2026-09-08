@@ -4,6 +4,7 @@ import { Search, X, FileText, Folder, Loader2 } from 'lucide-react';
 import { api } from '../api';
 import type { SearchResult } from '../api';
 import { IconButton } from './ui/IconButton';
+import { useAuth } from '../auth/AuthContext';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface SearchModalProps {
 
 export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectDocument }) => {
   const [query, setQuery] = useState('');
+  const { user } = useAuth();
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -54,6 +56,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
     }
   }, [isOpen]);
 
+  useEffect(() => { setResults([]); setSelectedIndex(0); }, [user?.id]);
+
   // Search logic with debounce
   useEffect(() => {
     if (!query.trim()) return;
@@ -77,7 +81,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, user?.id]);
 
   if (!isOpen) return null;
 

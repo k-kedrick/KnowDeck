@@ -7,6 +7,8 @@ import { DocViewer } from './DocViewer';
 import { PublicLayout } from './PublicLayout';
 import type { PublicOutletContext } from './publicLayoutContext';
 
+vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ user: null, loading: false, logout: vi.fn() }) }));
+
 vi.mock('../api', () => ({ api: {
   getSiteInfo: vi.fn().mockResolvedValue(null),
   getKnowledgeTree: vi.fn().mockResolvedValue([]),

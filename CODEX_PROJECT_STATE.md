@@ -146,3 +146,8 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 
 - **COMPLETED**: `documents.access_level` (`public`/`authenticated`), optional authentication, public locked metadata, viewer-aware search, SEO/sitemap exclusion, admin selector/badge, and locked DocViewer state.
 - Verification: U3 targeted backend tests, `go test ./...`, `go vet ./...`, focused frontend tests, lint and build passed on 2026-09-08. Browser interaction and race detector were not run.
+
+## U4 Member Frontend Authentication
+
+- **COMPLETED**: public `/login` and invite-only `/register`, canonical `kb_token` session restore, authenticated header/logout, safe local return paths, auth-aware document/search refresh, and logout cleanup of restricted UI.
+- U4 verification on 2026-09-08: frontend full suite 234 passed/1 skipped; lint and build passed; backend `go test ./...` and `go vet ./...` passed. Browser and race detector were not run.

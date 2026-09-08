@@ -1,4 +1,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { LoginPage } from './pages/public/LoginPage';
+import { RegisterPage } from './pages/public/RegisterPage';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import { ApiError, api } from './api';
 import type { DocDetailData } from './api';
@@ -50,6 +53,7 @@ const NotFoundPage = () => {
 
 export const DocumentPage = () => {
   const { siteInfo } = useOutletContext<PublicOutletContext>();
+  const { user, loading: authLoading } = useAuth();
   const { slug = '' } = useParams<{ slug: string }>();
   const [docDetail, setDocDetail] = useState<DocDetailData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,6 +65,7 @@ export const DocumentPage = () => {
   const canonicalPath = `/docs/${encodeURIComponent(slug)}`;
 
   useEffect(() => {
+    if (authLoading) return;
     const sequence = ++requestSequence.current;
     const controller = new AbortController();
 
@@ -82,7 +87,7 @@ export const DocumentPage = () => {
     });
 
     return () => controller.abort();
-  }, [slug]);
+  }, [slug, user?.id, authLoading]);
 
   return (
     <Suspense fallback={<RouteFallback />}>
@@ -125,11 +130,13 @@ export const DocumentPage = () => {
 };
 
 export const App: React.FC = () => (
-  <BrowserRouter>
+  <AuthProvider><BrowserRouter>
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route element={<PublicLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
           <Route path="blog" element={<BlogPage />} />
           <Route path="docs/:slug" element={<DocumentPage />} />
           <Route path="*" element={<NotFoundPage />} />
@@ -151,7 +158,7 @@ export const App: React.FC = () => (
         </Route>
       </Routes>
     </Suspense>
-  </BrowserRouter>
+  </BrowserRouter></AuthProvider>
 );
 
 export default App;

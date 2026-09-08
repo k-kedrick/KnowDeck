@@ -4,6 +4,8 @@ import { SearchModal } from './SearchModal';
 
 const searchMock = vi.hoisted(() => vi.fn());
 
+vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ user: null }) }));
+
 vi.mock('../api', () => ({
   api: {
     search: searchMock,

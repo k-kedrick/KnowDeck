@@ -278,6 +278,10 @@ export const api = {
   getTags: (signal?: AbortSignal) => fetchJson<Tag[]>('/public/tags', { signal }),
   search: (q: string, signal?: AbortSignal) => fetchJson<SearchResult[]>(`/public/search?q=${encodeURIComponent(q)}`, { signal }),
 
+  memberLogin: (username: string, password: string) => fetchJson<{ token: string; user: User }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  memberRegister: (username: string, password: string, invite_code: string) => fetchJson<null>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password, invite_code }) }),
+  memberMe: () => fetchJson<User>('/auth/me'),
+
   // Admin Auth API
   login: (username: string, password: string) =>
     fetchJson<{ token: string; user: User }>('/admin/auth/login', {

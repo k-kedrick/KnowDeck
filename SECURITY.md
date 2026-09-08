@@ -83,3 +83,7 @@
 ## Document authorization boundary
 
 `access_level=authenticated` content is enforced by the backend. Optional authentication treats no token as anonymous, but rejects supplied invalid, expired, stale, disabled, deleted, or invalid-signature tokens. Unauthorized responses never include document content, excerpts, body-derived metadata, or search snippets. SEO and sitemap output exclude restricted body data. The frontend locked state is UX only and renders neither body nor TOC.
+
+## Frontend authentication
+
+The backend remains the authorization boundary. The SPA stores only the canonical `kb_token`; passwords and invite codes remain form-local. Login redirects only to sanitized local paths. Registration sends no role or status fields and does not create a session. Logout removes session state and immediately removes restricted document and search UI before anonymous responses arrive.

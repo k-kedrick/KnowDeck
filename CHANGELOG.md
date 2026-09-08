@@ -236,3 +236,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - Added public/authenticated document access levels, viewer-aware public/search/SEO ACLs, and locked document UI.
+
+### Added
+- Public member login, invite registration, session restore, safe return paths, authenticated header state, and auth-aware restricted document and search refresh.

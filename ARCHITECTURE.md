@@ -128,3 +128,7 @@ SQLite DSN 启用 `foreign_keys(1)`、WAL、`busy_timeout(5000)` 和 `synchronou
 ## Document access control
 
 Documents have one persisted `access_level`: `public` or `authenticated`; legacy rows migrate to `public`. Admin CRUD carries this field. Public document and search routes use optional authentication: anonymous visitors receive safe locked metadata for authenticated documents, while authenticated users receive content. Search filters before FTS snippet generation; authenticated documents are `noindex,nofollow` and excluded from the sitemap. The admin editor exposes the setting, the list shows an access badge, and the viewer does not render a locked body or TOC.
+
+## Member frontend authentication
+
+The public SPA uses `AuthProvider` and one canonical `kb_token`; it restores sessions through `/api/auth/me`. `/login` accepts only safe local `returnTo` routes. `/register` is invite-only, creates members only, and never auto-signs-in. Header state reflects guest/member/admin and logout clears the session. Identity changes refetch protected documents and search; logout clears previously authorized restricted content and search results before anonymous refetch.

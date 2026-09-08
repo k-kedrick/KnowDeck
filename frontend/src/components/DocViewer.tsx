@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -156,6 +156,7 @@ const containsMarkdownMath = (content: string) => /(^|[^\\])\$\$?[\s\S]*?\$\$?/.
 
 export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = null }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const outletContext = useOutletContext<PublicOutletContext | null>();
   const setOutletTocItems = outletContext?.setTocItems;
   const setOutletDocTitle = outletContext?.setCurrentDocTitle;
@@ -475,7 +476,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     );
   }
 
-  if (locked) { return <main data-testid="document-locked" className="flex min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center"><Lock className="h-7 w-7" /><h1>{doc.title}</h1><p>此文章仅对登录用户开放</p><p>登录后即可查看完整内容。</p></main>; }
+  if (locked) { const returnTo = encodeURIComponent(`${location.pathname}${location.search}`); return <main data-testid="document-locked" className="flex min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center"><Lock className="h-7 w-7" /><h1>{doc.title}</h1><p>此文章仅对登录用户开放</p><Link to={`/login?returnTo=${returnTo}`}>登录后查看</Link><Link to={`/register?returnTo=${returnTo}`}>没有账号？注册</Link></main>; }
 
   const codeOccurrences = new Map<string, number>();
 

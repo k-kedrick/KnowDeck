@@ -1,0 +1,1 @@
+import {describe,it,expect} from 'vitest';import {sanitizeReturnTo} from './returnTo';describe('sanitizeReturnTo',()=>{it('allows local routes',()=>expect(sanitizeReturnTo('/docs/test?x=1')).toBe('/docs/test?x=1'));it('rejects external routes',()=>['https://evil.example','//evil.example','javascript:alert(1)',''].forEach(x=>expect(sanitizeReturnTo(x)).toBe('/')))});

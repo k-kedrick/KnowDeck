@@ -1,0 +1,1 @@
+export const sanitizeReturnTo=(value:string|null|undefined)=>{if(!value||!value.startsWith('/')||value.startsWith('//')||value.startsWith('/\\'))return '/';try{const u=new URL(value,'http://local');return u.origin==='http://local'&&u.pathname.startsWith('/')?`${u.pathname}${u.search}${u.hash}`:'/'}catch{return '/'}};

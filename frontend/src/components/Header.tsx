@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Sun, Moon, BookOpen, Layers, Menu, X } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import type { SiteInfo } from '../api';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSidebar,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, loading, logout } = useAuth();
 
   const navLinkClass = (isActive: boolean) =>
     `inline-flex min-h-9 items-center rounded-ds-md px-3 py-1.5 text-sm font-semibold transition-colors duration-150 ${
@@ -113,6 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Search className="h-5 w-5" />
           </IconButton>
 
+          {!loading && (user ? <><span className="text-sm font-semibold">{user.username}</span><button type="button" onClick={logout} className="text-sm">退出登录</button></> : <><Link to="/login" className="text-sm">登录</Link><Link to="/register" className="text-sm">注册</Link></>)}
           <IconButton
             label={darkMode ? '切换到亮色模式' : '切换到暗色模式'}
             onClick={onToggleDarkMode}
