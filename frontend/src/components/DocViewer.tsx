@@ -98,7 +98,7 @@ const TocNav = ({ items, activeId, onSelect, filterText = '' }: TocNavProps) => 
             data-level={item.level}
             title={item.text}
             aria-current={isActive ? 'location' : undefined}
-            className={`group relative flex items-center h-[28px] rounded px-1.5 text-left transition-colors ${
+            className={`group relative flex h-[28px] w-full min-w-0 max-w-full items-center overflow-hidden rounded px-1.5 text-left whitespace-nowrap transition-all ${
               depth === 0
                 ? 'mt-2.5 first:mt-0 font-medium text-[13px] text-slate-800 dark:text-slate-100'
                 : depth === 1
@@ -106,11 +106,11 @@ const TocNav = ({ items, activeId, onSelect, filterText = '' }: TocNavProps) => 
                 : 'mt-0.5 text-[12.5px] text-slate-500 dark:text-slate-400'
             } ${
               isActive
-                ? '!text-[#3370ff] dark:!text-blue-400 !font-semibold'
-                : 'hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-slate-800/40'
+                ? '!text-[#3370ff] dark:!text-blue-400 !font-semibold bg-[#3370ff]/10 dark:bg-blue-500/15'
+                : 'hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
             }`}
           >
-            <span className="truncate w-full block">
+            <span className="block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
               {item.text}
             </span>
           </a>
@@ -551,13 +551,13 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
           <button
             type="button"
             onClick={() => setIsTocOpen(true)}
-            className="fixed bottom-5 right-5 z-30 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-3.5 text-xs font-semibold text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-200 md:hidden"
+            className="fixed bottom-5 right-5 z-30 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-3.5 text-xs font-semibold text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-800/95 dark:text-slate-200 xl:hidden"
           >
             <ListTree className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             目录
           </button>
           {isTocOpen && (
-            <div className="fixed inset-0 z-50 md:hidden">
+            <div className="fixed inset-0 z-50 xl:hidden">
               <button type="button" aria-label="关闭目录" onClick={() => setIsTocOpen(false)} className="absolute inset-0 bg-black/40" />
               <aside aria-label="目录" className="absolute left-0 top-0 flex h-full w-[min(20rem,85vw)] flex-col bg-white dark:bg-slate-900 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5">
@@ -575,12 +575,12 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
         </>
       )}
 
-      {/* Desktop Left TOC: Fixed to the left edge of viewport (like Feishu/Notion) */}
+      {/* Desktop TOC fills the free gutter up to the reading canvas; long labels ellipsize at that edge. */}
       {allTocItems.length > 0 && !isTocCollapsed && (
         <aside
           data-testid="desktop-toc"
           aria-label="本文目录"
-          className="fixed left-3 sm:left-4 lg:left-6 xl:left-8 top-20 hidden md:flex flex-col w-[240px] lg:w-[260px] xl:w-[280px] h-[calc(100vh-6rem)] overflow-y-auto z-20 select-none toc-scrollbar"
+          className="document-reading-toc fixed top-20 h-[calc(100vh-6rem)] min-w-0 flex-col overflow-hidden z-20 select-none"
         >
           <div className="flex items-center justify-start mb-2 px-1 shrink-0">
             <button
@@ -604,7 +604,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
           type="button"
           onClick={() => handleToggleToc(false)}
           title="展开目录"
-          className="hidden md:flex fixed left-3 sm:left-4 lg:left-6 top-20 z-30 items-center justify-center w-7 h-7 rounded bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 hover:border-blue-400 shadow-sm transition-all backdrop-blur-sm"
+          className="hidden xl:flex fixed left-8 top-20 z-30 items-center justify-center w-7 h-7 rounded bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 hover:border-blue-400 shadow-sm transition-all backdrop-blur-sm"
         >
           <ChevronsRight className="w-4 h-4" />
         </button>

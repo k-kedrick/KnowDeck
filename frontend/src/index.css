@@ -891,6 +891,28 @@
 }
 
 /* Minimalist outline scrollbar */
+.document-reading-toc {
+  display: none;
+}
+
+/*
+ * The reading canvas is 860px wide and centered. On wide screens the TOC uses
+ * all remaining space from the viewport gutter to 24px before the article.
+ * There is deliberately no panel border/background: the article edge is the
+ * only visual boundary, matching Feishu's document outline behavior.
+ */
+@media (min-width: 1280px) {
+  .document-reading-toc {
+    display: flex;
+    left: 2rem;
+    right: calc(50% + 454px);
+    border: 0;
+    outline: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
 .toc-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -904,4 +926,3 @@
 .toc-scrollbar:hover::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.4);
 }
-

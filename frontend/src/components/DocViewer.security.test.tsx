@@ -151,7 +151,7 @@ $E = mc^2$
     expect(container.querySelector('iframe')?.getAttribute('sandbox')).toContain('allow-scripts');
   });
 
-  it('renders a progressively indented desktop table of contents with full-text wrap support', async () => {
+  it('renders a borderless fluid desktop table of contents with ellipsized labels', async () => {
     renderViewer(`# 一级目录标题
 
 ## 二级目录标题
@@ -167,7 +167,9 @@ $E = mc^2$
     expect(links.map((link) => link.dataset.level)).toEqual(['2', '3', '4']);
     expect(links.map((link) => link.style.paddingLeft)).toEqual(['20px', '34px', '48px']);
     expect(allLinks[0].getAttribute('aria-current')).toBe('location');
-    expect(links[0].querySelector('span:last-child')?.className).toContain('truncate');
+    expect(desktopToc.className).toContain('document-reading-toc');
+    expect(links[0].className).toContain('overflow-hidden');
+    expect(links[0].querySelector('span:last-child')?.className).toContain('text-ellipsis');
   });
 
   it('scrolls to a heading and activates it when the public table of contents is clicked', async () => {
