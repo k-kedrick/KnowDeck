@@ -20,7 +20,7 @@ import (
 func TestRegistrationHandlerRegistersPublicMemberWithoutSecrets(t *testing.T) {
 	router, db, invites, users := newRegistrationRouter(t)
 	defer db.Close()
-	if _, err := invites.Create(handlerInviteHash("valid"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("valid", handlerInviteHash("valid"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	response := postRegistration(router, `{"username":"alice","password":"123456789012","invite_code":"valid","role":"admin","status":"disabled","auth_version":999}`)
@@ -68,7 +68,7 @@ func TestRegistrationHandlerMapsInviteAndConflictErrors(t *testing.T) {
 	router, db, invites, users := newRegistrationRouter(t)
 	defer db.Close()
 	expiry := time.Now().Add(-time.Hour)
-	if _, err := invites.Create(handlerInviteHash("disabled"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("disabled", handlerInviteHash("disabled"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	disabled, err := invites.GetByHash(handlerInviteHash("disabled"))
@@ -78,10 +78,10 @@ func TestRegistrationHandlerMapsInviteAndConflictErrors(t *testing.T) {
 	if _, err = invites.UpdateStatus(disabled.ID, "disabled"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = invites.Create(handlerInviteHash("expired"), 1, 1, &expiry); err != nil {
+	if _, err = invites.Create("expired", handlerInviteHash("expired"), 1, "", 1, &expiry); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = invites.Create(handlerInviteHash("exhausted"), 1, 1, nil); err != nil {
+	if _, err = invites.Create("exhausted", handlerInviteHash("exhausted"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if ok, err := invites.ConsumeByHash(handlerInviteHash("exhausted")); err != nil || !ok {
@@ -101,13 +101,13 @@ func TestRegistrationHandlerMapsInviteAndConflictErrors(t *testing.T) {
 		})
 	}
 
-	if _, err = invites.Create(handlerInviteHash("first"), 1, 1, nil); err != nil {
+	if _, err = invites.Create("first", handlerInviteHash("first"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if response := postRegistration(router, `{"username":"alice","password":"123456789012","invite_code":"first"}`); response.Code != http.StatusOK {
 		t.Fatal(response.Body.String())
 	}
-	if _, err = invites.Create(handlerInviteHash("conflict"), 1, 1, nil); err != nil {
+	if _, err = invites.Create("conflict", handlerInviteHash("conflict"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	response := postRegistration(router, `{"username":"alice","password":"123456789012","invite_code":"conflict"}`)
@@ -123,7 +123,7 @@ func TestRegistrationHandlerMapsInviteAndConflictErrors(t *testing.T) {
 func TestRegistrationHandlerSingleUseInvite(t *testing.T) {
 	router, db, invites, users := newRegistrationRouter(t)
 	defer db.Close()
-	if _, err := invites.Create(handlerInviteHash("single"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("single", handlerInviteHash("single"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if response := postRegistration(router, `{"username":"alice","password":"123456789012","invite_code":"single"}`); response.Code != http.StatusOK {
@@ -167,6 +167,6 @@ func postRegistration(router *gin.Engine, body string) *httptest.ResponseRecorde
 }
 
 func handlerInviteHash(code string) string {
-	sum := sha256.Sum256([]byte(code))
+	sum := sha256.Sum256([]byte(strings.ToUpper(strings.TrimSpace(code))))
 	return hex.EncodeToString(sum[:])
 }

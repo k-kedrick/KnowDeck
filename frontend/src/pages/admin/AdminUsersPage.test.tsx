@@ -11,6 +11,11 @@ const apiMocks = vi.hoisted(() => ({
   logout: vi.fn(),
   listAdminInvites: vi.fn(),
   createAdminInvite: vi.fn(),
+  updateAdminInvite: vi.fn(),
+  deleteAdminInvite: vi.fn(),
+  batchDeleteAdminInvites: vi.fn(),
+  batchUpdateAdminInvitesStatus: vi.fn(),
+  getAdminInviteUsers: vi.fn(),
   disableAdminInvite: vi.fn(),
 }));
 
@@ -33,7 +38,12 @@ describe('AdminUsersPage', () => {
     apiMocks.updateAdminUserStatus.mockReset().mockResolvedValue({ id: 2, status: 'disabled' });
     apiMocks.resetAdminUserPassword.mockReset().mockResolvedValue({ id: 2 });
     apiMocks.listAdminInvites.mockReset().mockResolvedValue({ items: [] });
-    apiMocks.createAdminInvite.mockReset().mockResolvedValue({ id: 11, code: 'WXK-ONE-TIME-CODE', status: 'active', max_uses: 1, used_count: 0, expires_at: null });
+    apiMocks.createAdminInvite.mockReset().mockResolvedValue({ id: 11, code: '8ABCDEFG', status: 'active', max_uses: 1, used_count: 0, expires_at: null });
+    apiMocks.updateAdminInvite.mockReset().mockResolvedValue(null);
+    apiMocks.deleteAdminInvite.mockReset().mockResolvedValue(null);
+    apiMocks.batchDeleteAdminInvites.mockReset().mockResolvedValue({ deleted: 1 });
+    apiMocks.batchUpdateAdminInvitesStatus.mockReset().mockResolvedValue({ updated: 1 });
+    apiMocks.getAdminInviteUsers.mockReset().mockResolvedValue({ items: [{ id: 5, username: 'registered-user', created_at: '2026-09-08T10:00:00Z' }] });
     apiMocks.disableAdminInvite.mockReset().mockResolvedValue({ id: 11, status: 'disabled' });
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } });
   });
@@ -92,7 +102,7 @@ describe('AdminUsersPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '创建用户' }));
     fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'secret-password' } });
-    fireEvent.click(screen.getByRole('button', { name: '关闭创建用户' }));
+    fireEvent.click(screen.getByRole('button', { name: '关闭对话框' }));
     fireEvent.click(screen.getByRole('button', { name: '创建用户' }));
     expect((screen.getByLabelText('密码') as HTMLInputElement).value).toBe('');
   });
@@ -120,7 +130,7 @@ describe('AdminUsersPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '设为管理员' }));
     await waitFor(() => expect(apiMocks.updateAdminUserRole).toHaveBeenCalledWith(2, 'admin'));
     expect(apiMocks.listAdminUsers.mock.calls.length).toBeGreaterThan(1);
-    fireEvent.click(screen.getByRole('button', { name: '设为普通用户' }));
+    fireEvent.click(screen.getByRole('button', { name: '降为用户' }));
     expect(screen.getByRole('dialog', { name: '确认修改角色' })).toBeTruthy();
     expect(apiMocks.updateAdminUserRole).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: '确认执行' }));
@@ -170,61 +180,77 @@ describe('AdminUsersPage', () => {
     expect((screen.getByLabelText('新密码') as HTMLInputElement).value).toBe('');
   });
 
-  it('loads invite tab with empty, error, and safe historical list states', async () => {
-    const invite = { id: 11, created_by: 1, status: 'active', max_uses: 2, used_count: 1, expires_at: null };
+  it('loads invite tab with empty, error, and plaintext invite list with 8-character code', async () => {
+    const invite = { id: 11, code: '8ABCDEFG', remark: '测试备注', created_by: 1, status: 'active', max_uses: 2, used_count: 1, expires_at: null };
     let resolveInvites!: (value: { items: Array<typeof invite> }) => void;
     apiMocks.listAdminInvites.mockReturnValueOnce(new Promise((resolve) => { resolveInvites = resolve; })).mockResolvedValueOnce({ items: [invite] });
     render(<AdminUsersPage />);
-    fireEvent.click(screen.getByRole('tab', { name: '邀请码' }));
+    fireEvent.click(screen.getByRole('tab', { name: /邀请码/ }));
     expect(await screen.findByText('加载邀请码中...')).toBeTruthy();
     await act(async () => resolveInvites({ items: [] }));
-    expect(await screen.findByText('暂无邀请码')).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: '用户' }));
-    fireEvent.click(screen.getByRole('tab', { name: '邀请码' }));
-    expect(await screen.findByText('1 / 2')).toBeTruthy();
+    expect(await screen.findByText('暂无邀请码，点击上方按钮立即生成')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /用户/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /邀请码/ }));
+    expect(await screen.findByText('8ABCDEFG')).toBeTruthy();
+    expect(screen.getByText('1 / 2')).toBeTruthy();
     expect(screen.getByText('永久有效')).toBeTruthy();
-    expect(screen.queryByText(/code_hash/i)).toBeNull();
-    expect(screen.queryByText('WXK-ONE-TIME-CODE')).toBeNull();
+    expect(screen.getByText('测试备注')).toBeTruthy();
 
     apiMocks.listAdminInvites.mockRejectedValueOnce(new Error('offline'));
-    fireEvent.click(screen.getByRole('tab', { name: '用户' }));
-    fireEvent.click(screen.getByRole('tab', { name: '邀请码' }));
+    fireEvent.click(screen.getByRole('tab', { name: /用户/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /邀请码/ }));
     expect(await screen.findByText('邀请码列表加载失败')).toBeTruthy();
   });
 
-  it('creates, copies, and destroys the one-time plaintext invite', async () => {
+  it('generates 8-character invite code with custom days capsule and batch copy', async () => {
     render(<AdminUsersPage />);
-    fireEvent.click(screen.getByRole('tab', { name: '邀请码' }));
-    await screen.findByText('暂无邀请码');
-    fireEvent.click(screen.getByRole('button', { name: '生成邀请码' }));
-    expect((screen.getByLabelText('最大使用次数') as HTMLInputElement).value).toBe('1');
-    fireEvent.change(screen.getByLabelText('最大使用次数'), { target: { value: '3' } });
-    fireEvent.click(screen.getAllByRole('button', { name: '生成邀请码' }).at(-1)!);
-    await waitFor(() => expect(apiMocks.createAdminInvite).toHaveBeenCalledWith({ max_uses: 3 }));
-    expect(await screen.findByText('WXK-ONE-TIME-CODE')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '复制邀请码' }));
-    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith('WXK-ONE-TIME-CODE'));
-    expect(await screen.findByRole('button', { name: '已复制' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
-    expect(screen.queryByText('WXK-ONE-TIME-CODE')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '生成邀请码' }));
-    expect(screen.queryByText('WXK-ONE-TIME-CODE')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: /邀请码/ }));
+    await screen.findByText('暂无邀请码，点击上方按钮立即生成');
+    fireEvent.click(screen.getByRole('button', { name: '生成 8 位邀请码' }));
+    expect(screen.getByRole('dialog', { name: '生成注册邀请码' })).toBeTruthy();
+
+    // Select 7 days preset
+    fireEvent.click(screen.getByRole('button', { name: '7 天' }));
+    fireEvent.change(screen.getByLabelText('单码最大使用次数'), { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText('用途备注 (选填)'), { target: { value: '内测推广' } });
+
+    fireEvent.click(screen.getByRole('button', { name: '立即生成邀请码' }));
+    await waitFor(() =>
+      expect(apiMocks.createAdminInvite).toHaveBeenCalledWith({
+        count: 1,
+        max_uses: 5,
+        valid_days: 7,
+        remark: '内测推广',
+      })
+    );
+    expect(await screen.findByText('8ABCDEFG')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '一键复制全部 (多行)' }));
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith('8ABCDEFG'));
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
   });
 
-  it('confirms disabling active invites and leaves disabled invites non-actionable', async () => {
-    const active = { id: 11, created_by: 1, status: 'active', max_uses: 1, used_count: 0, expires_at: null };
-    const disabled = { ...active, id: 12, status: 'disabled' };
-    apiMocks.listAdminInvites.mockResolvedValue({ items: [active, disabled] });
+  it('supports viewing registered users and editing invite code', async () => {
+    const invite = { id: 11, code: '8ABCDEFG', remark: '老备注', created_by: 1, status: 'active', max_uses: 5, used_count: 1, expires_at: null };
+    apiMocks.listAdminInvites.mockResolvedValue({ items: [invite] });
     render(<AdminUsersPage />);
-    fireEvent.click(screen.getByRole('tab', { name: '邀请码' }));
-    await screen.findAllByText('永久有效');
-    expect(screen.getAllByText('已禁用').length).toBeGreaterThanOrEqual(2);
-    const activeInviteRow = screen.getByText('11').closest('tr')!;
-    expect(activeInviteRow.querySelectorAll('button')).toHaveLength(1);
-    fireEvent.click(activeInviteRow.querySelector('button')!);
-    expect(screen.getByRole('dialog', { name: '确认禁用邀请码' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '确认禁用' }));
-    await waitFor(() => expect(apiMocks.disableAdminInvite).toHaveBeenCalledWith(11));
-    expect(await screen.findByText('邀请码已禁用')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /邀请码/ }));
+    await screen.findByText('8ABCDEFG');
+
+    // View registered users
+    fireEvent.click(screen.getByRole('button', { name: '使用者' }));
+    expect(await screen.findByText('registered-user')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+
+    // Edit invite code
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }));
+    expect(screen.getByRole('dialog', { name: '编辑邀请码「8ABCDEFG」' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('用途备注'), { target: { value: '新备注' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+    await waitFor(() =>
+      expect(apiMocks.updateAdminInvite).toHaveBeenCalledWith(11, {
+        remark: '新备注',
+        max_uses: 5,
+      })
+    );
   });
 });

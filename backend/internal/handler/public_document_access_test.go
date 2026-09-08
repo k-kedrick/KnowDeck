@@ -35,7 +35,17 @@ func TestPublicDocumentAccessLevelAuthorization(t *testing.T) {
 	adminToken, _ := auth.GenerateToken(admin)
 	r := gin.New()
 	h := NewPublicHandler(service.NewDocumentService(docs, repository.NewCategoryRepository(db)), nil, nil, nil, nil, nil)
+	r.GET("/api/public/documents", middleware.OptionalAuthMiddleware(auth), h.ListDocuments)
 	r.GET("/api/public/documents/:slug", middleware.OptionalAuthMiddleware(auth), h.GetDocumentBySlug)
+	callList := func(token string) *httptest.ResponseRecorder {
+		q := httptest.NewRequest(http.MethodGet, "/api/public/documents", nil)
+		if token != "" {
+			q.Header.Set("Authorization", "Bearer "+token)
+		}
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, q)
+		return w
+	}
 	call := func(slug, token string) *httptest.ResponseRecorder {
 		q := httptest.NewRequest(http.MethodGet, "/api/public/documents/"+slug, nil)
 		if token != "" {
@@ -52,6 +62,53 @@ func TestPublicDocumentAccessLevelAuthorization(t *testing.T) {
 		}
 		return v["data"].(map[string]any)
 	}
+	// Verify ListDocuments anonymizes excerpt for authenticated access level
+	listAnon := callList("")
+	if listAnon.Code != 200 {
+		t.Fatal(listAnon.Code)
+	}
+	var listAnonResp struct {
+		Data struct {
+			List []map[string]any `json:"list"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listAnon.Body.Bytes(), &listAnonResp); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range listAnonResp.Data.List {
+		if item["slug"] == "locked-acl" {
+			if item["excerpt"] != "" {
+				t.Fatalf("anonymous list leaked excerpt for locked document: %v", item["excerpt"])
+			}
+		}
+		if item["slug"] == "public-acl" {
+			if item["excerpt"] != "public excerpt" {
+				t.Fatalf("public document excerpt should be preserved: %v", item["excerpt"])
+			}
+		}
+	}
+
+	// Verify ListDocuments preserves excerpt for authenticated member
+	listMember := callList(memberToken)
+	if listMember.Code != 200 {
+		t.Fatal(listMember.Code)
+	}
+	var listMemberResp struct {
+		Data struct {
+			List []map[string]any `json:"list"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listMember.Body.Bytes(), &listMemberResp); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range listMemberResp.Data.List {
+		if item["slug"] == "locked-acl" {
+			if item["excerpt"] != "restricted excerpt" {
+				t.Fatalf("authenticated member should receive full excerpt for locked document: %v", item["excerpt"])
+			}
+		}
+	}
+
 	publicAnon := call("public-acl", "")
 	if publicAnon.Code != 200 {
 		t.Fatal(publicAnon.Code)

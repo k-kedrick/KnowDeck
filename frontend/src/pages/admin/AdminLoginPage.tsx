@@ -25,7 +25,7 @@ export const AdminLoginPage: React.FC = () => {
       const data = await api.login(username, password);
       if (data.token) {
         localStorage.setItem('kb_token', data.token);
-        navigate('/wang/documents', { replace: true });
+        navigate('/wang/dashboard', { replace: true });
       } else {
         setErrorMsg('登录失败：未收到有效签名令牌');
       }

@@ -7,6 +7,15 @@ import { ArticleCard } from '../../components/ArticleCard';
 import { SEOHead } from '../../components/SEOHead';
 import type { PublicOutletContext } from '../../components/publicLayoutContext';
 
+const getCachedTags = (): Tag[] => {
+  try {
+    const raw = localStorage.getItem('cached_site_tags');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
 type CategoryOption = CategoryTreeNode & { depth: number };
 
 const flattenCategories = (nodes: CategoryTreeNode[], depth = 0): CategoryOption[] =>
@@ -16,7 +25,7 @@ export const BlogPage = () => {
   const { tree, siteInfo } = useOutletContext<PublicOutletContext>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [documents, setDocuments] = useState<DocumentListItem[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [tags, setTags] = useState<Tag[]>(() => getCachedTags());
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -41,7 +50,14 @@ export const BlogPage = () => {
 
   useEffect(() => {
     const controller = new AbortController();
-    api.getTags(controller.signal).then((data) => setTags(data || [])).catch(() => undefined);
+    api.getTags(controller.signal).then((data) => {
+      if (!controller.signal.aborted && data) {
+        setTags(data);
+        try {
+          localStorage.setItem('cached_site_tags', JSON.stringify(data));
+        } catch {}
+      }
+    }).catch(() => undefined);
     return () => controller.abort();
   }, []);
 
@@ -74,8 +90,8 @@ export const BlogPage = () => {
 
   return (
     <main className="relative page-gutter page-section w-full min-w-0">
-      {/* Soft Ambient Light */}
-      <div className="pointer-events-none absolute -top-20 left-1/2 -z-10 h-96 w-full -translate-x-1/2 max-w-7xl bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/10 via-indigo-500/5 to-transparent blur-3xl dark:from-blue-600/15 dark:via-indigo-600/5" aria-hidden="true" />
+      {/* Soft Atmospheric Light Mesh */}
+      <div className="pointer-events-none absolute -top-32 left-1/2 -z-10 h-[520px] w-full -translate-x-1/2 max-w-7xl bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/15 via-indigo-500/10 to-transparent blur-3xl dark:from-blue-600/20 dark:via-indigo-600/10" aria-hidden="true" />
 
       <SEOHead
         title={`文章${pageLabel} - ${siteName}`}
@@ -87,17 +103,17 @@ export const BlogPage = () => {
 
       <div className="layout-list">
         {/* Clean Page Header */}
-        <header className="border-b border-border-subtle pb-6 sm:pb-8">
+        <header className="border-b border-slate-200/80 pb-6 sm:pb-8 dark:border-slate-800/80">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50/80 px-3 py-1 text-xs font-semibold text-brand dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-400">
-                <FileText className="h-3.5 w-3.5" />
+              <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-blue-200/90 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 px-3.5 py-1 text-xs font-semibold text-blue-700 shadow-xs backdrop-blur-md dark:border-blue-900/60 dark:from-blue-950/60 dark:to-indigo-950/60 dark:text-blue-300">
+                <FileText className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                 <span>内容中心</span>
               </div>
-              <h1 className="type-h1 text-text-primary">
+              <h1 className="type-h1 tracking-tight text-slate-900 dark:text-white">
                 文章与文档
               </h1>
-              <p className="mt-2 text-sm sm:text-base text-text-secondary">
+              <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-300">
                 浏览全部技术文章、项目说明与知识库文档。
               </p>
             </div>
@@ -108,7 +124,7 @@ export const BlogPage = () => {
                 <button
                   type="button"
                   onClick={() => setSearchParams({})}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border-default bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:hover:border-red-900 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-200/80 bg-red-50/80 px-3.5 py-2 text-xs font-semibold text-red-600 shadow-xs transition-all hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/50"
                 >
                   <X className="h-3.5 w-3.5" />
                   清除筛选条件
@@ -118,25 +134,25 @@ export const BlogPage = () => {
           </div>
         </header>
 
-        <details className="mt-5 rounded-2xl border border-border-default bg-surface lg:hidden">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-text-primary marker:hidden">
+        <details className="mt-5 rounded-2xl border border-slate-200/80 bg-white/90 p-1 lg:hidden dark:border-slate-800/80 dark:bg-slate-900/90 shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white marker:hidden">
             <span className="inline-flex items-center gap-2">
-              <Filter className="h-4 w-4 text-brand" />
+              <Filter className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               筛选分类与标签
             </span>
-            <span className="text-xs text-text-tertiary">展开</span>
+            <span className="text-xs text-slate-400">展开</span>
           </summary>
-          <div className="border-t border-border-subtle p-4 space-y-4">
+          <div className="border-t border-slate-100 p-4 space-y-4 dark:border-slate-800">
             <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-text-tertiary">分类</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">分类</p>
               <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   onClick={() => updateFilter('category')}
                   className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                     !category
-                      ? 'bg-brand text-white'
-                      : 'bg-surface-subtle text-text-secondary hover:bg-surface-subtle/80'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
                   全部
@@ -148,8 +164,8 @@ export const BlogPage = () => {
                     onClick={() => updateFilter('category', String(item.id))}
                     className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                       category === item.id
-                        ? 'bg-brand text-white'
-                        : 'bg-surface-subtle text-text-secondary hover:bg-surface-subtle/80'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     {item.name}
@@ -160,7 +176,7 @@ export const BlogPage = () => {
 
             {!!tags.length && (
               <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-text-tertiary">标签</p>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">标签</p>
                 <div className="flex flex-wrap gap-1.5">
                   {tags.map((item) => (
                     <button
@@ -169,8 +185,8 @@ export const BlogPage = () => {
                       onClick={() => updateFilter('tag', tag === item.slug ? undefined : item.slug)}
                       className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                         tag === item.slug
-                          ? 'bg-brand text-white'
-                          : 'bg-surface-subtle text-text-secondary hover:bg-surface-subtle/80'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
                     >
                       #{item.name}
@@ -183,26 +199,26 @@ export const BlogPage = () => {
         </details>
 
         {/* Content Stream & Sidebar Grid */}
-        <div className="grid gap-10 pt-8 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="grid gap-10 pt-8 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
           {/* Left Sidebar Filter */}
           <aside className="hidden space-y-6 lg:block">
-            <div className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/70 p-5 backdrop-blur-sm shadow-sm space-y-6">
+            <div className="glass-card rounded-2xl p-5 shadow-sm space-y-6">
               {/* Category Filter */}
               <div>
-                <div className="flex items-center gap-2 border-b border-border-subtle pb-2.5 mb-3">
-                  <FolderTree className="h-4 w-4 text-brand" />
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-3.5 dark:border-slate-800">
+                  <FolderTree className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                     分类筛选
                   </h2>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <button
                     type="button"
                     onClick={() => updateFilter('category')}
-                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    className={`w-full rounded-xl px-3.5 py-2 text-left text-sm font-medium transition-all ${
                       !category
-                        ? 'bg-brand/10 text-brand font-semibold'
-                        : 'text-text-secondary hover:bg-surface-subtle hover:text-text-primary'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-semibold shadow-xs'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-white'
                     }`}
                   >
                     全部分类
@@ -212,14 +228,14 @@ export const BlogPage = () => {
                       type="button"
                       key={item.id}
                       onClick={() => updateFilter('category', String(item.id))}
-                      style={{ paddingLeft: `${12 + item.depth * 14}px` }}
-                      className={`w-full truncate rounded-lg pr-3 py-2 text-left text-sm transition-colors ${
+                      style={{ paddingLeft: `${14 + item.depth * 14}px` }}
+                      className={`w-full truncate rounded-xl pr-3.5 py-2 text-left text-sm font-medium transition-all ${
                         category === item.id
-                          ? 'bg-brand/10 text-brand font-semibold'
-                          : 'text-text-secondary hover:bg-surface-subtle hover:text-text-primary'
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-semibold shadow-xs'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-white'
                       }`}
                     >
-                      {item.depth > 0 ? '— ' : ''}{item.name}
+                      {item.depth > 0 ? '└ ' : ''}{item.name}
                     </button>
                   ))}
                 </div>
@@ -228,13 +244,13 @@ export const BlogPage = () => {
               {/* Tag Filter */}
               {!!tags.length && (
                 <div>
-                  <div className="flex items-center gap-2 border-b border-border-subtle pb-2.5 mb-3">
-                    <Tags className="h-4 w-4 text-brand" />
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-3.5 dark:border-slate-800">
+                    <Tags className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                       标签筛选
                     </h2>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {tags.slice(0, 16).map((item) => {
                       const isActive = tag === item.slug;
                       return (
@@ -242,10 +258,10 @@ export const BlogPage = () => {
                           type="button"
                           key={item.id}
                           onClick={() => updateFilter('tag', isActive ? undefined : item.slug)}
-                          className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+                          className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
                             isActive
-                              ? 'bg-brand text-white font-medium shadow-sm'
-                              : 'bg-surface-subtle text-text-secondary hover:bg-brand/10 hover:text-brand'
+                              ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                              : 'border border-slate-200/60 bg-slate-50/80 text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:border-blue-800 dark:hover:bg-blue-950/40 dark:hover:text-blue-300'
                           }`}
                         >
                           #{item.name}
@@ -272,40 +288,42 @@ export const BlogPage = () => {
 
             {/* List Content */}
             {loading ? (
-              <div className="space-y-3 py-1" aria-label="文章列表加载中">
+              <div className="space-y-4 py-1" aria-label="文章列表加载中">
                 {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="rounded-xl border border-border-subtle bg-surface-elevated px-4 py-3 sm:px-5 sm:py-3.5 animate-pulse space-y-2.5">
-                    <div className="h-3.5 w-32 rounded bg-surface-subtle" />
-                    <div className="h-5 w-2/3 rounded bg-surface-subtle" />
-                    <div className="h-3.5 w-full rounded bg-surface-subtle" />
+                  <div key={item} className="rounded-2xl border border-slate-200/80 bg-white/80 p-5 sm:p-6 animate-pulse space-y-3 dark:border-slate-800/80 dark:bg-slate-900/80">
+                    <div className="h-4 w-32 rounded bg-slate-100 dark:bg-slate-800" />
+                    <div className="h-6 w-2/3 rounded bg-slate-100 dark:bg-slate-800" />
+                    <div className="h-4 w-full rounded bg-slate-100 dark:bg-slate-800" />
                   </div>
                 ))}
               </div>
             ) : error ? (
-              <div className="py-16 text-center">
-                <h2 className="text-base font-semibold text-text-primary">文章列表加载失败</h2>
-                <p className="mt-2 text-xs text-text-tertiary">请稍后刷新页面重试。</p>
+              <div className="glass-card rounded-2xl p-12 text-center">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">文章列表加载失败</h2>
+                <p className="mt-2 text-xs text-slate-500">请稍后刷新页面重试。</p>
               </div>
             ) : documents.length ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {documents.map((document) => (
                   <ArticleCard key={document.id} document={document} />
                 ))}
               </div>
             ) : (
-              <div className="py-20 text-center">
-                <FileText className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
-                <h2 className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <div className="glass-card rounded-3xl p-16 text-center shadow-xs">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mb-4">
+                  <FileText className="h-7 w-7" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
                   没有找到匹配的文章
                 </h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                   尝试清除当前分类或标签筛选条件。
                 </p>
                 {(category || tag) && (
                   <button
                     type="button"
                     onClick={() => setSearchParams({})}
-                    className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                    className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 transition-all hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-400 dark:hover:bg-blue-900/50"
                   >
                     重置所有筛选
                   </button>

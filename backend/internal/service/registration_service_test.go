@@ -14,7 +14,7 @@ import (
 func TestRegistrationServiceRegister(t *testing.T) {
 	svc, db, invites, users := newRegistrationService(t)
 	defer db.Close()
-	if _, err := invites.Create(hashInviteCode("valid-code"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("valid-code", hashInviteCode("valid-code"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	member, err := svc.Register("  alice  ", "twelve-chars", "  valid-code  ")
@@ -67,7 +67,7 @@ func TestRegistrationServiceValidatesUsernameAndPassword(t *testing.T) {
 
 	svc, db, invites, users := newRegistrationService(t)
 	defer db.Close()
-	if _, err := invites.Create(hashInviteCode("long-password"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("long-password", hashInviteCode("long-password"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	password := strings.Repeat("p", 64)
@@ -84,7 +84,7 @@ func TestRegistrationServiceMapsInviteErrors(t *testing.T) {
 	svc, db, invites, users := newRegistrationService(t)
 	defer db.Close()
 	expiry := time.Now().Add(-time.Hour)
-	if _, err := invites.Create(hashInviteCode("disabled"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("disabled", hashInviteCode("disabled"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	disabled, err := invites.GetByHash(hashInviteCode("disabled"))
@@ -94,10 +94,10 @@ func TestRegistrationServiceMapsInviteErrors(t *testing.T) {
 	if _, err = invites.UpdateStatus(disabled.ID, "disabled"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = invites.Create(hashInviteCode("expired"), 1, 1, &expiry); err != nil {
+	if _, err = invites.Create("expired", hashInviteCode("expired"), 1, "", 1, &expiry); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = invites.Create(hashInviteCode("exhausted"), 1, 1, nil); err != nil {
+	if _, err = invites.Create("exhausted", hashInviteCode("exhausted"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if consumed, err := invites.ConsumeByHash(hashInviteCode("exhausted")); err != nil || !consumed {
@@ -129,13 +129,13 @@ func TestRegistrationServiceMapsInviteErrors(t *testing.T) {
 func TestRegistrationServiceUsernameConflictAndSingleUse(t *testing.T) {
 	svc, db, invites, users := newRegistrationService(t)
 	defer db.Close()
-	if _, err := invites.Create(hashInviteCode("first"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("first", hashInviteCode("first"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Register("alice", "twelve-chars", "first"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := invites.Create(hashInviteCode("conflict"), 1, 1, nil); err != nil {
+	if _, err := invites.Create("conflict", hashInviteCode("conflict"), 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Register("alice", "twelve-chars", "conflict"); !errors.Is(err, ErrUsernameExists) {

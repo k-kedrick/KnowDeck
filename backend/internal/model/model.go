@@ -210,12 +210,21 @@ type SiteInfoResp struct {
 
 type InviteCode struct {
 	ID        int64
+	Code      string
 	CodeHash  string
 	CreatedBy int64
+	Remark    string
 	Status    string
 	MaxUses   *int
 	UsedCount int
 	ExpiresAt *time.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type InviteUserUsage struct {
+	UserID       int64     `json:"user_id"`
+	Username     string    `json:"username"`
+	Nickname     string    `json:"nickname"`
+	RegisteredAt time.Time `json:"registered_at"`
 }

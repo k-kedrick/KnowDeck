@@ -28,7 +28,9 @@ import {
   X,
   ChevronsLeft,
   ChevronsRight,
+  ArrowLeft,
 } from 'lucide-react';
+import { ReadingProgressBar } from './ReadingProgressBar';
 
 type MarkdownMathPlugins = typeof import('./markdownMath');
 
@@ -213,11 +215,10 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     if (!raw) return '';
     if (isHtmlContent) {
       const safeHtml = sanitizeDocumentHtml(raw)
-        .replace(/<(\/?)h([1-4])\b/gi, (_match, slash: string, level: string) => `<${slash}h${Number(level) + 1}`)
         .replace(/<img\b/gi, '<img loading="lazy" decoding="async"');
       return ensureDocumentHeadingIds(enhanceDocumentHtmlLinks(proxyHistoricalDocumentImages(safeHtml)));
     }
-      return raw.replace(/[!！]\s*\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" referrerpolicy="no-referrer" class="max-w-full h-auto rounded-xl my-4" />');
+    return raw.replace(/[!！]\s*\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" referrerpolicy="no-referrer" class="max-w-full h-auto rounded-xl my-4" />');
   }, [doc?.content, doc?.excerpt, isHtmlContent]);
 
   React.useEffect(() => {
@@ -445,7 +446,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   if (error) {
     const isNotFound = error === 'not-found';
     return (
-      <div className="flex min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center text-slate-400">
+      <div className="flex w-full min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center text-slate-400">
         <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
           <List className="w-7 h-7 text-slate-500 dark:text-slate-400" />
         </div>
@@ -464,7 +465,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
 
   if (!data || !data.document || !doc) {
     return (
-      <div className="flex min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center text-slate-400">
+      <div className="flex w-full min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center text-slate-400">
         <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-400">
           <List className="w-7 h-7" />
         </div>
@@ -476,12 +477,74 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     );
   }
 
-  if (locked) { const returnTo = encodeURIComponent(`${location.pathname}${location.search}`); return <main data-testid="document-locked" className="flex min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center"><Lock className="h-7 w-7" /><h1>{doc.title}</h1><p>此文章仅对登录用户开放</p><Link to={`/login?returnTo=${returnTo}`}>登录后查看</Link><Link to={`/register?returnTo=${returnTo}`}>没有账号？注册</Link></main>; }
+  if (locked) {
+    const returnTo = encodeURIComponent(`${location.pathname}${location.search}`);
+    return (
+      <main
+        data-testid="document-locked"
+        className="flex w-full min-h-[75vh] flex-1 items-center justify-center px-4 py-12"
+      >
+        <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 p-8 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 sm:p-10 text-center">
+          {/* Decorative background glow */}
+          <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl dark:bg-blue-600/15" />
+
+          {/* Lock Icon Emblem */}
+          <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/30 dark:shadow-blue-500/20">
+            <Lock className="h-9 w-9" />
+          </div>
+
+          {/* Badge */}
+          <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50/80 px-3 py-1 text-xs font-semibold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300">
+            <span>🔒</span>
+            <span>成员专享内容</span>
+          </div>
+
+          {/* Document Title */}
+          <h1 className="mb-3 text-xl font-bold leading-snug tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+            {doc.title}
+          </h1>
+
+          {/* Prompt Description */}
+          <p className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            此文章仅对登录用户开放。请登录后继续阅读完整文章与知识库大纲。
+          </p>
+
+          {/* Action CTAs */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link
+              to={`/login?returnTo=${returnTo}`}
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.98]"
+            >
+              登录后查看
+            </Link>
+            <Link
+              to={`/register?returnTo=${returnTo}`}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50/80 px-6 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              没有账号？注册
+            </Link>
+          </div>
+
+          {/* Back link */}
+          <div className="mt-8 border-t border-slate-100 pt-5 dark:border-slate-800">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              返回首页浏览其他公开文章
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const codeOccurrences = new Map<string, number>();
 
   return (
     <div className="relative w-full min-h-full flex-1 flex justify-center">
+      <ReadingProgressBar />
       {/* Mobile TOC Drawer Trigger */}
       {allTocItems.length > 0 && (
         <>
@@ -512,44 +575,44 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
         </>
       )}
 
-      {/* Centered Document Container across all zoom levels */}
-      <div className={`w-full ${isTocCollapsed ? 'max-w-[860px]' : 'max-w-[1440px]'} flex justify-center px-4 sm:px-6 lg:px-8 gap-8 lg:gap-14 xl:gap-20 transition-all`}>
-        {/* Desktop Left TOC: No harsh borders, wider width so titles fit on one line */}
-        {allTocItems.length > 0 && !isTocCollapsed && (
-          <aside
-            data-testid="desktop-toc"
-            aria-label="本文目录"
-            className="sticky top-16 hidden md:block w-[300px] lg:w-[340px] xl:w-[360px] shrink-0 h-[calc(100vh-4.5rem)] overflow-y-auto py-4 select-none toc-scrollbar"
-          >
-            <div className="flex items-center justify-start mb-3 px-1">
-              <button
-                type="button"
-                onClick={() => handleToggleToc(true)}
-                title="收起目录"
-                className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
-              >
-                <ChevronsLeft className="w-4 h-4" />
-              </button>
-            </div>
+      {/* Desktop Left TOC: Fixed to the left edge of viewport (like Feishu/Notion) */}
+      {allTocItems.length > 0 && !isTocCollapsed && (
+        <aside
+          data-testid="desktop-toc"
+          aria-label="本文目录"
+          className="fixed left-3 sm:left-4 lg:left-6 xl:left-8 top-20 hidden md:flex flex-col w-[240px] lg:w-[260px] xl:w-[280px] h-[calc(100vh-6rem)] overflow-y-auto z-20 select-none toc-scrollbar"
+        >
+          <div className="flex items-center justify-start mb-2 px-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleToggleToc(true)}
+              title="收起目录"
+              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-1 toc-scrollbar">
             <TocNav items={allTocItems} activeId={activeHeadingId} onSelect={handleTocClick} />
-          </aside>
-        )}
+          </div>
+        </aside>
+      )}
 
-        {/* Expand TOC Button (Shown when collapsed) */}
-        {allTocItems.length > 0 && isTocCollapsed && (
-          <button
-            type="button"
-            onClick={() => handleToggleToc(false)}
-            title="展开目录"
-            className="hidden md:flex fixed left-4 top-20 z-30 items-center justify-center w-7 h-7 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 hover:border-blue-400 shadow-sm transition-all"
-          >
-            <ChevronsRight className="w-4 h-4" />
-          </button>
-        )}
+      {/* Expand TOC Button (Shown when collapsed) */}
+      {allTocItems.length > 0 && isTocCollapsed && (
+        <button
+          type="button"
+          onClick={() => handleToggleToc(false)}
+          title="展开目录"
+          className="hidden md:flex fixed left-3 sm:left-4 lg:left-6 top-20 z-30 items-center justify-center w-7 h-7 rounded bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 hover:border-blue-400 shadow-sm transition-all backdrop-blur-sm"
+        >
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+      )}
 
-        {/* Main Reading Canvas */}
-        <div className="flex-1 min-w-0 flex justify-center py-6 sm:py-8 lg:py-10">
-          <main className="w-full max-w-[820px] bg-surface transition-colors">
+      {/* Main Reading Canvas: Strictly centered horizontally across all states */}
+      <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+        <main className="w-full max-w-[860px] bg-transparent transition-colors">
           {/* Document Header Metadata */}
           <header className="mb-6">
           {/* Document Title */}
@@ -712,6 +775,5 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
       </main>
     </div>
   </div>
-</div>
   );
 };

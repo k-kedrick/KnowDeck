@@ -7,6 +7,7 @@ import (
 	"knowledge-base/backend/internal/config"
 	"knowledge-base/backend/internal/repository"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -71,7 +72,7 @@ func TestInviteConsumeBoundaries(t *testing.T) {
 	}
 
 	disabledCode := "disabled-invite"
-	if _, err = repo.Create(inviteHash(disabledCode), 1, 5, nil); err != nil {
+	if _, err = repo.Create(disabledCode, inviteHash(disabledCode), 1, "", 5, nil); err != nil {
 		t.Fatal(err)
 	}
 	disabled, err := repo.GetByHash(inviteHash(disabledCode))
@@ -91,7 +92,7 @@ func TestInviteConsumeBoundaries(t *testing.T) {
 
 	expiredCode := "expired-invite"
 	expiry := time.Now().Add(-time.Hour)
-	if _, err = repo.Create(inviteHash(expiredCode), 1, 5, &expiry); err != nil {
+	if _, err = repo.Create(expiredCode, inviteHash(expiredCode), 1, "", 5, &expiry); err != nil {
 		t.Fatal(err)
 	}
 	if err = svc.Consume(expiredCode); !errors.Is(err, ErrInviteCodeExpired) {
@@ -104,7 +105,7 @@ func TestInviteConsumeBoundaries(t *testing.T) {
 
 	protectedCode := "protected-fields"
 	protectedExpiry := time.Now().Add(time.Hour)
-	if _, err = repo.Create(inviteHash(protectedCode), 1, 5, &protectedExpiry); err != nil {
+	if _, err = repo.Create(protectedCode, inviteHash(protectedCode), 1, "", 5, &protectedExpiry); err != nil {
 		t.Fatal(err)
 	}
 	before, err := repo.GetByHash(inviteHash(protectedCode))
@@ -167,6 +168,6 @@ func TestInviteConsumeConcurrentMaxUses(t *testing.T) {
 }
 
 func inviteHash(code string) string {
-	sum := sha256.Sum256([]byte(code))
+	sum := sha256.Sum256([]byte(strings.ToUpper(strings.TrimSpace(code))))
 	return hex.EncodeToString(sum[:])
 }

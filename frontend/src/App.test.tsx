@@ -63,6 +63,7 @@ const expectDocumentTitle = async (title: string) => {
 describe('public document routing', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/');
+    localStorage.clear();
     apiMocks.getSiteInfo.mockReset().mockResolvedValue(null);
     apiMocks.getKnowledgeTree.mockReset().mockResolvedValue(knowledgeTree);
     apiMocks.getDocumentBySlug.mockReset().mockImplementation((slug: string) =>

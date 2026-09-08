@@ -206,6 +206,32 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 		}
 	}
 
+	var inviteCodeColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('invite_codes') WHERE name='code'").Scan(&inviteCodeColCount)
+	if inviteCodeColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE invite_codes ADD COLUMN code TEXT NOT NULL DEFAULT ''"); err != nil {
+			return fmt.Errorf("添加 invite_codes.code 列失败: %w", err)
+		}
+	}
+	_, _ = db.Exec("CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes (code)")
+
+	var inviteRemarkColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('invite_codes') WHERE name='remark'").Scan(&inviteRemarkColCount)
+	if inviteRemarkColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE invite_codes ADD COLUMN remark TEXT NOT NULL DEFAULT ''"); err != nil {
+			return fmt.Errorf("添加 invite_codes.remark 列失败: %w", err)
+		}
+	}
+
+	var userInviteCodeIdColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='invite_code_id'").Scan(&userInviteCodeIdColCount)
+	if userInviteCodeIdColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE users ADD COLUMN invite_code_id INTEGER DEFAULT 0"); err != nil {
+			return fmt.Errorf("添加 users.invite_code_id 列失败: %w", err)
+		}
+	}
+	_, _ = db.Exec("CREATE INDEX IF NOT EXISTS idx_users_invite_code_id ON users (invite_code_id)")
+
 	// 初始化 FTS5 全文搜索表与触发器 (容错处理)
 	ftsSchema := `
 	CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(

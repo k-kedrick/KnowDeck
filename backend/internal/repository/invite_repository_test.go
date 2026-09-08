@@ -50,7 +50,7 @@ func TestConsumeByHashAtomic(t *testing.T) {
 	}
 	defer db.Close()
 	repo := NewInviteRepository(db)
-	if _, err = repo.Create("consume", 1, 1, nil); err != nil {
+	if _, err = repo.Create("consume", "consume", 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	ok, err := repo.ConsumeByHash("consume")
@@ -72,7 +72,7 @@ func TestCreateMemberWithInvite(t *testing.T) {
 	defer db.Close()
 	invites := NewInviteRepository(db)
 	users := NewUserRepository(db)
-	if _, err := invites.Create("valid", 1, 1, nil); err != nil {
+	if _, err := invites.Create("valid", "valid", 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := users.CreateMemberWithInvite("member-one", "$2a$test-hash-placeholder", "valid"); err != nil {
@@ -96,7 +96,7 @@ func TestCreateMemberWithInviteRollsBackUsernameConflict(t *testing.T) {
 	defer db.Close()
 	invites := NewInviteRepository(db)
 	users := NewUserRepository(db)
-	if _, err := invites.Create("conflict", 1, 1, nil); err != nil {
+	if _, err := invites.Create("conflict", "conflict", 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec("INSERT INTO users (username, password_hash, nickname) VALUES ('alice', 'existing-hash', 'alice')"); err != nil {
@@ -124,16 +124,16 @@ func TestCreateMemberWithInviteRejectsUnavailableInvites(t *testing.T) {
 	}{
 		{hash: "unknown", setup: func() error { return nil }, wantUsedCount: -1},
 		{hash: "disabled", setup: func() error {
-			id, err := invites.Create("disabled", 1, 1, nil)
+			id, err := invites.Create("disabled", "disabled", 1, "", 1, nil)
 			if err != nil {
 				return err
 			}
 			_, err = invites.UpdateStatus(id, "disabled")
 			return err
 		}, wantUsedCount: 0},
-		{hash: "expired", setup: func() error { _, err := invites.Create("expired", 1, 1, &expired); return err }, wantUsedCount: 0},
+		{hash: "expired", setup: func() error { _, err := invites.Create("expired", "expired", 1, "", 1, &expired); return err }, wantUsedCount: 0},
 		{hash: "exhausted", setup: func() error {
-			if _, err := invites.Create("exhausted", 1, 1, nil); err != nil {
+			if _, err := invites.Create("exhausted", "exhausted", 1, "", 1, nil); err != nil {
 				return err
 			}
 			_, err := invites.ConsumeByHash("exhausted")
@@ -168,7 +168,7 @@ func TestCreateMemberWithInviteMaxUsesAndConcurrency(t *testing.T) {
 	defer db.Close()
 	invites := NewInviteRepository(db)
 	users := NewUserRepository(db)
-	if _, err := invites.Create("single-use", 1, 1, nil); err != nil {
+	if _, err := invites.Create("single-use", "single-use", 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := users.CreateMemberWithInvite("first", "hash", "single-use"); err != nil {
@@ -178,7 +178,7 @@ func TestCreateMemberWithInviteMaxUsesAndConcurrency(t *testing.T) {
 		t.Fatalf("second registration error = %v", err)
 	}
 
-	if _, err := invites.Create("concurrent", 1, 1, nil); err != nil {
+	if _, err := invites.Create("concurrent", "concurrent", 1, "", 1, nil); err != nil {
 		t.Fatal(err)
 	}
 	const attempts = 20

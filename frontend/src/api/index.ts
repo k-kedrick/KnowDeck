@@ -54,15 +54,30 @@ export interface AdminUserListResponse {
 
 export interface AdminInvite {
   id: number;
+  code?: string;
+  remark?: string;
   created_by: number;
   status: string;
   max_uses: number | null;
   used_count: number;
   expires_at: string | null;
+  created_at?: string;
 }
 
-export interface CreatedAdminInvite extends Omit<AdminInvite, 'created_by'> {
-  code: string;
+export interface CreatedAdminInvite {
+  id?: number;
+  code?: string;
+  codes?: string[];
+  count?: number;
+  max_uses?: number | null;
+  expires_at?: string | null;
+  status?: string;
+}
+
+export interface AdminInviteUserUsage {
+  id: number;
+  username: string;
+  created_at: string;
 }
 
 export interface Category {
@@ -329,11 +344,47 @@ export const api = {
       body: JSON.stringify({ password }),
     }),
   listAdminInvites: () => fetchJson<{ items: AdminInvite[] }>('/admin/invites'),
-  createAdminInvite: (data: { max_uses: number; expires_at?: string }) =>
+  createAdminInvite: (data: {
+    count?: number;
+    custom_code?: string;
+    max_uses?: number;
+    valid_days?: number;
+    expires_at?: string;
+    remark?: string;
+  }) =>
     fetchJson<CreatedAdminInvite>('/admin/invites', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateAdminInvite: (
+    id: number,
+    data: {
+      remark?: string;
+      max_uses?: number;
+      valid_days?: number;
+      status?: string;
+    }
+  ) =>
+    fetchJson<null>(`/admin/invites/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteAdminInvite: (id: number) =>
+    fetchJson<null>(`/admin/invites/${id}`, {
+      method: 'DELETE',
+    }),
+  batchDeleteAdminInvites: (ids: number[]) =>
+    fetchJson<{ deleted: number }>('/admin/invites/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+  batchUpdateAdminInvitesStatus: (ids: number[], status: 'active' | 'disabled') =>
+    fetchJson<{ updated: number }>('/admin/invites/batch-status', {
+      method: 'POST',
+      body: JSON.stringify({ ids, status }),
+    }),
+  getAdminInviteUsers: (id: number) =>
+    fetchJson<{ items: AdminInviteUserUsage[] }>(`/admin/invites/${id}/users`),
   disableAdminInvite: (id: number) =>
     fetchJson<Pick<AdminInvite, 'id' | 'status'>>(`/admin/invites/${id}/status`, {
       method: 'PATCH',

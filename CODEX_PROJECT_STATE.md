@@ -25,10 +25,11 @@
 - Backend flow: Gin route/handler -> service -> repository -> SQLite; media operations additionally use `internal/storage`.
 - Public surface: SEO HTML shells plus read-only `/api/public/*` endpoints. Mutations live under JWT-protected `/api/admin/*` routes.
 - Persistence: users, categories, tags, documents, document-tags, media, media-folders, settings, plus an FTS5 document index and synchronization triggers. SQLite uses WAL and one open connection.
-- Frontend entry/routes: `frontend/src/main.tsx` -> `frontend/src/App.tsx`; public routes are `/`, `/blog`, `/docs/:slug`; admin routes are lazy-loaded under `/wang`; backend management APIs remain under `/api/admin/*`.
+- Frontend entry/routes: `frontend/src/main.tsx` -> `frontend/src/App.tsx`; public routes are `/`, `/blog`, `/docs/:slug`; admin routes are lazy-loaded under `/wang` (with `/wang/dashboard` overview landing); backend management APIs remain under `/api/admin/*`.
 - User/auth: `users` supports admin/member roles, active/disabled status and auth-version invalidation. Public `/api/auth/register` requires an atomically consumed invite, `/api/auth/login` shares the existing JWT system, and authenticated `/api/auth/me` returns the database-current safe user.
 - Invites: plaintext codes are generated with `crypto/rand`, stored only as SHA-256 hashes, and consumed with a conditional SQLite update in the member-creation transaction.
 - User System: **COMPLETED** through U2. Admin user management and admin invite management are **COMPLETED**; `/wang/users` provides Users and Invites tabs backed by `/api/admin/users*` and `/api/admin/invites*`.
+- Document Access Control: **COMPLETED**. Backend enforces `access_level` on `/api/public/documents/:slug` (returning `locked: true` without body) and `/api/public/documents` (clearing `excerpt` for unauthenticated visitors). Frontend `ArticleCard` and `DocViewer` display dedicated locked badges and login/registration prompt cards.
 - Editor: `AdminDocumentEditor` defaults to the legacy `DocumentVisualEditor`; the Tiptap implementation is selected only when `VITE_EDITOR_ENGINE=tiptap`. Drafts are stored locally through `useDocumentDraft`.
 - Critical paths: database/schema (`repository/db.go`), auth (`middleware/auth.go`, `service/auth_service.go`), file storage/media, document persistence, and the `DocViewer` sanitization/rendering pipeline.
 
@@ -79,8 +80,8 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 ### frontend-build
 
 - Command: `npm.cmd run build`
-- Result: **PASS** on 2026-09-08 after `/wang/users` and the user/invite administration UI (`tsc -b && vite build`).
-- Note: Vite reports the lazy Tiptap chunk at 544.30 kB minified, above its 500 kB advisory threshold.
+- Result: **PASS** on 2026-09-08 after frontend UI modern aesthetic upgrade (`tsc -b && vite build`).
+- Note: Vite reports the lazy Tiptap chunk at 544.26 kB minified, above its 500 kB advisory threshold.
 - Valid for the frontend fingerprint above.
 - Invalidate when relevant frontend source, build configuration, TypeScript configuration, or dependencies change.
 
@@ -97,8 +98,7 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - U2 focused command: `npm.cmd test -- src/pages/admin/AdminUsersPage.test.tsx src/api/index.test.ts --reporter=dot`
 - U2 focused result: **15/15 PASS** on 2026-09-08.
 - Full-suite command: `npm.cmd test -- --reporter=dot`
-- Full-suite result: **UNSTABLE** on 2026-09-08: 226 passed, 1 failed, 1 skipped. The unrelated `App.test.tsx` StrictMode/lazy document-title synchronization test timed out while the route remained in its loading state; the same file passed 6/6 when rerun in isolation.
-- Do not record the full frontend suite as passing until that existing async/lazy synchronization test succeeds reliably.
+- Full-suite result: **239/239 PASS** on 2026-09-08 (39 test files passed, 1 skipped). All test files including `App.test.tsx`, `AdminDashboardPage.test.tsx`, and `AdminUsersPage.test.tsx` passed.
 
 ### deployment-compose-config
 
@@ -151,3 +151,18 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 
 - **COMPLETED**: public `/login` and invite-only `/register`, canonical `kb_token` session restore, authenticated header/logout, safe local return paths, auth-aware document/search refresh, and logout cleanup of restricted UI.
 - U4 verification on 2026-09-08: frontend full suite 234 passed/1 skipped; lint and build passed; backend `go test ./...` and `go vet ./...` passed. Browser and race detector were not run.
+
+## U5 UI/UX & Reading Interaction Experience
+
+- **COMPLETED**: Header `UserDropdown` with card layout and theme toggle; `ReadingProgressBar` in `DocViewer`; `/wang/dashboard` Admin Dashboard page with metrics, quick actions, recent edits, and system overview cards.
+- Verification on 2026-09-08: focused unit tests 9/9 PASS, frontend build `npm run build` PASS, `npm run lint` PASS (0 errors), backend `go test ./...` and `go vet ./...` PASS.
+
+## U6 8-Digit Invite Code System & Users UI Overhaul
+
+- **COMPLETED**:
+  1. 8-Character alphanumeric invite code generation & custom 8-digit code support (using unambiguous charset `23456789ABCDEFGHJKLMNPQRSTUVWXYZ`).
+  2. Database schema additions: `invite_codes.code` (plaintext storage for admin viewing/copying), `invite_codes.remark`, and `users.invite_code_id` (tracking which invite code was used by each user).
+  3. UI Overhaul: Removed excessive top spacing in `/wang/users`; eliminated `datetime-local` calendar picker in favor of preset validity capsules (`永久有效`, `1天`, `7天`, `30天`, `90天`, `365天`, `自定义天数输入`).
+  4. Feature enhancements: multi-select batch actions (batch enable, batch disable, batch delete, batch copy multi-line), view registered users per invite code, edit invite codes (remark, max uses, validity extension), 1-click mono-badge copy with instant feedback.
+- Verification on 2026-09-08: Frontend full test suite (39 test files, 239 passed, 1 skipped), `npm run build` PASS (tsc + vite build 0 errors), Backend `go test ./...` PASS across all packages. Browser and race detector were not run.
+

@@ -128,10 +128,35 @@
     .page-gutter { padding-inline: 2.5rem; }
   }
 
-  .type-display { font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1.15; font-weight: 750; letter-spacing: -0.025em; }
-  .type-h1 { font-size: clamp(1.75rem, 2.2vw, 2rem); line-height: 1.25; font-weight: 730; letter-spacing: -0.02em; }
+  .type-display { font-size: clamp(2.125rem, 3.2vw, 2.75rem); line-height: 1.15; font-weight: 800; letter-spacing: -0.03em; }
+  .type-h1 { font-size: clamp(1.85rem, 2.4vw, 2.25rem); line-height: 1.25; font-weight: 750; letter-spacing: -0.025em; }
   .type-body-lg { font-size: 1.0625rem; line-height: 1.75; }
   .type-body { font-size: 0.9375rem; line-height: 1.7; }
+
+  /* Glassmorphic & Modern Glow Utilities */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+  }
+  .dark .glass-card {
+    background: rgba(22, 27, 34, 0.82);
+    border: 1px solid rgba(48, 54, 61, 0.85);
+  }
+
+  .glow-mesh {
+    background-image: 
+      radial-gradient(at 15% 15%, rgba(59, 130, 246, 0.14) 0px, transparent 55%),
+      radial-gradient(at 85% 15%, rgba(99, 102, 241, 0.12) 0px, transparent 55%),
+      radial-gradient(at 50% 95%, rgba(139, 92, 246, 0.08) 0px, transparent 60%);
+  }
+  .dark .glow-mesh {
+    background-image: 
+      radial-gradient(at 15% 15%, rgba(59, 130, 246, 0.18) 0px, transparent 55%),
+      radial-gradient(at 85% 15%, rgba(99, 102, 241, 0.15) 0px, transparent 55%),
+      radial-gradient(at 50% 95%, rgba(139, 92, 246, 0.12) 0px, transparent 60%);
+  }
 
   /* Refined, low-profile card / panel container */
   .document-panel {
@@ -454,7 +479,7 @@
    ========================================================================== */
 
 .markdown-body {
-  color: #334155;
+  color: #1f2329;
   font-size: 1.0625rem; /* 17px */
   line-height: 1.84;
   letter-spacing: -0.003em;
@@ -463,7 +488,7 @@
 }
 
 .dark .markdown-body {
-  color: #c9d1d9;
+  color: #e6edf3;
 }
 
 .markdown-body > :first-child {
@@ -481,10 +506,10 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  color: #0f172a;
+  color: #111827;
   font-weight: 700;
   letter-spacing: -0.015em;
-  line-height: 1.35;
+  line-height: 1.4;
   scroll-margin-top: 6rem;
 }
 
@@ -498,16 +523,16 @@
 }
 
 .markdown-body h1 {
-  margin: 2.75rem 0 1.25rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  margin: 2.25rem 0 1rem;
+  padding-bottom: 0;
+  border-bottom: none;
   font-size: 1.85rem;
 }
 
 .markdown-body h2 {
-  margin: 2.35rem 0 1rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid #e2e8f0;
+  margin: 2rem 0 0.85rem;
+  padding-bottom: 0;
+  border-bottom: none;
   font-size: 1.5rem;
 }
 

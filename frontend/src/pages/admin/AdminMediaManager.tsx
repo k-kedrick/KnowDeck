@@ -390,9 +390,9 @@ export const AdminMediaManager: React.FC = () => {
         {/* ================= 1. Left Sidebar: Folder Navigation + Stats Card ================= */}
         <aside className="w-full lg:w-64 xl:w-72 shrink-0 lg:sticky lg:top-20 space-y-4">
           {/* Card 1: 文件夹导航 */}
-          <div className="rounded-ds-lg border border-border-subtle bg-surface shadow-xs p-3.5 space-y-3">
+          <div className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 p-4 shadow-xs backdrop-blur-md space-y-3.5">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border-subtle pb-2.5">
+            <div className="flex items-center justify-between border-b border-border-subtle/80 pb-2.5">
               <div className="flex items-center space-x-2 text-xs font-bold text-text-primary">
                 <FolderOpen className="w-4 h-4 text-brand" />
                 <span>资源文件夹</span>
@@ -404,7 +404,7 @@ export const AdminMediaManager: React.FC = () => {
                   setNewFolderName('');
                   setShowCreateModal(true);
                 }}
-                className="inline-flex items-center space-x-1 text-xs text-brand hover:text-brand-hover p-1 rounded hover:bg-brand-soft transition"
+                className="inline-flex items-center space-x-1 text-xs text-brand hover:text-brand-hover p-1 rounded-lg hover:bg-brand/10 transition"
                 title="新建文件夹"
                 aria-label="新建文件夹"
               >
@@ -414,19 +414,19 @@ export const AdminMediaManager: React.FC = () => {
 
             {/* Quick search folders */}
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-text-tertiary" />
               <input
                 type="text"
                 value={folderFilterQuery}
                 onChange={(e) => setFolderFilterQuery(e.target.value)}
                 placeholder="筛选文件夹..."
-                className="w-full rounded-md border border-border-subtle bg-slate-50/70 dark:bg-slate-900/50 pl-8 pr-7 py-1.5 text-xs text-text-primary outline-none focus:border-brand transition"
+                className="w-full rounded-xl border border-border-default/80 bg-surface pl-8 pr-7 py-1.5 text-xs text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
               {folderFilterQuery && (
                 <button
                   type="button"
                   onClick={() => setFolderFilterQuery('')}
-                  className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="absolute right-2 top-2 text-text-tertiary hover:text-text-primary"
                   title="清空筛选"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -442,7 +442,7 @@ export const AdminMediaManager: React.FC = () => {
                   setSelectedFolderId(null);
                   setPage(1);
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-xs transition ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
                   selectedFolderId === null
                     ? 'bg-brand text-white font-semibold shadow-xs'
                     : 'text-text-primary hover:bg-surface-subtle font-medium'
@@ -453,7 +453,7 @@ export const AdminMediaManager: React.FC = () => {
                   <span>全部资源</span>
                 </span>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-mono ${
-                  selectedFolderId === null ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-text-tertiary'
+                  selectedFolderId === null ? 'bg-white/20 text-white' : 'bg-surface-subtle text-text-tertiary'
                 }`}>
                   {totalMediaCount}
                 </span>
@@ -465,18 +465,18 @@ export const AdminMediaManager: React.FC = () => {
                   setSelectedFolderId(0);
                   setPage(1);
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-xs transition ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
                   selectedFolderId === 0
                     ? 'bg-brand text-white font-semibold shadow-xs'
                     : 'text-text-primary hover:bg-surface-subtle font-medium'
                 }`}
               >
                 <span className="flex items-center space-x-2 truncate">
-                  <Folder className={`w-4 h-4 shrink-0 ${selectedFolderId === 0 ? 'text-white' : 'text-slate-400'}`} />
+                  <Folder className={`w-4 h-4 shrink-0 ${selectedFolderId === 0 ? 'text-white' : 'text-text-tertiary'}`} />
                   <span>未分类资源</span>
                 </span>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-mono ${
-                  selectedFolderId === 0 ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-text-tertiary'
+                  selectedFolderId === 0 ? 'bg-white/20 text-white' : 'bg-surface-subtle text-text-tertiary'
                 }`}>
                   {unclassifiedCount}
                 </span>
@@ -484,21 +484,21 @@ export const AdminMediaManager: React.FC = () => {
             </div>
 
             {/* Document Exclusive Folders Section */}
-            <div className="space-y-1.5 pt-2 border-t border-border-subtle">
+            <div className="space-y-1.5 pt-2 border-t border-border-subtle/80">
               <div className="px-1 flex items-center justify-between text-[11px] font-semibold text-text-tertiary tracking-wider">
                 <span className="flex items-center space-x-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-blue-500" />
+                  <BookOpen className="w-3.5 h-3.5 text-brand" />
                   <span>文档专属目录</span>
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 font-mono">
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-surface-subtle font-mono">
                   {docFolders.length}
                 </span>
               </div>
 
               {foldersLoading ? (
-                <div className="py-2.5 text-center text-xs text-slate-400 animate-pulse">加载目录中...</div>
+                <div className="py-2.5 text-center text-xs text-text-tertiary animate-pulse">加载目录中...</div>
               ) : docFolders.length === 0 ? (
-                <div className="py-2.5 px-2 text-center text-[11px] text-text-tertiary bg-slate-50/50 dark:bg-slate-900/30 rounded-md border border-dashed border-border-subtle">
+                <div className="py-2.5 px-2 text-center text-[11px] text-text-tertiary bg-surface-subtle/50 rounded-xl border border-dashed border-border-subtle/80">
                   {folderFilterQuery ? '无匹配文档' : '在文档中上传图片将自动建夹'}
                 </div>
               ) : (
@@ -509,14 +509,14 @@ export const AdminMediaManager: React.FC = () => {
             </div>
 
             {/* Custom Folders Section */}
-            <div className="space-y-1.5 pt-2 border-t border-border-subtle">
+            <div className="space-y-1.5 pt-2 border-t border-border-subtle/80">
               <div className="px-1 flex items-center justify-between text-[11px] font-semibold text-text-tertiary tracking-wider">
                 <span className="flex items-center space-x-1.5">
                   <Folder className="w-3.5 h-3.5 text-amber-500" />
                   <span>自定义文件夹</span>
                 </span>
                 <div className="flex items-center space-x-1">
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 font-mono">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-surface-subtle font-mono">
                     {customFolders.length}
                   </span>
                   <button
@@ -534,7 +534,7 @@ export const AdminMediaManager: React.FC = () => {
               </div>
 
               {foldersLoading ? (
-                <div className="py-2 text-center text-xs text-slate-400 animate-pulse">加载中...</div>
+                <div className="py-2 text-center text-xs text-text-tertiary animate-pulse">加载中...</div>
               ) : customFolders.length === 0 ? (
                 <button
                   type="button"
@@ -542,7 +542,7 @@ export const AdminMediaManager: React.FC = () => {
                     setNewFolderName('');
                     setShowCreateModal(true);
                   }}
-                  className="w-full py-2 px-2 text-center text-[11px] text-brand hover:bg-brand-soft rounded-md border border-dashed border-border-subtle transition flex items-center justify-center space-x-1"
+                  className="w-full py-2 px-2 text-center text-[11px] text-brand hover:bg-brand/10 rounded-xl border border-dashed border-border-subtle/80 transition flex items-center justify-center space-x-1"
                 >
                   <Plus className="w-3 h-3" />
                   <span>{folderFilterQuery ? '无匹配，新建此文件夹' : '新建自定义文件夹'}</span>
@@ -556,23 +556,23 @@ export const AdminMediaManager: React.FC = () => {
           </div>
 
           {/* Card 2: 资源库概况与保障卡片 */}
-          <div className="rounded-ds-lg border border-border-subtle bg-surface shadow-xs p-3.5 space-y-2.5 text-xs">
+          <div className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 p-4 shadow-xs backdrop-blur-md space-y-3 text-xs">
             <div className="flex items-center space-x-2 text-text-primary font-bold">
-              <HardDrive className="w-3.5 h-3.5 text-slate-500" />
+              <HardDrive className="w-3.5 h-3.5 text-brand" />
               <span>资源库概况</span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-border-subtle">
+              <div className="p-2.5 rounded-xl bg-surface border border-border-subtle/80">
                 <div className="text-text-tertiary">总资源数</div>
                 <div className="font-bold text-sm text-text-primary font-mono mt-0.5">{totalMediaCount}</div>
               </div>
-              <div className="p-2 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-border-subtle">
+              <div className="p-2.5 rounded-xl bg-surface border border-border-subtle/80">
                 <div className="text-text-tertiary">分类文件夹</div>
                 <div className="font-bold text-sm text-text-primary font-mono mt-0.5">{folders.length}</div>
               </div>
             </div>
-            <div className="rounded-md bg-blue-50/70 dark:bg-blue-950/40 p-2.5 text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed flex items-start space-x-2 border border-blue-100 dark:border-blue-900/50">
-              <Sparkles className="w-3.5 h-3.5 shrink-0 text-blue-500 mt-0.5" />
+            <div className="rounded-xl bg-blue-500/10 p-3 text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed flex items-start space-x-2 border border-blue-500/20">
+              <Sparkles className="w-3.5 h-3.5 shrink-0 text-brand mt-0.5" />
               <span>在编辑文档时粘贴或导入的图片将自动落盘转存，并归档至该文档的专属文件夹中。</span>
             </div>
           </div>
@@ -581,7 +581,7 @@ export const AdminMediaManager: React.FC = () => {
         {/* ================= 2. Right Media Grid Workspace ================= */}
         <div className="flex-1 min-w-0 space-y-4">
           {/* Breadcrumb Path & Folder Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle/80 pb-4">
             <div className="space-y-1">
               <div className="flex items-center space-x-2 text-xs text-text-tertiary">
                 <button
@@ -594,7 +594,7 @@ export const AdminMediaManager: React.FC = () => {
                 <ChevronRight className="w-3 h-3" />
                 {currentFolder.type === 'doc' && (
                   <>
-                    <span className="text-blue-600 dark:text-blue-400 font-medium">文档专属</span>
+                    <span className="text-brand font-medium">文档专属</span>
                     <ChevronRight className="w-3 h-3" />
                   </>
                 )}
@@ -608,10 +608,10 @@ export const AdminMediaManager: React.FC = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <h2 className="text-base font-bold text-text-primary flex items-center space-x-2">
-                  {currentFolder.type === 'doc' && <BookOpen className="w-5 h-5 text-blue-500 shrink-0" />}
+                  {currentFolder.type === 'doc' && <BookOpen className="w-5 h-5 text-brand shrink-0" />}
                   {currentFolder.type === 'custom' && <Folder className="w-5 h-5 text-amber-500 shrink-0" />}
                   {currentFolder.type === 'all' && <Layers className="w-5 h-5 text-indigo-500 shrink-0" />}
-                  {currentFolder.type === 'unclassified' && <Folder className="w-5 h-5 text-slate-400 shrink-0" />}
+                  {currentFolder.type === 'unclassified' && <Folder className="w-5 h-5 text-text-tertiary shrink-0" />}
                   <span>{currentFolder.name}</span>
                   <span className="text-xs font-normal text-text-tertiary">
                     ({loading ? '加载中…' : `共 ${total} 项`})
@@ -622,7 +622,7 @@ export const AdminMediaManager: React.FC = () => {
                     href={`/wang/documents/${currentFolder.document_id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-[11px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 transition shadow-xs"
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-brand bg-brand/10 hover:bg-brand/20 transition shadow-xs"
                     title="在文章编辑器中打开此文档"
                   >
                     <span>打开关联文档</span>
@@ -630,7 +630,7 @@ export const AdminMediaManager: React.FC = () => {
                   </a>
                 )}
               </div>
-              <p className="text-[11px] text-text-tertiary">{currentFolder.desc}</p>
+              <p className="text-xs text-text-tertiary">{currentFolder.desc}</p>
             </div>
 
             {/* Quick Action in this folder */}
@@ -643,9 +643,9 @@ export const AdminMediaManager: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => startRenaming(target)}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-md border border-border-default bg-surface hover:bg-slate-50 dark:hover:bg-slate-800 text-text-primary transition"
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-border-default/80 bg-surface hover:bg-surface-subtle text-text-primary transition shadow-xs font-medium"
                     >
-                      <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                      <Edit2 className="w-3.5 h-3.5 text-text-tertiary" />
                       <span>重命名文件夹</span>
                     </button>
                   );
@@ -655,9 +655,9 @@ export const AdminMediaManager: React.FC = () => {
           </div>
 
           {/* Search & Filter Toolbar */}
-          <section aria-label="媒体筛选" className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(14rem,1fr)_14rem]">
+          <section aria-label="媒体筛选" className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/80 p-4 shadow-xs backdrop-blur-md grid grid-cols-1 gap-3 sm:grid-cols-[minmax(14rem,1fr)_14rem]">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-3 text-text-tertiary" />
               <input
                 type="text"
                 value={keyword}
@@ -667,7 +667,7 @@ export const AdminMediaManager: React.FC = () => {
                 }}
                 placeholder={`在 ${currentFolder.name} 中搜索文件名...`}
                 aria-label="搜索媒体文件"
-                className="min-h-10 w-full rounded-ds-md border border-border-default bg-surface pl-9 pr-3 text-xs text-text-primary outline-none focus:ring-2 focus:ring-brand"
+                className="min-h-10 w-full rounded-xl border border-border-default/80 bg-surface pl-9 pr-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
 
@@ -678,7 +678,7 @@ export const AdminMediaManager: React.FC = () => {
                 setPage(1);
               }}
               aria-label="按媒体类型筛选"
-              className="min-h-10 rounded-ds-md border border-border-default bg-surface px-3 text-xs text-text-primary outline-none focus:ring-2 focus:ring-brand"
+              className="min-h-10 rounded-xl border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
             >
               <option value="">所有文件类型 (图片 + 视频 + 文件)</option>
               <option value="image">图片 (Image)</option>
@@ -689,10 +689,10 @@ export const AdminMediaManager: React.FC = () => {
 
           {/* Media Grid Cards */}
           {loading ? (
-            <div className="text-center py-20 text-xs text-slate-400 animate-pulse">加载媒体库中...</div>
+            <div className="text-center py-20 text-xs text-text-tertiary animate-pulse">加载媒体库中...</div>
           ) : mediaList.length === 0 ? (
-            <div className="space-y-3 rounded-ds-lg border border-dashed border-border-subtle py-20 text-center text-sm text-text-tertiary bg-surface/50">
-              <ImageIcon className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
+            <div className="space-y-3 rounded-2xl border border-dashed border-border-subtle/80 py-20 text-center text-sm text-text-tertiary bg-surface-elevated/40">
+              <ImageIcon className="mx-auto h-10 w-10 text-text-tertiary/40" />
               <div>
                 <p className="font-semibold text-text-primary">此文件夹暂无资源</p>
                 <p className="mt-1 text-xs text-text-tertiary">
@@ -701,31 +701,46 @@ export const AdminMediaManager: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
               {mediaList.map((m) => {
                 const folderOfMedia = folders.find((f) => f.id === m.folder_id);
+                const ext = m.filename.split('.').pop()?.toUpperCase() || m.mime_type.split('/').pop()?.toUpperCase() || 'FILE';
                 return (
                   <div
                     key={m.id}
-                    className="group flex min-w-0 flex-col overflow-hidden rounded-ds-md border border-border-subtle bg-surface transition hover:border-border-default shadow-xs hover:shadow-sm"
+                    className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface-elevated/95 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg shadow-xs"
                   >
                     {/* Media Preview Box */}
-                    <div className="aspect-[4/3] bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center relative overflow-hidden">
+                    <div className="aspect-[4/3] bg-surface-subtle/90 flex items-center justify-center relative overflow-hidden group/thumb">
                       {m.media_type === 'image' ? (
-                        <img src={m.url} alt={m.original_name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        <img
+                          src={m.url}
+                          alt={m.original_name}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover/thumb:scale-108"
+                        />
                       ) : m.media_type === 'video' ? (
-                        <div className="flex flex-col items-center justify-center text-blue-500 space-y-1">
-                          <Video className="w-8 h-8" />
-                          <span className="text-[10px] font-semibold uppercase">{m.mime_type}</span>
+                        <div className="flex flex-col items-center justify-center text-brand space-y-1.5 p-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 border border-brand/20">
+                            <Video className="w-5 h-5 text-brand" />
+                          </div>
+                          <span className="text-[10px] font-semibold font-mono uppercase text-text-secondary">{ext}</span>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center text-slate-400 space-y-1">
-                          <FileText className="w-8 h-8" />
-                          <span className="text-[10px] font-semibold uppercase">{m.mime_type}</span>
+                        <div className="flex flex-col items-center justify-center text-text-tertiary space-y-1.5 p-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-elevated border border-border-subtle">
+                            <FileText className="w-5 h-5 text-text-tertiary" />
+                          </div>
+                          <span className="text-[10px] font-semibold font-mono uppercase text-text-secondary">{ext}</span>
                         </div>
                       )}
 
-                      {/* Containment Badge */}
+                      {/* Format Badge */}
+                      <span className="absolute top-2 left-2 rounded-md bg-black/60 backdrop-blur-md px-1.5 py-0.5 font-mono text-[9px] font-bold text-white uppercase shadow-xs">
+                        {ext}
+                      </span>
+
+                      {/* Folder Badge */}
                       {folderOfMedia ? (
                         <button
                           type="button"
@@ -734,18 +749,18 @@ export const AdminMediaManager: React.FC = () => {
                             setSelectedFolderId(folderOfMedia.id);
                             setPage(1);
                           }}
-                          className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 hover:bg-black/80 backdrop-blur-sm text-[10px] font-medium text-white max-w-[85%] truncate transition flex items-center space-x-1"
+                          className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-black/65 hover:bg-black/85 backdrop-blur-md text-[10px] font-medium text-white max-w-[85%] truncate transition flex items-center space-x-1 shadow-xs"
                           title={`所属文件夹: ${folderOfMedia.name}，点击筛选此文件夹`}
                         >
                           {folderOfMedia.document_id > 0 ? (
-                            <BookOpen className="w-3 h-3 text-blue-400 shrink-0" />
+                            <BookOpen className="w-3 h-3 text-blue-300 shrink-0" />
                           ) : (
-                            <Folder className="w-3 h-3 text-amber-400 shrink-0" />
+                            <Folder className="w-3 h-3 text-amber-300 shrink-0" />
                           )}
                           <span className="truncate">{folderOfMedia.name}</span>
                         </button>
                       ) : (
-                        <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[10px] text-slate-300">
+                        <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-black/50 backdrop-blur-md text-[10px] text-white/80">
                           未分类
                         </span>
                       )}
@@ -754,8 +769,8 @@ export const AdminMediaManager: React.FC = () => {
                         href={m.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg text-xs opacity-0 group-hover:opacity-100 transition"
-                        title="查看原图/原文件"
+                        className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center bg-black/60 hover:bg-black/90 text-white rounded-lg opacity-0 group-hover/thumb:opacity-100 transition shadow-xs"
+                        title="在新窗口查看原文件"
                         aria-label={`查看 ${m.original_name}`}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -765,10 +780,10 @@ export const AdminMediaManager: React.FC = () => {
                     {/* Card Info Footer */}
                     <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
                       <div>
-                        <div className="font-semibold text-xs text-slate-900 dark:text-white truncate" title={m.original_name}>
+                        <div className="font-semibold text-xs text-text-primary truncate" title={m.original_name}>
                           {m.original_name}
                         </div>
-                        <div className="text-[11px] text-slate-400 flex items-center justify-between mt-1 font-mono">
+                        <div className="text-[11px] text-text-tertiary flex items-center justify-between mt-1 font-mono">
                           <span>{formatSize(m.size)}</span>
                           <span className="flex items-center space-x-1">
                             <Calendar className="w-3 h-3 text-emerald-500 shrink-0" />
@@ -785,11 +800,11 @@ export const AdminMediaManager: React.FC = () => {
                       </div>
 
                       {/* Card Action Buttons */}
-                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1">
+                      <div className="pt-2 border-t border-border-subtle/80 flex items-center justify-between gap-1">
                         <button
                           type="button"
                           onClick={() => handleCopyMarkdown(m)}
-                          className="inline-flex items-center space-x-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-md text-[11px] font-medium transition"
+                          className="inline-flex items-center space-x-1 px-2.5 py-1 bg-surface hover:bg-surface-subtle border border-border-default/80 text-text-secondary hover:text-text-primary rounded-lg text-[11px] font-medium transition shadow-xs"
                           title="复制 Markdown 引用语法"
                         >
                           {copiedId === m.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
@@ -803,7 +818,7 @@ export const AdminMediaManager: React.FC = () => {
                               setMovingMedia(m);
                               setTargetFolderId(m.folder_id || 0);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-md transition"
+                            className="p-1.5 text-text-tertiary hover:text-brand hover:bg-brand/10 rounded-lg transition"
                             title="移动到其他文件夹"
                             aria-label="移动到其他文件夹"
                           >
@@ -816,7 +831,7 @@ export const AdminMediaManager: React.FC = () => {
                               setDeletingMedia(m);
                               setDeleteError(null);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition"
+                            className="p-1.5 text-text-tertiary hover:text-red-600 hover:bg-red-500/10 rounded-lg transition"
                             title="删除媒体文件"
                             aria-label={`删除媒体 ${m.original_name}`}
                           >
@@ -830,6 +845,7 @@ export const AdminMediaManager: React.FC = () => {
               })}
             </div>
           )}
+
 
           {/* Pagination */}
           {total > pageSize && (
@@ -1114,7 +1130,7 @@ export const AdminMediaManager: React.FC = () => {
 
     if (isEditing) {
       return (
-        <div key={f.id} className="flex items-center space-x-1 p-1 rounded-md bg-brand/5 border border-brand">
+        <div key={f.id} className="flex items-center space-x-1 p-1 rounded-xl bg-brand/10 border border-brand">
           <input
             type="text"
             autoFocus
@@ -1124,14 +1140,14 @@ export const AdminMediaManager: React.FC = () => {
               if (e.key === 'Enter') handleSaveRename(f.id);
               if (e.key === 'Escape') setRenamingFolderId(null);
             }}
-            className="flex-1 bg-transparent px-1.5 py-0.5 text-xs text-text-primary outline-none"
+            className="flex-1 bg-transparent px-2 py-1 text-xs text-text-primary outline-none"
             maxLength={50}
           />
           <button
             type="button"
             onClick={() => handleSaveRename(f.id)}
             disabled={isRenaming}
-            className="p-1 text-brand hover:text-brand-hover"
+            className="p-1 text-brand hover:text-brand-hover rounded-lg transition"
             title="保存"
           >
             <Check className="w-3.5 h-3.5" />
@@ -1139,7 +1155,7 @@ export const AdminMediaManager: React.FC = () => {
           <button
             type="button"
             onClick={() => setRenamingFolderId(null)}
-            className="p-1 text-slate-400 hover:text-slate-600"
+            className="p-1 text-text-tertiary hover:text-text-primary rounded-lg transition"
             title="取消"
           >
             <X className="w-3.5 h-3.5" />
@@ -1151,9 +1167,9 @@ export const AdminMediaManager: React.FC = () => {
     return (
       <div
         key={f.id}
-        className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition ${
+        className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all ${
           isSelected
-            ? 'bg-brand/10 text-brand font-semibold shadow-xs'
+            ? 'bg-brand text-white font-semibold shadow-xs'
             : 'text-text-secondary hover:text-text-primary hover:bg-surface-subtle font-medium'
         }`}
       >
@@ -1166,9 +1182,9 @@ export const AdminMediaManager: React.FC = () => {
           className="flex-1 flex items-center space-x-2 text-left min-w-0 pr-2"
         >
           {f.document_id > 0 ? (
-            <BookOpen className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-brand' : 'text-blue-500'}`} />
+            <BookOpen className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-brand'}`} />
           ) : (
-            <Folder className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-brand' : 'text-amber-500'}`} />
+            <Folder className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-amber-500'}`} />
           )}
           <span className="truncate" title={f.name}>
             {f.name}
@@ -1177,8 +1193,8 @@ export const AdminMediaManager: React.FC = () => {
 
         {/* Action icons appear on hover */}
         <div className="flex items-center space-x-1 shrink-0">
-          <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-mono group-hover:hidden ${
-            isSelected ? 'bg-brand/20 text-brand' : 'bg-slate-100 dark:bg-slate-800 text-text-tertiary'
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-mono group-hover:hidden ${
+            isSelected ? 'bg-white/20 text-white' : 'bg-surface-subtle text-text-tertiary'
           }`}>
             {f.media_count}
           </span>
@@ -1187,7 +1203,7 @@ export const AdminMediaManager: React.FC = () => {
             <button
               type="button"
               onClick={() => startRenaming(f)}
-              className="p-1 text-slate-400 hover:text-brand transition rounded"
+              className={`p-1 transition rounded-lg ${isSelected ? 'text-white/80 hover:text-white hover:bg-white/20' : 'text-text-tertiary hover:text-brand hover:bg-brand/10'}`}
               title="重命名此文件夹"
               aria-label={`重命名 ${f.name}`}
             >
@@ -1196,7 +1212,7 @@ export const AdminMediaManager: React.FC = () => {
             <button
               type="button"
               onClick={() => setDeletingFolder(f)}
-              className="p-1 text-slate-400 hover:text-red-500 transition rounded"
+              className={`p-1 transition rounded-lg ${isSelected ? 'text-white/80 hover:text-white hover:bg-white/20' : 'text-text-tertiary hover:text-red-500 hover:bg-red-500/10'}`}
               title="删除此文件夹"
               aria-label={`删除文件夹 ${f.name}`}
             >
@@ -1207,4 +1223,5 @@ export const AdminMediaManager: React.FC = () => {
       </div>
     );
   }
+
 };

@@ -142,6 +142,15 @@ func (h *PublicHandler) ListDocuments(c *gin.Context) {
 		return
 	}
 
+	user, _ := c.Get(middleware.ContextUserKey)
+	currentUser, _ := user.(*model.User)
+
+	for _, doc := range list {
+		if !service.CanReadDocument(doc, currentUser) {
+			doc.Excerpt = ""
+		}
+	}
+
 	response.SuccessPage(c, list, total, page, pageSize)
 }
 

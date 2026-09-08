@@ -16,7 +16,7 @@ import (
 	"knowledge-base/backend/internal/service"
 )
 
-func TestAdminInvitePlaintextIsCreateOnly(t *testing.T) {
+func TestAdminInviteManagement(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := &config.Config{DBPath: filepath.Join(t.TempDir(), "invites.db"), UploadDir: t.TempDir(), AdminUser: "admin", AdminPass: "test-admin-password", SiteName: "x", JWTSecret: "secret", JWTExpireHrs: 1}
 	db, err := repository.InitDB(cfg)
@@ -32,7 +32,12 @@ func TestAdminInvitePlaintextIsCreateOnly(t *testing.T) {
 	g.Use(middleware.AuthMiddleware(auth), middleware.RequireAdmin())
 	g.POST("/invites", h.Create)
 	g.GET("/invites", h.List)
+	g.PUT("/invites/:id", h.Update)
+	g.DELETE("/invites/:id", h.Delete)
 	g.PATCH("/invites/:id/status", h.Disable)
+	g.POST("/invites/batch-delete", h.BatchDelete)
+	g.POST("/invites/batch-status", h.BatchStatus)
+	g.GET("/invites/:id/users", h.GetUsers)
 	admin, _ := users.GetByUsername("admin")
 	token, _ := auth.GenerateToken(admin)
 
@@ -44,7 +49,7 @@ func TestAdminInvitePlaintextIsCreateOnly(t *testing.T) {
 		r.ServeHTTP(w, req)
 		return w
 	}
-	created := call(http.MethodPost, "/api/admin/invites", `{"max_uses":1}`)
+	created := call(http.MethodPost, "/api/admin/invites", `{"max_uses":5,"valid_days":7,"remark":"测试邀请码"}`)
 	if created.Code != http.StatusOK {
 		t.Fatalf("create: %d %s", created.Code, created.Body.String())
 	}
@@ -69,17 +74,35 @@ func TestAdminInvitePlaintextIsCreateOnly(t *testing.T) {
 	}
 	listData := listBody["data"].(map[string]any)
 	item := listData["items"].([]any)[0].(map[string]any)
-	for _, forbidden := range []string{"code", "code_hash", "invite_code", "token"} {
+	if item["code"] != plaintext {
+		t.Fatalf("expected code %s, got %v", plaintext, item["code"])
+	}
+	if item["remark"] != "测试邀请码" {
+		t.Fatalf("expected remark 测试邀请码, got %v", item["remark"])
+	}
+	for _, forbidden := range []string{"code_hash", "token"} {
 		if _, exists := item[forbidden]; exists {
 			t.Fatalf("invite list exposed %q", forbidden)
 		}
 	}
-	if strings.Contains(listed.Body.String(), plaintext) {
-		t.Fatal("invite plaintext reappeared in list response")
+
+	updated := call(http.MethodPut, fmt.Sprintf("/api/admin/invites/%d", inviteID), `{"max_uses":10,"remark":"更新备注"}`)
+	if updated.Code != http.StatusOK {
+		t.Fatalf("update: %d %s", updated.Code, updated.Body.String())
 	}
 
-	disabled := call(http.MethodPatch, fmt.Sprintf("/api/admin/invites/%d/status", inviteID), `{"status":"disabled"}`)
-	if disabled.Code != http.StatusOK {
-		t.Fatalf("disable: %d %s", disabled.Code, disabled.Body.String())
+	batchStatus := call(http.MethodPost, "/api/admin/invites/batch-status", fmt.Sprintf(`{"ids":[%d],"status":"disabled"}`, inviteID))
+	if batchStatus.Code != http.StatusOK {
+		t.Fatalf("batch status: %d %s", batchStatus.Code, batchStatus.Body.String())
+	}
+
+	getUsers := call(http.MethodGet, fmt.Sprintf("/api/admin/invites/%d/users", inviteID), "")
+	if getUsers.Code != http.StatusOK {
+		t.Fatalf("get users: %d %s", getUsers.Code, getUsers.Body.String())
+	}
+
+	batchDelete := call(http.MethodPost, "/api/admin/invites/batch-delete", fmt.Sprintf(`{"ids":[%d]}`, inviteID))
+	if batchDelete.Code != http.StatusOK {
+		t.Fatalf("batch delete: %d %s", batchDelete.Code, batchDelete.Body.String())
 	}
 }

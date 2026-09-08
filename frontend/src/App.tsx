@@ -24,6 +24,7 @@ const AdminTagManager = lazy(() => import('./pages/admin/AdminTagManager').then(
 const AdminMediaManager = lazy(() => import('./pages/admin/AdminMediaManager').then((module) => ({ default: module.AdminMediaManager })));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage').then((module) => ({ default: module.AdminSettingsPage })));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage').then((module) => ({ default: module.AdminUsersPage })));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage').then((module) => ({ default: module.AdminDashboardPage })));
 
 const RouteFallback = () => (
   <div className="flex min-h-[50vh] flex-1 items-center justify-center text-sm text-slate-500 dark:text-slate-400">加载中…</div>
@@ -145,7 +146,8 @@ export const App: React.FC = () => (
         <Route path="/wang/login" element={<AdminLoginPage />} />
         <Route path="/wang" element={<AdminAuthGuard />}>
           <Route element={<AdminLayout />}>
-            <Route index element={<Navigate to="/wang/documents" replace />} />
+            <Route index element={<Navigate to="/wang/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboardPage />} />
             <Route path="documents" element={<AdminDocumentList />} />
             <Route path="documents/new" element={<AdminDocumentEditorRoute />} />
             <Route path="documents/:id" element={<AdminDocumentEditorRoute />} />

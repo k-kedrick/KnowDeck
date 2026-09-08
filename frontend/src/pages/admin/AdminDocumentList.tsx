@@ -168,7 +168,7 @@ export const AdminDocumentList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 py-2">
       <AdminPageHeader
         icon={FileText}
         title="文档管理"
@@ -182,17 +182,17 @@ export const AdminDocumentList: React.FC = () => {
 
       {/* Action Alerts */}
       {actionError && (
-        <div role="alert" className="flex items-center gap-2 rounded-ds-md border border-red-200 bg-red-50 p-3 text-sm text-danger">
-          <AlertCircle className="w-4 h-4" />
+        <div role="alert" className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3.5 text-sm text-red-600 dark:text-red-400">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{actionError}</span>
         </div>
       )}
 
       {/* Filters Toolbar */}
-      <section aria-label="文档筛选" className="grid grid-cols-1 gap-3 border-b border-border-subtle pb-5 sm:grid-cols-2 xl:grid-cols-[minmax(15rem,1.5fr)_repeat(3,minmax(10rem,1fr))_auto]">
+      <section aria-label="文档筛选" className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/80 p-4 shadow-xs backdrop-blur-md grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(15rem,1.5fr)_repeat(3,minmax(10rem,1fr))_auto]">
         {/* Search */}
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-text-tertiary" />
           <input
             type="text"
             value={keyword}
@@ -202,7 +202,7 @@ export const AdminDocumentList: React.FC = () => {
             }}
             placeholder="搜索文档标题或摘要..."
             aria-label="搜索文档"
-            className="min-h-10 w-full rounded-ds-md border border-border-default bg-surface pl-9 pr-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand"
+            className="min-h-10 w-full rounded-xl border border-border-default/80 bg-surface pl-9 pr-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
         </div>
 
@@ -214,7 +214,7 @@ export const AdminDocumentList: React.FC = () => {
             setPage(1);
           }}
           aria-label="按状态筛选"
-          className="min-h-10 rounded-ds-md border border-border-default bg-surface px-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand"
+          className="min-h-10 rounded-xl border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
         >
           <option value="">所有状态 (草稿 + 已发布)</option>
           <option value="published">已发布 (Published)</option>
@@ -230,7 +230,7 @@ export const AdminDocumentList: React.FC = () => {
             setPage(1);
           }}
           aria-label="按分类筛选"
-          className="min-h-10 rounded-ds-md border border-border-default bg-surface px-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand"
+          className="min-h-10 rounded-xl border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
         >
           <option value={0}>所有分类</option>
           {categories.map((c) => (
@@ -253,7 +253,7 @@ export const AdminDocumentList: React.FC = () => {
             setSearchParams(nextParams, { replace: true });
             setPage(1);
           }}
-          className="min-h-10 rounded-ds-md border border-border-default bg-surface px-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand"
+          className="min-h-10 rounded-xl border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
           aria-label="按标签筛选"
         >
           <option value="">所有标签</option>
@@ -271,233 +271,238 @@ export const AdminDocumentList: React.FC = () => {
       </section>
 
       {/* Documents Table */}
-      <div className="overflow-x-auto rounded-ds-md border border-border-default bg-surface" tabIndex={0} aria-label="文档列表，可横向滚动">
-        <table className="min-w-[70rem] w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-500 uppercase">
-              <th className="px-4 py-3">文档标题 / Slug</th>
-              <th className="px-4 py-3">分类</th>
-              <th className="px-4 py-3">状态</th>
-              <th className="px-4 py-3">浏览量</th>
-              <th className="px-4 py-3">创建时间</th>
-              <th className="px-4 py-3">最后更新</th>
-              <th className="px-4 py-3 text-right">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-xs">
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                  <div className="inline-flex items-center space-x-2">
-                    <svg className="animate-spin h-4 w-4 text-blue-500" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>加载文档列表中...</span>
-                  </div>
-                </td>
+      <div className="overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 backdrop-blur-md shadow-xs" tabIndex={0} aria-label="文档列表，可横向滚动">
+        <div className="overflow-x-auto">
+          <table className="min-w-[70rem] w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-surface-subtle/70 border-b border-border-subtle/80 text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">
+                <th className="px-5 py-3.5">文档标题 / Slug</th>
+                <th className="px-4 py-3.5">分类</th>
+                <th className="px-4 py-3.5">状态与权限</th>
+                <th className="px-4 py-3.5">浏览量</th>
+                <th className="px-4 py-3.5">创建时间</th>
+                <th className="px-4 py-3.5">最后更新</th>
+                <th className="px-5 py-3.5 text-right">操作</th>
               </tr>
-            ) : documents.length === 0 && visibleLocalDrafts.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                  暂无匹配文档
-                </td>
-              </tr>
-            ) : (
-              <>
-              {visibleLocalDrafts.map((entry) => (
-                <tr key={entry.key} className="bg-blue-50/35 hover:bg-blue-50/70 dark:bg-blue-950/10 dark:hover:bg-blue-950/20 transition">
-                  <td className="px-4 py-3 max-w-xs">
-                    <div className="font-semibold text-slate-900 dark:text-white truncate">
-                      {entry.draft.title.trim() || '未命名文档'}
+            </thead>
+            <tbody className="divide-y divide-border-subtle/60 text-xs">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-text-tertiary">
+                    <div className="inline-flex items-center space-x-2">
+                      <svg className="animate-spin h-4 w-4 text-brand" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>加载文档列表中...</span>
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">尚未保存到服务器</div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[11px]">
-                      {categories.find((category) => category.id === entry.draft.categoryId)?.name || '未分类'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200/60 rounded-md text-[11px] font-medium">
-                      <Clock className="w-3 h-3" />
-                      <span>本地草稿</span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-400">—</td>
-                  <td className="px-4 py-3 text-slate-400">—</td>
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[11px] font-mono whitespace-nowrap">
-                    {new Date(entry.draft.updatedAt).toLocaleString('zh-CN', {
-                      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-                    })}
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button
-                      onClick={() => navigate(createNewDocumentDraftPath(entry.draft.localDraftId))}
-                      className="inline-flex items-center space-x-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md text-[11px] transition font-medium"
-                    >
-                      <Edit className="w-3 h-3" />
-                      <span>继续编辑</span>
-                    </button>
-                    <button
-                      onClick={() => setDiscardingLocalDraft(entry)}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded-md text-[11px] transition font-medium"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>放弃</span>
-                    </button>
                   </td>
                 </tr>
-              ))}
-              {documents.map((doc) => (
-                <tr key={doc.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/40 transition">
-                  {/* Title & Slug */}
-                  <td className="px-4 py-3 max-w-xs">
-                    <div className="flex items-center space-x-2">
-                      {doc.is_pinned && (
-                        <span title="已置顶">
-                          <Pin className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                        </span>
-                      )}
-                      <span className="font-semibold text-slate-900 dark:text-white truncate">
-                        {doc.title}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 font-mono truncate mt-0.5">
-                      /{doc.slug}
-                    </div>
+              ) : documents.length === 0 && visibleLocalDrafts.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-text-tertiary">
+                    暂无匹配文档
                   </td>
-
-                  {/* Category */}
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[11px]">
-                      {doc.category_name || '未分类'}
-                    </span>
-                  </td>
-
-                  {/* Status Badge */}
-                  <td className="px-4 py-3">
-                    {doc.status === 'published' ? (
-                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 rounded-md text-[11px] font-medium">
-                        <CheckCircle className="w-3 h-3" />
-                        <span>已发布</span>
+                </tr>
+              ) : (
+                <>
+                {visibleLocalDrafts.map((entry) => (
+                  <tr key={entry.key} className="bg-blue-50/30 hover:bg-blue-50/60 dark:bg-blue-950/20 dark:hover:bg-blue-950/35 transition-colors">
+                    <td className="px-5 py-3.5 max-w-xs">
+                      <div className="font-semibold text-text-primary truncate">
+                        {entry.draft.title.trim() || '未命名文档'}
+                      </div>
+                      <div className="text-[11px] text-text-tertiary mt-0.5">尚未保存到服务器</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-text-secondary">
+                      <span className="px-2.5 py-0.5 bg-surface-subtle border border-border-subtle/80 rounded-lg text-[11px] font-medium">
+                        {categories.find((category) => category.id === entry.draft.categoryId)?.name || '未分类'}
                       </span>
-                    ) : doc.status === 'archived' ? (
-                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border border-slate-200/60 rounded-md text-[11px] font-medium">
-                        <Archive className="w-3 h-3" />
-                        <span>已归档</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 rounded-md text-[11px] font-medium">
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 bg-blue-500/10 text-brand border border-blue-500/20 rounded-lg text-[11px] font-medium">
                         <Clock className="w-3 h-3" />
-                        <span>草稿</span>
+                        <span>本地草稿</span>
                       </span>
-                    )}
-                    <span className={`ml-2 inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${doc.access_level === 'authenticated' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{doc.access_level === 'authenticated' ? '登录可见' : '公开'}</span>
-                  </td>
+                    </td>
+                    <td className="px-4 py-3.5 text-text-tertiary">—</td>
+                    <td className="px-4 py-3.5 text-text-tertiary">—</td>
+                    <td className="px-4 py-3.5 text-text-secondary text-[11px] font-mono whitespace-nowrap">
+                      {new Date(entry.draft.updatedAt).toLocaleString('zh-CN', {
+                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-5 py-3.5 text-right space-x-2">
+                      <button
+                        onClick={() => navigate(createNewDocumentDraftPath(entry.draft.localDraftId))}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-surface hover:bg-surface-subtle border border-border-default/80 text-text-primary rounded-lg text-[11px] transition font-medium shadow-xs"
+                      >
+                        <Edit className="w-3 h-3 text-brand" />
+                        <span>继续编辑</span>
+                      </button>
+                      <button
+                        onClick={() => setDiscardingLocalDraft(entry)}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 rounded-lg text-[11px] transition font-medium"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>放弃</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {documents.map((doc) => (
+                  <tr key={doc.id} className="hover:bg-brand/5 transition-colors">
+                    {/* Title & Slug */}
+                    <td className="px-5 py-3.5 max-w-xs">
+                      <div className="flex items-center space-x-2">
+                        {doc.is_pinned && (
+                          <span title="已置顶">
+                            <Pin className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                          </span>
+                        )}
+                        <span className="font-semibold text-text-primary truncate">
+                          {doc.title}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-text-tertiary font-mono truncate mt-0.5">
+                        /{doc.slug}
+                      </div>
+                    </td>
 
-                  {/* Views */}
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono">
-                    <div className="flex items-center space-x-1">
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>{doc.views}</span>
-                    </div>
-                  </td>
-
-                  {/* Created At */}
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-[11px] font-mono whitespace-nowrap">
-                    <div className="flex items-center space-x-1 text-slate-500 dark:text-slate-400">
-                      <Calendar className="w-3 h-3 text-emerald-500 shrink-0" />
-                      <span>
-                        {doc.created_at
-                          ? new Date(doc.created_at).toLocaleString('zh-CN', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '未知时间'}
+                    {/* Category */}
+                    <td className="px-4 py-3.5 text-text-secondary">
+                      <span className="px-2.5 py-0.5 bg-surface-subtle border border-border-subtle/80 rounded-lg text-[11px] font-medium">
+                        {doc.category_name || '未分类'}
                       </span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Updated At */}
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[11px] font-mono whitespace-nowrap">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3 text-blue-500 shrink-0" />
-                      <span>
-                        {new Date(doc.updated_at).toLocaleString('zh-CN', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                  </td>
+                    {/* Status & Access Level Badges */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {doc.status === 'published' ? (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg text-[11px] font-medium">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>已发布</span>
+                          </span>
+                        ) : doc.status === 'archived' ? (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20 rounded-lg text-[11px] font-medium">
+                            <Archive className="w-3 h-3" />
+                            <span>已归档</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-lg text-[11px] font-medium">
+                            <Clock className="w-3 h-3" />
+                            <span>草稿</span>
+                          </span>
+                        )}
+                        <span className={`inline-flex rounded-lg px-2 py-0.5 text-[11px] font-medium border ${doc.access_level === 'authenticated' ? 'bg-blue-500/10 text-brand border-blue-500/20' : 'bg-surface-subtle text-text-tertiary border-border-subtle/80'}`}>{doc.access_level === 'authenticated' ? '登录可见' : '公开'}</span>
+                      </div>
+                    </td>
 
-                  {/* Actions */}
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button
-                      onClick={() => handleToggleStatus(doc)}
-                      className="text-[11px] text-slate-600 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 underline font-medium"
-                      title={doc.status === 'published' ? '下架为草稿' : '发布文档'}
-                    >
-                      {doc.status === 'published' ? '下架' : '发布'}
-                    </button>
-                    <button
-                      onClick={() => navigate(`/wang/documents/${doc.id}`)}
-                      className="inline-flex items-center space-x-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-md text-[11px] transition font-medium"
-                    >
-                      <Edit className="w-3 h-3" />
-                      <span>编辑</span>
-                    </button>
-                    <button
-                      onClick={() => setDeletingDoc({ id: doc.id, title: doc.title })}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded-md text-[11px] transition font-medium cursor-pointer"
-                      title="彻底删除此文档"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>删除</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              </>
-            )}
-          </tbody>
-        </table>
+                    {/* Views */}
+                    <td className="px-4 py-3.5 text-text-secondary font-mono">
+                      <div className="flex items-center space-x-1 text-text-tertiary">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="font-semibold text-text-primary">{doc.views}</span>
+                      </div>
+                    </td>
+
+                    {/* Created At */}
+                    <td className="px-4 py-3.5 text-text-secondary text-[11px] font-mono whitespace-nowrap">
+                      <div className="flex items-center space-x-1.5 text-text-tertiary">
+                        <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>
+                          {doc.created_at
+                            ? new Date(doc.created_at).toLocaleString('zh-CN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : '未知时间'}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Updated At */}
+                    <td className="px-4 py-3.5 text-text-secondary text-[11px] font-mono whitespace-nowrap">
+                      <div className="flex items-center space-x-1.5 text-text-tertiary">
+                        <Clock className="w-3.5 h-3.5 text-brand shrink-0" />
+                        <span>
+                          {new Date(doc.updated_at).toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                      <button
+                        onClick={() => handleToggleStatus(doc)}
+                        className="inline-flex items-center px-2 py-1 rounded-lg border border-border-default/80 bg-surface hover:bg-surface-subtle text-[11px] text-text-secondary hover:text-brand transition font-medium shadow-xs"
+                        title={doc.status === 'published' ? '下架为草稿' : '发布文档'}
+                      >
+                        {doc.status === 'published' ? '下架' : '发布'}
+                      </button>
+                      <button
+                        onClick={() => navigate(`/wang/documents/${doc.id}`)}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-surface hover:bg-surface-subtle border border-border-default/80 text-text-primary rounded-lg text-[11px] transition font-medium shadow-xs"
+                      >
+                        <Edit className="w-3 h-3 text-brand" />
+                        <span>编辑</span>
+                      </button>
+                      <button
+                        onClick={() => setDeletingDoc({ id: doc.id, title: doc.title })}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 rounded-lg text-[11px] transition font-medium cursor-pointer"
+                        title="彻底删除此文档"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>删除</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
       {total > pageSize && (
         <div className="flex items-center justify-between pt-2 text-xs">
-          <span className="text-slate-500">
+          <span className="text-text-tertiary">
             显示第 {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} 条，共 {total} 条
           </span>
           <div className="flex items-center space-x-2">
             <button
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg disabled:opacity-50 font-medium"
+              className="px-3.5 py-1.5 rounded-xl border border-border-default/80 bg-surface hover:bg-surface-subtle text-text-primary disabled:opacity-40 font-medium transition shadow-xs"
             >
               上一页
             </button>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
+            <span className="px-2 font-semibold text-text-primary">
               {page} / {Math.ceil(total / pageSize)}
             </span>
             <button
               disabled={page >= Math.ceil(total / pageSize)}
               onClick={() => setPage(page + 1)}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg disabled:opacity-50 font-medium"
+              className="px-3.5 py-1.5 rounded-xl border border-border-default/80 bg-surface hover:bg-surface-subtle text-text-primary disabled:opacity-40 font-medium transition shadow-xs"
             >
               下一页
             </button>
           </div>
         </div>
       )}
+
 
       {/* React Custom Delete Modal */}
       {deletingDoc && (

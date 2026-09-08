@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import {
+  LayoutDashboard,
   FileText,
   FolderTree,
   Tag as TagIcon,
@@ -38,13 +39,21 @@ export const AdminLayout: React.FC = () => {
     }
   };
 
-  const navItems = [
-    { to: '/wang/documents', label: '文档管理', icon: FileText, end: true },
+  interface NavItem {
+    to: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    end?: boolean;
+  }
+
+  const navItems: NavItem[] = [
+    { to: '/wang/dashboard', label: '控制台概览', icon: LayoutDashboard },
+    { to: '/wang/documents', label: '文档管理', icon: FileText },
     { to: '/wang/categories', label: '分类管理', icon: FolderTree },
     { to: '/wang/tags', label: '标签管理', icon: TagIcon },
     { to: '/wang/media', label: '媒体资源库', icon: ImageIcon },
     { to: '/wang/settings', label: '系统配置', icon: Settings },
-	{ to: '/wang/users', label: '用户管理', icon: Users },
+    { to: '/wang/users', label: '用户管理', icon: Users },
   ];
   const isEditorWorkspace = /^\/wang\/documents\/(?:new|\d+)$/.test(location.pathname);
   const currentPage = isEditorWorkspace
@@ -61,67 +70,70 @@ export const AdminLayout: React.FC = () => {
   }, [isEditorAdminNavOpen, isEditorWorkspace]);
 
   return (
-    <div className={`admin-shell cloud-doc-surface flex flex-col font-sans text-text-secondary ${isEditorWorkspace ? 'admin-editor-route-shell' : 'min-h-screen'}`}>
+    <div className={`admin-shell relative cloud-doc-surface flex flex-col font-sans text-text-secondary ${isEditorWorkspace ? 'admin-editor-route-shell' : 'min-h-screen'}`}>
+      {/* Soft Ambient Light for Admin */}
+      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-96 w-full -translate-x-1/2 max-w-7xl bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/10 via-indigo-500/5 to-transparent blur-3xl dark:from-blue-600/15 dark:via-indigo-600/5" aria-hidden="true" />
+
       {/* Admin Header */}
-      <header className="sticky top-0 z-30 h-14 border-b border-border-subtle bg-surface/95 px-3 backdrop-blur-md sm:px-4">
-        <div className={`${isEditorWorkspace ? 'layout-workspace' : 'layout-shell'} flex h-full items-center justify-between gap-2`}>
-        <div className="flex min-w-0 items-center space-x-2 sm:space-x-3">
-          {isEditorWorkspace && (
-            <button
-              type="button"
-              onClick={() => setIsEditorAdminNavOpen((open) => !open)}
-              className="admin-editor-nav-toggle flex h-9 w-9 shrink-0 items-center justify-center rounded-ds-md text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary"
-              aria-label={isEditorAdminNavOpen ? '关闭管理导航' : '打开管理导航'}
-              aria-expanded={isEditorAdminNavOpen}
-            >
-              {isEditorAdminNavOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
-          )}
-          <div className="flex h-8 w-8 items-center justify-center rounded-ds-md bg-brand font-bold text-white">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <span className="truncate text-sm font-semibold tracking-tight text-text-primary sm:text-base">
-            知识库 · 控制台
-          </span>
-          <span className="hidden text-text-tertiary sm:inline" aria-hidden="true">/</span>
-          <span className="hidden truncate text-sm font-medium text-text-secondary sm:inline">{currentPage}</span>
-        </div>
-
-        <div className="flex shrink-0 items-center space-x-1 sm:space-x-4">
-          <a
-            href="/"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="在新标签页打开前台知识库"
-            className="flex min-h-9 items-center space-x-1 rounded-ds-md px-2.5 py-1.5 text-sm font-medium text-text-tertiary transition-colors hover:bg-surface-subtle hover:text-brand"
-          >
-            <span className="hidden lg:inline">返回前台阅读</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-
-          <div className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
-
-          <div className="flex items-center space-x-2 text-sm font-medium text-text-secondary">
-            <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
-              <UserIcon className="w-4 h-4" />
+      <header className="sticky top-0 z-30 h-16 border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-xl transition-colors dark:border-slate-800/80 dark:bg-slate-900/85 sm:px-6">
+        <div className={`${isEditorWorkspace ? 'layout-workspace' : 'layout-shell'} flex h-full items-center justify-between gap-3`}>
+          <div className="flex min-w-0 items-center space-x-3">
+            {isEditorWorkspace && (
+              <button
+                type="button"
+                onClick={() => setIsEditorAdminNavOpen((open) => !open)}
+                className="admin-editor-nav-toggle flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                aria-label={isEditorAdminNavOpen ? '关闭管理导航' : '打开管理导航'}
+                aria-expanded={isEditorAdminNavOpen}
+              >
+                {isEditorAdminNavOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              </button>
+            )}
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 font-bold text-white shadow-md shadow-blue-500/20">
+              <BookOpen className="w-5 h-5" />
             </div>
-            <span className="hidden md:inline">{user?.nickname || user?.username || '管理员'}</span>
+            <span className="truncate text-base font-bold tracking-tight text-slate-900 dark:text-white">
+              知识库 · 控制台
+            </span>
+            <span className="hidden text-slate-300 dark:text-slate-700 sm:inline" aria-hidden="true">/</span>
+            <span className="hidden truncate text-sm font-semibold text-slate-500 dark:text-slate-400 sm:inline">{currentPage}</span>
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="flex min-h-9 items-center space-x-1 rounded-ds-md px-2.5 py-1.5 text-sm font-medium text-danger transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
-            title="退出登录"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">退出</span>
-          </button>
-        </div>
+          <div className="flex shrink-0 items-center space-x-2 sm:space-x-4">
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="在新标签页打开前台知识库"
+              className="flex min-h-9 items-center space-x-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:border-blue-300 hover:bg-white hover:text-blue-600 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <span className="hidden lg:inline">返回前台阅读</span>
+              <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
+            </a>
+
+            <div className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
+
+            <div className="flex items-center space-x-2 rounded-xl bg-slate-100/80 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-[11px] shadow-xs">
+                <UserIcon className="w-3.5 h-3.5" />
+              </div>
+              <span className="hidden md:inline">{user?.nickname || user?.username || '管理员'}</span>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="flex min-h-9 items-center space-x-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-red-600 transition-all hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+              title="退出登录"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">退出</span>
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <div className={`${isEditorWorkspace ? 'layout-workspace admin-editor-route-layout' : 'layout-shell'} flex flex-1 flex-col gap-4 px-3 py-4 md:px-4 md:py-5 lg:flex-row lg:gap-6 xl:px-5`}>
+      <div className={`${isEditorWorkspace ? 'layout-workspace admin-editor-route-layout' : 'layout-shell'} flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 md:py-8 lg:flex-row lg:gap-8`}>
         {isEditorWorkspace && isEditorAdminNavOpen && (
           <button
             type="button"
@@ -133,10 +145,10 @@ export const AdminLayout: React.FC = () => {
         {/* Left Admin Sidebar */}
         <aside
           data-drawer-open={isEditorAdminNavOpen ? 'true' : 'false'}
-          className={`static flex h-auto w-full flex-shrink-0 flex-col border-b border-border-subtle pb-3 lg:sticky lg:top-[4.75rem] lg:h-[calc(100vh-5.75rem)] lg:border-b-0 lg:border-r lg:pr-4 ${isEditorWorkspace ? 'admin-editor-global-nav lg:w-52' : 'lg:w-56'}`}
+          className={`static flex h-auto w-full flex-shrink-0 flex-col border-b border-slate-200/80 pb-4 lg:sticky lg:top-[5.25rem] lg:h-[calc(100vh-6.75rem)] lg:border-b-0 lg:border-r lg:pr-5 dark:border-slate-800/80 ${isEditorWorkspace ? 'admin-editor-global-nav lg:w-56' : 'lg:w-60'}`}
         >
-          <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:block lg:space-y-1">
-            <div className="col-span-2 px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-text-tertiary sm:col-span-3 lg:block">
+          <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:block lg:space-y-1.5">
+            <div className="col-span-2 px-3.5 pb-2.5 pt-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:col-span-3 lg:block">
               内容工作台
             </div>
             {navItems.map((item) => {
@@ -148,10 +160,10 @@ export const AdminLayout: React.FC = () => {
                   end={item.end}
                   onClick={() => setIsEditorAdminNavOpen(false)}
                   className={({ isActive }) =>
-                    `flex min-h-10 items-center space-x-3 rounded-ds-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                    `flex min-h-10 items-center space-x-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
                       isActive
-                        ? 'bg-brand-soft text-brand font-semibold'
-                        : 'text-text-secondary hover:bg-surface-subtle hover:text-text-primary'
+                        ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300 font-bold'
+                        : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white'
                     }`
                   }
                 >
@@ -161,13 +173,12 @@ export const AdminLayout: React.FC = () => {
               );
             })}
           </nav>
-
         </aside>
 
         {/* Right Admin Workstation */}
         <main
           data-workspace={isEditorWorkspace ? 'wide' : 'standard'}
-          className={`flex min-w-0 flex-1 flex-col ${isEditorWorkspace ? 'admin-workspace-wide min-h-0 overflow-hidden p-3 sm:p-4' : 'admin-workspace-standard py-1 md:px-2'}`}
+          className={`flex min-w-0 flex-1 flex-col ${isEditorWorkspace ? 'admin-workspace-wide min-h-0 overflow-hidden p-3 sm:p-4' : 'admin-workspace-standard'}`}
         >
           <Outlet />
         </main>

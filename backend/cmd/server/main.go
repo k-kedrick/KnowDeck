@@ -115,7 +115,7 @@ func main() {
 		apiPublic.GET("/categories/tree", publicHandler.GetKnowledgeTree)
 		apiPublic.GET("/categories", publicHandler.ListCategories)
 		apiPublic.GET("/tags", publicHandler.ListTags)
-		apiPublic.GET("/documents", publicHandler.ListDocuments)
+		apiPublic.GET("/documents", middleware.OptionalAuthMiddleware(authService), publicHandler.ListDocuments)
 		apiPublic.GET("/documents/:slug", middleware.OptionalAuthMiddleware(authService), publicHandler.GetDocumentBySlug)
 		apiPublic.GET("/search", middleware.OptionalAuthMiddleware(authService), searchLimiter.Middleware("搜索过于频繁，请稍后再试"), publicHandler.Search)
 		apiPublic.GET("/media/download/:id", publicHandler.DownloadMedia)
@@ -190,7 +190,12 @@ func main() {
 		// 邀请码
 		apiAdmin.POST("/invites", adminInviteHandler.Create)
 		apiAdmin.GET("/invites", adminInviteHandler.List)
+		apiAdmin.PUT("/invites/:id", adminInviteHandler.Update)
+		apiAdmin.DELETE("/invites/:id", adminInviteHandler.Delete)
 		apiAdmin.PATCH("/invites/:id/status", adminInviteHandler.Disable)
+		apiAdmin.POST("/invites/batch-delete", adminInviteHandler.BatchDelete)
+		apiAdmin.POST("/invites/batch-status", adminInviteHandler.BatchStatus)
+		apiAdmin.GET("/invites/:id/users", adminInviteHandler.GetUsers)
 
 		// 系统设置
 		apiAdmin.GET("/settings", adminSettingHandler.GetAll)

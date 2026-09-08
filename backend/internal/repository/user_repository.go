@@ -110,6 +110,9 @@ func (r *UserRepository) CreateMemberWithInvite(username, passwordHash, inviteCo
 	}
 	defer tx.Rollback()
 
+	var inviteID int64
+	_ = tx.QueryRow("SELECT id FROM invite_codes WHERE code_hash = ?", inviteCodeHash).Scan(&inviteID)
+
 	consumed, err := consumeInviteByHash(tx, inviteCodeHash)
 	if err != nil {
 		return 0, err
@@ -119,9 +122,9 @@ func (r *UserRepository) CreateMemberWithInvite(username, passwordHash, inviteCo
 	}
 
 	result, err := tx.Exec(`
-		INSERT INTO users (username, password_hash, nickname, role, status, auth_version)
-		VALUES (?, ?, ?, 'member', 'active', 1)
-	`, username, passwordHash, username)
+		INSERT INTO users (username, password_hash, nickname, role, status, auth_version, invite_code_id)
+		VALUES (?, ?, ?, 'member', 'active', 1, ?)
+	`, username, passwordHash, username, inviteID)
 	if err != nil {
 		return 0, err
 	}
