@@ -73,7 +73,7 @@ func TestSQLiteTimestampParsingRegression(t *testing.T) {
 		}
 
 		// 1. Test FTS5 search path
-		results, err := searchRepo.Search("searchable_time_test", 10)
+		results, err := searchRepo.Search("searchable_time_test", 10, true)
 		if err != nil {
 			t.Fatalf("searchRepo.Search failed: %v", err)
 		}
@@ -90,7 +90,7 @@ func TestSQLiteTimestampParsingRegression(t *testing.T) {
 		}
 
 		// 2. Test LIKE search path directly
-		likeResults, err := searchRepo.searchLike("searchable_time_test", 10)
+		likeResults, err := searchRepo.searchLike("searchable_time_test", 10, true)
 		if err != nil {
 			t.Fatalf("searchRepo.searchLike failed: %v", err)
 		}

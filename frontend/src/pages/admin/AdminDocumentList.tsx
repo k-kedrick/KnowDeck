@@ -393,6 +393,7 @@ export const AdminDocumentList: React.FC = () => {
                         <span>草稿</span>
                       </span>
                     )}
+                    <span className={`ml-2 inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${doc.access_level === 'authenticated' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{doc.access_level === 'authenticated' ? '登录可见' : '公开'}</span>
                   </td>
 
                   {/* Views */}

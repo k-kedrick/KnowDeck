@@ -212,6 +212,10 @@ func (h *SEOHandler) Article(c *gin.Context) {
 	}
 
 	canonical := h.siteURL + "/docs/" + url.PathEscape(document.Slug)
+	if document.AccessLevel == "authenticated" {
+		h.render(c, http.StatusOK, seoPageMeta{Title: document.Title + " - " + info.SiteName, Description: "此内容仅对登录用户开放。", Robots: "noindex,nofollow", SiteURL: h.siteURL, Canonical: canonical, SiteName: info.SiteName, OGType: "article"})
+		return
+	}
 	description := seoDescription(document.Excerpt, document.Content, 160)
 	if description == "" {
 		description = document.Title

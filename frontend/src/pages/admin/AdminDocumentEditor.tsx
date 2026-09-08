@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '../../api';
-import type { DocumentSaveReq, Category, Media, Tag, DocumentDetail } from '../../api';
+import type { DocumentSaveReq, Category, Media, Tag, DocumentDetail, DocumentAccessLevel } from '../../api';
 import { DocumentVisualEditor } from '../../components/admin/DocumentVisualEditor';
 import { TagCombobox } from '../../components/admin/TagCombobox';
 import type { TiptapEditorHandle } from '../../components/admin/tiptap/TiptapEditor';
@@ -76,6 +76,7 @@ export const AdminDocumentEditor: React.FC = () => {
   const [excerpt, setExcerpt] = useState<string>('');
   const [cover, setCover] = useState<string>('');
   const [status, setStatus] = useState<string>('draft');
+  const [accessLevel, setAccessLevel] = useState<DocumentAccessLevel>('public');
   const [categoryId, setCategoryId] = useState<number>(0);
   const [isPinned, setIsPinned] = useState<boolean>(false);
   const [tags, setTags] = useState<string[]>([]);
@@ -338,6 +339,7 @@ export const AdminDocumentEditor: React.FC = () => {
         setExcerpt(doc.excerpt || '');
         setCover(doc.cover || '');
         setStatus(doc.status || 'draft');
+        setAccessLevel(doc.access_level || 'public');
         setCategoryId(doc.category_id || 0);
         setIsPinned(doc.is_pinned || false);
         setTags(doc.tags || []);
@@ -626,6 +628,7 @@ export const AdminDocumentEditor: React.FC = () => {
       excerpt,
       cover,
       status: docStatus,
+      accessLevel,
       categoryId,
       isPinned,
       tags,
@@ -977,6 +980,15 @@ export const AdminDocumentEditor: React.FC = () => {
                     placeholder="留空自动根据标题生成拼音/英文"
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label htmlFor="document-access-level" className="font-semibold text-slate-700 dark:text-slate-300">访问权限</label>
+                  <select id="document-access-level" value={accessLevel} onChange={(event) => setAccessLevel(event.target.value as DocumentAccessLevel)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                    <option value="public">公开</option>
+                    <option value="authenticated">登录用户可见</option>
+                  </select>
+                  <p className="text-[11px] text-slate-400">{accessLevel === 'public' ? '所有访问者都可以查看完整文章内容。' : '只有已登录用户可以查看文章正文。'}</p>
                 </div>
 
                 <div className="space-y-1">

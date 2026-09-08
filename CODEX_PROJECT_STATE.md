@@ -141,3 +141,8 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - Inspect actual command output and the final diff.
 - Update durable architecture facts, risks, fingerprints, verification results, and invalidation conditions here.
 - Do not append a chronological activity log.
+
+## U3 Document Access Control
+
+- **COMPLETED**: `documents.access_level` (`public`/`authenticated`), optional authentication, public locked metadata, viewer-aware search, SEO/sitemap exclusion, admin selector/badge, and locked DocViewer state.
+- Verification: U3 targeted backend tests, `go test ./...`, `go vet ./...`, focused frontend tests, lint and build passed on 2026-09-08. Browser interaction and race detector were not run.

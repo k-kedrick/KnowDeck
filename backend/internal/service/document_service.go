@@ -89,6 +89,10 @@ func (s *DocumentService) GetBySlug(slug string, isPublic bool) (*model.Document
 	return doc, neighbor, nil
 }
 
+func CanReadDocument(doc *model.Document, user *model.User) bool {
+	return doc.AccessLevel == "public" || user != nil
+}
+
 func (s *DocumentService) Create(authorID int64, req model.DocumentSaveReq) (*model.Document, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -112,6 +116,10 @@ func (s *DocumentService) Create(authorID int64, req model.DocumentSaveReq) (*mo
 	if !isValidDocumentStatus(status) {
 		return nil, errors.New("文档状态无效")
 	}
+	accessLevel, err := repository.NormalizeDocumentAccessLevel(req.AccessLevel)
+	if err != nil {
+		return nil, errors.New("文档访问权限无效")
+	}
 
 	excerpt := normalizeExcerpt(req.Excerpt)
 
@@ -128,6 +136,7 @@ func (s *DocumentService) Create(authorID int64, req model.DocumentSaveReq) (*mo
 		Excerpt:     excerpt,
 		Cover:       req.Cover,
 		Status:      status,
+		AccessLevel: accessLevel,
 		CategoryID:  req.CategoryID,
 		AuthorID:    authorID,
 		SortOrder:   req.SortOrder,
@@ -171,6 +180,10 @@ func (s *DocumentService) Update(id int64, req model.DocumentSaveReq) (*model.Do
 	if !isValidDocumentStatus(status) {
 		return nil, errors.New("文档状态无效")
 	}
+	accessLevel, err := repository.NormalizeDocumentAccessLevel(req.AccessLevel)
+	if err != nil {
+		return nil, errors.New("文档访问权限无效")
+	}
 
 	excerpt := normalizeExcerpt(req.Excerpt)
 
@@ -186,6 +199,7 @@ func (s *DocumentService) Update(id int64, req model.DocumentSaveReq) (*model.Do
 	doc.Excerpt = excerpt
 	doc.Cover = req.Cover
 	doc.Status = status
+	doc.AccessLevel = accessLevel
 	doc.CategoryID = req.CategoryID
 	doc.SortOrder = req.SortOrder
 	doc.IsPinned = req.IsPinned

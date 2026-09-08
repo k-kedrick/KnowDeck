@@ -231,3 +231,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - `tsc -b && vite build` 生产构建 100% 零错误。
 - `go test ./...` 与 `npx vitest run` 自动化全量测试 100% 全部通过。
+
+## Unreleased
+
+### Changed
+- Added public/authenticated document access levels, viewer-aware public/search/SEO ACLs, and locked document UI.

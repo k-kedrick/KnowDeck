@@ -91,6 +91,7 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 		excerpt TEXT DEFAULT '',
 		cover TEXT DEFAULT '',
 		status TEXT NOT NULL DEFAULT 'draft',
+		access_level TEXT NOT NULL DEFAULT 'public' CHECK (access_level IN ('public', 'authenticated')),
 		category_id INTEGER NOT NULL DEFAULT 0,
 		author_id INTEGER NOT NULL DEFAULT 1,
 		sort_order INTEGER DEFAULT 0,
@@ -194,6 +195,14 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 	if authVersionColCount == 0 {
 		if _, err := db.Exec("ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1"); err != nil {
 			return fmt.Errorf("添加 users.auth_version 列失败: %w", err)
+		}
+	}
+
+	var documentAccessLevelColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='access_level'").Scan(&documentAccessLevelColCount)
+	if documentAccessLevelColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE documents ADD COLUMN access_level TEXT NOT NULL DEFAULT 'public' CHECK (access_level IN ('public', 'authenticated'))"); err != nil {
+			return fmt.Errorf("添加 documents.access_level 列失败: %w", err)
 		}
 	}
 

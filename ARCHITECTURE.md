@@ -124,3 +124,7 @@ SQLite DSN 启用 `foreign_keys(1)`、WAL、`busy_timeout(5000)` 和 `synchronou
 4. 文档内容格式必须同时兼容编辑、存储、搜索和只读渲染。
 5. 数据库与上传文件是同一业务备份单元。
 6. 部署不得暴露后端端口或覆盖宿主现有代理配置。
+
+## Document access control
+
+Documents have one persisted `access_level`: `public` or `authenticated`; legacy rows migrate to `public`. Admin CRUD carries this field. Public document and search routes use optional authentication: anonymous visitors receive safe locked metadata for authenticated documents, while authenticated users receive content. Search filters before FTS snippet generation; authenticated documents are `noindex,nofollow` and excluded from the sitemap. The admin editor exposes the setting, the list shows an access badge, and the viewer does not render a locked body or TOC.

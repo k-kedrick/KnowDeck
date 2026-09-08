@@ -132,6 +132,27 @@ func TestSEOSitemapAndRobotsOnlyExposePublicRoutes(t *testing.T) {
 	}
 }
 
+func TestSEORestrictedDocumentNeverLeaksBodyOrSitemapURL(t *testing.T) {
+	router, db := newSEOTestRouter(t)
+	const secret = "SEO-RESTRICTED-SECRET-9F31A7"
+	if _, err := db.Exec(`INSERT INTO documents (title, slug, content, excerpt, cover, status, access_level, author_id, published_at) VALUES (?, ?, ?, ?, ?, 'published', 'authenticated', 1, CURRENT_TIMESTAMP)`, "Restricted SEO", "restricted-seo-test", secret, secret, "https://example.invalid/restricted-secret-image.jpg"); err != nil {
+		t.Fatal(err)
+	}
+	article := performSEORequest(router, "/docs/restricted-seo-test")
+	if article.Code != http.StatusOK || !strings.Contains(article.Body.String(), `content="noindex,nofollow"`) {
+		t.Fatalf("unexpected restricted shell: %d %s", article.Code, article.Body.String())
+	}
+	for _, forbidden := range []string{secret, "restricted-secret-image.jpg", `"@type":"TechArticle"`} {
+		if strings.Contains(article.Body.String(), forbidden) {
+			t.Fatalf("restricted SEO shell leaked %q", forbidden)
+		}
+	}
+	sitemap := performSEORequest(router, "/sitemap.xml")
+	if strings.Contains(sitemap.Body.String(), "restricted-seo-test") || strings.Contains(sitemap.Body.String(), secret) {
+		t.Fatal("restricted document leaked into sitemap")
+	}
+}
+
 func TestSEOIndexingRulesRedirectAndMissingArticle(t *testing.T) {
 	router, _ := newSEOTestRouter(t)
 

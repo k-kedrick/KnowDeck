@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"knowledge-base/backend/internal/middleware"
 	"knowledge-base/backend/internal/model"
 	"knowledge-base/backend/internal/repository"
 	"knowledge-base/backend/internal/service"
@@ -180,14 +181,35 @@ func (h *PublicHandler) GetDocumentBySlug(c *gin.Context) {
 		return
 	}
 
+	user, _ := c.Get(middleware.ContextUserKey)
+	currentUser, _ := user.(*model.User)
 	type DocDetailResp struct {
-		Document *model.Document         `json:"document"`
+		Document interface{}             `json:"document"`
 		Neighbor *model.DocumentNeighbor `json:"neighbor"`
+		Locked   bool                    `json:"locked"`
+	}
+	if !service.CanReadDocument(doc, currentUser) {
+		type lockedDocument struct {
+			ID           int64      `json:"id"`
+			Title        string     `json:"title"`
+			Slug         string     `json:"slug"`
+			Cover        string     `json:"cover"`
+			Status       string     `json:"status"`
+			AccessLevel  string     `json:"access_level"`
+			CategoryID   int64      `json:"category_id"`
+			CategoryName string     `json:"category_name,omitempty"`
+			CategorySlug string     `json:"category_slug,omitempty"`
+			Tags         []string   `json:"tags,omitempty"`
+			PublishedAt  *time.Time `json:"published_at,omitempty"`
+		}
+		response.Success(c, DocDetailResp{Document: lockedDocument{doc.ID, doc.Title, doc.Slug, doc.Cover, doc.Status, doc.AccessLevel, doc.CategoryID, doc.CategoryName, doc.CategorySlug, doc.Tags, doc.PublishedAt}, Locked: true})
+		return
 	}
 
 	response.Success(c, DocDetailResp{
 		Document: doc,
 		Neighbor: neighbor,
+		Locked:   false,
 	})
 }
 
@@ -220,7 +242,8 @@ func (h *PublicHandler) Search(c *gin.Context) {
 	}
 
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	results, err := h.searchRepo.Search(query, limit)
+	_, authenticated := c.Get(middleware.ContextUserKey)
+	results, err := h.searchRepo.Search(query, limit, !authenticated)
 	if err != nil {
 		response.ServerError(c, "搜索出错")
 		return

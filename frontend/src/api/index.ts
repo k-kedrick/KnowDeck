@@ -99,6 +99,7 @@ export interface CategoryTreeNode {
 }
 
 export type DocumentStatus = 'draft' | 'published' | 'archived';
+export type DocumentAccessLevel = 'public' | 'authenticated';
 
 export interface DocumentListItem {
   id: number;
@@ -107,6 +108,7 @@ export interface DocumentListItem {
   excerpt: string;
   cover: string;
   status: DocumentStatus;
+  access_level?: DocumentAccessLevel;
   category_id: number;
   author_id: number;
   sort_order: number;
@@ -126,6 +128,11 @@ export interface DocumentDetail extends DocumentListItem {
   content: string;
 }
 
+export interface LockedDocument extends Omit<DocumentDetail, 'content' | 'excerpt'> {
+  excerpt?: never;
+  content?: never;
+}
+
 export interface DocumentSaveReq {
   title: string;
   slug?: string;
@@ -133,6 +140,7 @@ export interface DocumentSaveReq {
   excerpt?: string;
   cover?: string;
   status?: string;
+  access_level?: DocumentAccessLevel;
   category_id?: number;
   sort_order?: number;
   is_pinned?: boolean;
@@ -154,8 +162,9 @@ export interface DocumentNeighbor {
 }
 
 export interface DocDetailData {
-  document: DocumentDetail;
+  document: DocumentDetail | LockedDocument;
   neighbor?: DocumentNeighbor;
+  locked?: boolean;
 }
 
 export interface SearchResult {

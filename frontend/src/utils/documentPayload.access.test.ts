@@ -1,0 +1,3 @@
+import { describe, expect, it } from 'vitest';
+import { buildDocumentPayload } from './documentPayload';
+describe('buildDocumentPayload access level', () => { it('defaults to public and preserves authenticated access', () => { expect(buildDocumentPayload({ title: 'A', slug: '', content: 'body', excerpt: '', cover: '', status: 'published', categoryId: 0, isPinned: false, tags: [] }).access_level).toBe('public'); expect(buildDocumentPayload({ title: 'A', slug: '', content: 'body', excerpt: '', cover: '', status: 'published', categoryId: 0, isPinned: false, tags: [], accessLevel: 'authenticated' }).access_level).toBe('authenticated'); }); });

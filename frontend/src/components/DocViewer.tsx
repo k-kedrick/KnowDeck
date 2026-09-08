@@ -24,6 +24,7 @@ import {
   Check,
   List,
   ListTree,
+  Lock,
   X,
   ChevronsLeft,
   ChevronsRight,
@@ -186,6 +187,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
 
   const doc = data?.document;
   const docTitle = doc?.title;
+  const locked = data?.locked === true;
 
   const rawContent = doc?.content || doc?.excerpt || '';
   const isHtmlContent = React.useMemo(() => isHtmlDocumentContent(rawContent), [rawContent]);
@@ -194,7 +196,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   const documentId = doc?.id;
   const documentSlug = doc?.slug;
   const documentContent = doc?.content;
-  const rendered = Boolean(doc) && !loading && !error;
+  const rendered = Boolean(doc) && !loading && !error && !locked;
   // Bind DOM-derived state and asynchronous callbacks to the current document render.
   const headingScope = React.useMemo<HeadingScope>(() => ({
     documentId, slug: documentSlug, content: documentContent, title: docTitle, rendered, markdownReady,
@@ -472,6 +474,8 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
       </div>
     );
   }
+
+  if (locked) { return <main data-testid="document-locked" className="flex min-h-[60vh] flex-1 flex-col items-center justify-center p-8 text-center"><Lock className="h-7 w-7" /><h1>{doc.title}</h1><p>此文章仅对登录用户开放</p><p>登录后即可查看完整内容。</p></main>; }
 
   const codeOccurrences = new Map<string, number>();
 

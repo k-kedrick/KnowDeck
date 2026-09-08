@@ -25,33 +25,55 @@ func AuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			response.Unauthorized(c, "Token 格式错误，应为 Bearer <Token>")
-			c.Abort()
+		if !authenticate(c, authService, authHeader) {
 			return
 		}
-
-		tokenStr := parts[1]
-		claims, err := authService.ParseToken(tokenStr)
-		if err != nil {
-			response.Unauthorized(c, "Token 无效或已过期")
-			c.Abort()
-			return
-		}
-		user, err := authService.GetUserByID(claims.UserID)
-		if err != nil || user == nil || user.Status != "active" || user.AuthVersion != claims.AuthVersion {
-			response.Unauthorized(c, "Token 无效或已过期")
-			c.Abort()
-			return
-		}
-
-		c.Set(ContextUserIDKey, user.ID)
-		c.Set(ContextUsernameKey, user.Username)
-		c.Set(ContextUserRoleKey, user.Role)
-		c.Set(ContextUserKey, user)
 		c.Next()
 	}
+}
+
+// OptionalAuthMiddleware accepts anonymous requests but rejects a supplied invalid token.
+func OptionalAuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.Next()
+			return
+		}
+		if !authenticate(c, authService, authHeader) {
+			return
+		}
+		c.Next()
+	}
+}
+
+func authenticate(c *gin.Context, authService *service.AuthService, authHeader string) bool {
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		response.Unauthorized(c, "Token 格式错误，应为 Bearer <Token>")
+		c.Abort()
+		return false
+	}
+
+	tokenStr := parts[1]
+	claims, err := authService.ParseToken(tokenStr)
+	if err != nil {
+		response.Unauthorized(c, "Token 无效或已过期")
+		c.Abort()
+		return false
+	}
+	user, err := authService.GetUserByID(claims.UserID)
+	if err != nil || user == nil || user.Status != "active" || user.AuthVersion != claims.AuthVersion {
+		response.Unauthorized(c, "Token 无效或已过期")
+		c.Abort()
+		return false
+	}
+
+	c.Set(ContextUserIDKey, user.ID)
+	c.Set(ContextUsernameKey, user.Username)
+	c.Set(ContextUserRoleKey, user.Role)
+	c.Set(ContextUserKey, user)
+	return true
 }
 
 func RequireAdmin() gin.HandlerFunc {

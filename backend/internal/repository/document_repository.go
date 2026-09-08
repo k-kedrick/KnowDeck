@@ -34,6 +34,18 @@ type DocumentFilter struct {
 	PageSize   int
 }
 
+var ErrInvalidDocumentAccessLevel = errors.New("invalid document access level")
+
+func NormalizeDocumentAccessLevel(accessLevel string) (string, error) {
+	if accessLevel == "" {
+		return "public", nil
+	}
+	if accessLevel != "public" && accessLevel != "authenticated" {
+		return "", ErrInvalidDocumentAccessLevel
+	}
+	return accessLevel, nil
+}
+
 func (r *DocumentRepository) List(filter DocumentFilter) ([]*model.Document, int64, error) {
 	var whereClauses []string
 	var args []interface{}
@@ -84,7 +96,7 @@ func (r *DocumentRepository) List(filter DocumentFilter) ([]*model.Document, int
 	offset := (page - 1) * pageSize
 
 	querySQL := fmt.Sprintf(`
-		SELECT d.id, d.title, d.slug, d.excerpt, d.cover, d.status, d.category_id, d.author_id,
+		SELECT d.id, d.title, d.slug, d.excerpt, d.cover, d.status, d.access_level, d.category_id, d.author_id,
 		       d.sort_order, d.is_pinned, d.views, d.created_at, d.updated_at, d.published_at,
 		       COALESCE(c.name, '') as category_name, COALESCE(c.slug, '') as category_slug,
 		       COALESCE(u.nickname, u.username, '') as author_name
@@ -109,7 +121,7 @@ func (r *DocumentRepository) List(filter DocumentFilter) ([]*model.Document, int
 		var publishedAt sql.NullString
 
 		err := rows.Scan(
-			&doc.ID, &doc.Title, &doc.Slug, &doc.Excerpt, &doc.Cover, &doc.Status,
+			&doc.ID, &doc.Title, &doc.Slug, &doc.Excerpt, &doc.Cover, &doc.Status, &doc.AccessLevel,
 			&doc.CategoryID, &doc.AuthorID, &doc.SortOrder, &doc.IsPinned, &doc.Views,
 			&createdAt, &updatedAt, &publishedAt,
 			&doc.CategoryName, &doc.CategorySlug, &doc.AuthorName,
@@ -157,7 +169,7 @@ func (r *DocumentRepository) List(filter DocumentFilter) ([]*model.Document, int
 
 func (r *DocumentRepository) GetByID(id int64) (*model.Document, error) {
 	row := r.db.QueryRow(`
-		SELECT d.id, d.title, d.slug, d.content, d.excerpt, d.cover, d.status, d.category_id, d.author_id,
+		SELECT d.id, d.title, d.slug, d.content, d.excerpt, d.cover, d.status, d.access_level, d.category_id, d.author_id,
 		       d.sort_order, d.is_pinned, d.views, d.created_at, d.updated_at, d.published_at,
 		       COALESCE(c.name, '') as category_name, COALESCE(c.slug, '') as category_slug,
 		       COALESCE(u.nickname, u.username, '') as author_name
@@ -172,7 +184,7 @@ func (r *DocumentRepository) GetByID(id int64) (*model.Document, error) {
 
 func (r *DocumentRepository) GetBySlug(slug string) (*model.Document, error) {
 	row := r.db.QueryRow(`
-		SELECT d.id, d.title, d.slug, d.content, d.excerpt, d.cover, d.status, d.category_id, d.author_id,
+		SELECT d.id, d.title, d.slug, d.content, d.excerpt, d.cover, d.status, d.access_level, d.category_id, d.author_id,
 		       d.sort_order, d.is_pinned, d.views, d.created_at, d.updated_at, d.published_at,
 		       COALESCE(c.name, '') as category_name, COALESCE(c.slug, '') as category_slug,
 		       COALESCE(u.nickname, u.username, '') as author_name
@@ -191,7 +203,7 @@ func (r *DocumentRepository) scanDocument(row *sql.Row) (*model.Document, error)
 	var publishedAt sql.NullString
 
 	err := row.Scan(
-		&doc.ID, &doc.Title, &doc.Slug, &doc.Content, &doc.Excerpt, &doc.Cover, &doc.Status,
+		&doc.ID, &doc.Title, &doc.Slug, &doc.Content, &doc.Excerpt, &doc.Cover, &doc.Status, &doc.AccessLevel,
 		&doc.CategoryID, &doc.AuthorID, &doc.SortOrder, &doc.IsPinned, &doc.Views,
 		&createdAt, &updatedAt, &publishedAt,
 		&doc.CategoryName, &doc.CategorySlug, &doc.AuthorName,
@@ -289,7 +301,7 @@ func (r *DocumentRepository) ListPublishedForTree() ([]*model.Document, error) {
 	rows, err := r.db.Query(`
 		SELECT id, title, slug, excerpt, cover, category_id, views, updated_at
 		FROM documents
-		WHERE status = 'published'
+		WHERE status = 'published' AND access_level = 'public'
 		ORDER BY is_pinned DESC, sort_order ASC, published_at DESC, created_at DESC
 	`)
 	if err != nil {
@@ -311,6 +323,11 @@ func (r *DocumentRepository) ListPublishedForTree() ([]*model.Document, error) {
 }
 
 func (r *DocumentRepository) Create(doc *model.Document) (int64, error) {
+	accessLevel, err := NormalizeDocumentAccessLevel(doc.AccessLevel)
+	if err != nil {
+		return 0, err
+	}
+	doc.AccessLevel = accessLevel
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, err
@@ -319,11 +336,11 @@ func (r *DocumentRepository) Create(doc *model.Document) (int64, error) {
 
 	res, err := tx.Exec(`
 		INSERT INTO documents (
-			title, slug, content, excerpt, cover, status, category_id, author_id,
+			title, slug, content, excerpt, cover, status, access_level, category_id, author_id,
 			sort_order, is_pinned, views, created_at, updated_at, published_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
 	`, doc.Title, doc.Slug, doc.Content, doc.Excerpt, doc.Cover, doc.Status,
-		doc.CategoryID, doc.AuthorID, doc.SortOrder, doc.IsPinned, doc.PublishedAt)
+		doc.AccessLevel, doc.CategoryID, doc.AuthorID, doc.SortOrder, doc.IsPinned, doc.PublishedAt)
 	if err != nil {
 		return 0, err
 	}
@@ -343,6 +360,11 @@ func (r *DocumentRepository) Create(doc *model.Document) (int64, error) {
 }
 
 func (r *DocumentRepository) Update(doc *model.Document) error {
+	accessLevel, err := NormalizeDocumentAccessLevel(doc.AccessLevel)
+	if err != nil {
+		return err
+	}
+	doc.AccessLevel = accessLevel
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -351,10 +373,10 @@ func (r *DocumentRepository) Update(doc *model.Document) error {
 
 	res, err := tx.Exec(`
 		UPDATE documents
-		SET title = ?, slug = ?, content = ?, excerpt = ?, cover = ?, status = ?,
+		SET title = ?, slug = ?, content = ?, excerpt = ?, cover = ?, status = ?, access_level = ?,
 		    category_id = ?, sort_order = ?, is_pinned = ?, updated_at = CURRENT_TIMESTAMP, published_at = ?
 		WHERE id = ?
-	`, doc.Title, doc.Slug, doc.Content, doc.Excerpt, doc.Cover, doc.Status,
+	`, doc.Title, doc.Slug, doc.Content, doc.Excerpt, doc.Cover, doc.Status, doc.AccessLevel,
 		doc.CategoryID, doc.SortOrder, doc.IsPinned, doc.PublishedAt, doc.ID)
 	if err != nil {
 		return err
@@ -522,7 +544,7 @@ func (r *DocumentRepository) ListPublishedForSitemap() ([]*model.DocumentSummary
 	rows, err := r.db.Query(`
 		SELECT id, title, slug, excerpt, cover, views, updated_at
 		FROM documents
-		WHERE status = 'published'
+		WHERE status = 'published' AND access_level = 'public'
 		ORDER BY updated_at DESC, id DESC
 	`)
 	if err != nil {

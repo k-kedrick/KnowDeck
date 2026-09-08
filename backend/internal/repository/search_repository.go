@@ -16,7 +16,7 @@ func NewSearchRepository(db *DB) *SearchRepository {
 	return &SearchRepository{db: db}
 }
 
-func (r *SearchRepository) Search(query string, limit int) ([]*model.SearchResult, error) {
+func (r *SearchRepository) Search(query string, limit int, publicOnly bool) ([]*model.SearchResult, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return []*model.SearchResult{}, nil
@@ -26,16 +26,16 @@ func (r *SearchRepository) Search(query string, limit int) ([]*model.SearchResul
 	}
 
 	// 1. Try SQLite FTS5 search first
-	results, err := r.searchFTS5(query, limit)
+	results, err := r.searchFTS5(query, limit, publicOnly)
 	if err == nil && len(results) > 0 {
 		return results, nil
 	}
 
 	// 2. Fallback to standard LIKE search
-	return r.searchLike(query, limit)
+	return r.searchLike(query, limit, publicOnly)
 }
 
-func (r *SearchRepository) searchFTS5(query string, limit int) ([]*model.SearchResult, error) {
+func (r *SearchRepository) searchFTS5(query string, limit int, publicOnly bool) ([]*model.SearchResult, error) {
 	// Clean query for FTS5 syntax
 	cleanQuery := strings.ReplaceAll(query, "\"", "")
 	cleanQuery = strings.ReplaceAll(cleanQuery, "'", "")
@@ -55,12 +55,16 @@ func (r *SearchRepository) searchFTS5(query string, limit int) ([]*model.SearchR
 		FROM documents_fts
 		JOIN documents d ON documents_fts.rowid = d.id
 		LEFT JOIN categories c ON d.category_id = c.id
-		WHERE documents_fts MATCH ? AND d.status = 'published'
+		WHERE documents_fts MATCH ? AND d.status = 'published' AND (? = 0 OR d.access_level = 'public')
 		ORDER BY rank
 		LIMIT ?
 	`
 
-	rows, err := r.db.Query(sqlQuery, ftsQuery, limit)
+	publicScope := 0
+	if publicOnly {
+		publicScope = 1
+	}
+	rows, err := r.db.Query(sqlQuery, ftsQuery, publicScope, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +84,7 @@ func (r *SearchRepository) searchFTS5(query string, limit int) ([]*model.SearchR
 	return results, rows.Err()
 }
 
-func (r *SearchRepository) searchLike(query string, limit int) ([]*model.SearchResult, error) {
+func (r *SearchRepository) searchLike(query string, limit int, publicOnly bool) ([]*model.SearchResult, error) {
 	kw := "%" + query + "%"
 	sqlQuery := `
 		SELECT d.id, d.title, d.slug, d.excerpt, d.content,
@@ -88,12 +92,16 @@ func (r *SearchRepository) searchLike(query string, limit int) ([]*model.SearchR
 		       d.updated_at
 		FROM documents d
 		LEFT JOIN categories c ON d.category_id = c.id
-		WHERE d.status = 'published' AND (d.title LIKE ? OR d.content LIKE ? OR d.excerpt LIKE ?)
+		WHERE d.status = 'published' AND (? = 0 OR d.access_level = 'public') AND (d.title LIKE ? OR d.content LIKE ? OR d.excerpt LIKE ?)
 		ORDER BY d.views DESC, d.updated_at DESC
 		LIMIT ?
 	`
 
-	rows, err := r.db.Query(sqlQuery, kw, kw, kw, limit)
+	publicScope := 0
+	if publicOnly {
+		publicScope = 1
+	}
+	rows, err := r.db.Query(sqlQuery, publicScope, kw, kw, kw, limit)
 	if err != nil {
 		return nil, err
 	}

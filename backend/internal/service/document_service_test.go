@@ -1,9 +1,39 @@
 package service
 
 import (
+	"errors"
 	"strings"
 	"testing"
+
+	"knowledge-base/backend/internal/model"
+	"knowledge-base/backend/internal/repository"
 )
+
+func TestDocumentServiceAccessLevelLifecycle(t *testing.T) {
+	db := newTestDB(t)
+	defer db.Close()
+	documents := repository.NewDocumentRepository(db)
+	svc := NewDocumentService(documents, repository.NewCategoryRepository(db))
+
+	created, err := svc.Create(1, model.DocumentSaveReq{Title: "Default access", Slug: "default-access-service", Content: "body"})
+	if err != nil || created.AccessLevel != "public" {
+		t.Fatalf("default create = %#v, err=%v", created, err)
+	}
+	restricted, err := svc.Create(1, model.DocumentSaveReq{Title: "Restricted access", Slug: "restricted-access-service", Content: "restricted body", AccessLevel: "authenticated"})
+	if err != nil || restricted.AccessLevel != "authenticated" {
+		t.Fatalf("authenticated create = %#v, err=%v", restricted, err)
+	}
+	updated, err := svc.Update(restricted.ID, model.DocumentSaveReq{Title: restricted.Title, Slug: restricted.Slug, Content: restricted.Content, Status: restricted.Status, AccessLevel: "public"})
+	if err != nil || updated.AccessLevel != "public" {
+		t.Fatalf("access update = %#v, err=%v", updated, err)
+	}
+	if _, err := svc.Create(1, model.DocumentSaveReq{Title: "Invalid", Slug: "invalid-access-service", AccessLevel: "private"}); err == nil || !strings.Contains(err.Error(), "访问权限") {
+		t.Fatalf("invalid access error = %v", err)
+	}
+	if _, err := repository.NormalizeDocumentAccessLevel("vip"); !errors.Is(err, repository.ErrInvalidDocumentAccessLevel) {
+		t.Fatalf("repository validation error = %v", err)
+	}
+}
 
 func TestNormalizeExcerptStripsPastedHTML(t *testing.T) {
 	excerpt := `<p></p><div datapageid="page-id" datalarkhtmlrole="root"><h1>先电脑浏览器登入</h1><p>正文 &amp; 提示</p></div>`

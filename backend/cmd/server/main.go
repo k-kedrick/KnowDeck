@@ -116,8 +116,8 @@ func main() {
 		apiPublic.GET("/categories", publicHandler.ListCategories)
 		apiPublic.GET("/tags", publicHandler.ListTags)
 		apiPublic.GET("/documents", publicHandler.ListDocuments)
-		apiPublic.GET("/documents/:slug", publicHandler.GetDocumentBySlug)
-		apiPublic.GET("/search", searchLimiter.Middleware("搜索过于频繁，请稍后再试"), publicHandler.Search)
+		apiPublic.GET("/documents/:slug", middleware.OptionalAuthMiddleware(authService), publicHandler.GetDocumentBySlug)
+		apiPublic.GET("/search", middleware.OptionalAuthMiddleware(authService), searchLimiter.Middleware("搜索过于频繁，请稍后再试"), publicHandler.Search)
 		apiPublic.GET("/media/download/:id", publicHandler.DownloadMedia)
 		apiPublic.GET("/external-image", imageProxyLimiter.Middleware("图片请求过于频繁，请稍后再试"), publicHandler.ProxyExternalImage)
 	}

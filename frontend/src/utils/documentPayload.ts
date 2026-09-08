@@ -1,4 +1,4 @@
-import type { DocumentSaveReq } from '../api';
+import type { DocumentAccessLevel, DocumentSaveReq } from '../api';
 
 export interface DocumentPayloadInput {
   title: string;
@@ -7,6 +7,7 @@ export interface DocumentPayloadInput {
   excerpt: string;
   cover: string;
   status: string;
+  accessLevel?: DocumentAccessLevel;
   categoryId: number;
   isPinned: boolean;
   tags: string[];
@@ -19,6 +20,7 @@ export const buildDocumentPayload = ({
   excerpt,
   cover,
   status,
+  accessLevel,
   categoryId,
   isPinned,
   tags,
@@ -29,6 +31,7 @@ export const buildDocumentPayload = ({
   excerpt: excerpt.trim() || undefined,
   cover: cover.trim() || undefined,
   status,
+  access_level: accessLevel || 'public',
   category_id: categoryId,
   is_pinned: isPinned,
   tags,

@@ -49,7 +49,8 @@ type Document struct {
 	Content     string     `json:"content,omitempty" db:"content"`
 	Excerpt     string     `json:"excerpt" db:"excerpt"`
 	Cover       string     `json:"cover" db:"cover"`
-	Status      string     `json:"status" db:"status"` // draft, published, archived
+	Status      string     `json:"status" db:"status"`             // draft, published, archived
+	AccessLevel string     `json:"access_level" db:"access_level"` // public, authenticated
 	CategoryID  int64      `json:"category_id" db:"category_id"`
 	AuthorID    int64      `json:"author_id" db:"author_id"`
 	SortOrder   int        `json:"sort_order" db:"sort_order"`
@@ -165,16 +166,17 @@ type UpdateProfileReq struct {
 }
 
 type DocumentSaveReq struct {
-	Title      string   `json:"title" binding:"required"`
-	Slug       string   `json:"slug"`
-	Content    string   `json:"content"`
-	Excerpt    string   `json:"excerpt"`
-	Cover      string   `json:"cover"`
-	Status     string   `json:"status"` // draft, published, archived
-	CategoryID int64    `json:"category_id"`
-	SortOrder  int      `json:"sort_order"`
-	IsPinned   bool     `json:"is_pinned"`
-	Tags       []string `json:"tags"`
+	Title       string   `json:"title" binding:"required"`
+	Slug        string   `json:"slug"`
+	Content     string   `json:"content"`
+	Excerpt     string   `json:"excerpt"`
+	Cover       string   `json:"cover"`
+	Status      string   `json:"status"`       // draft, published, archived
+	AccessLevel string   `json:"access_level"` // public, authenticated
+	CategoryID  int64    `json:"category_id"`
+	SortOrder   int      `json:"sort_order"`
+	IsPinned    bool     `json:"is_pinned"`
+	Tags        []string `json:"tags"`
 }
 
 type DocumentStatusReq struct {
