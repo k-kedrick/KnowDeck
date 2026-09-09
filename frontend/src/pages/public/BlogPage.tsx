@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Filter, FolderTree, Tags, X } from 'lucide-react';
+import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, FolderTree, Tags, X } from 'lucide-react';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
 import type { CategoryTreeNode, DocumentListItem, Tag } from '../../api';
@@ -16,10 +16,98 @@ const getCachedTags = (): Tag[] => {
   }
 };
 
-type CategoryOption = CategoryTreeNode & { depth: number };
+const findCategoryAncestors = (nodes: CategoryTreeNode[], targetID: number, ancestors: number[] = []): number[] => {
+  for (const node of nodes) {
+    if (node.id === targetID) return ancestors;
+    const found = findCategoryAncestors(node.children || [], targetID, [...ancestors, node.id]);
+    if (found.length || node.children?.some((child) => child.id === targetID)) return found;
+  }
+  return [];
+};
 
-const flattenCategories = (nodes: CategoryTreeNode[], depth = 0): CategoryOption[] =>
-  nodes.flatMap((node) => [{ ...node, depth }, ...flattenCategories(node.children || [], depth + 1)]);
+type CategoryFilterTreeProps = {
+  nodes: CategoryTreeNode[];
+  activeCategory?: number;
+  onSelect: (id?: string) => void;
+  compact?: boolean;
+};
+
+const CategoryFilterTree = ({ nodes, activeCategory, onSelect, compact = false }: CategoryFilterTreeProps) => {
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(() => new Set());
+  const [tooltip, setTooltip] = useState<{ id: number; left: number; top: number } | null>(null);
+  const activeAncestors = activeCategory ? new Set(findCategoryAncestors(nodes, activeCategory)) : new Set<number>();
+
+  const moveTooltip = (node: CategoryTreeNode, event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!node.description?.trim()) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltip({
+      id: node.id,
+      left: event.clientX - rect.left + 14,
+      top: event.clientY - rect.top,
+    });
+  };
+
+  const toggle = (id: number) => {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const renderNode = (node: CategoryTreeNode, depth = 0) => {
+    const hasChildren = !!node.children?.length;
+    const expanded = expandedIds.has(node.id) || activeAncestors.has(node.id);
+    const active = activeCategory === node.id;
+    const rowPadding = `${compact ? 4 + depth * 12 : 4 + depth * 14}px`;
+    const rowClass = compact
+      ? `flex min-w-0 flex-1 items-center rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors ${active ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`
+      : `flex min-w-0 flex-1 items-center rounded-xl px-3 py-2 text-left text-sm font-medium transition-all ${active ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs dark:bg-blue-950/60 dark:text-blue-300' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-white'}`;
+
+    return (
+      <div key={node.id}>
+        <div
+          className="relative flex min-w-0 items-center gap-0.5"
+          style={{ paddingLeft: rowPadding }}
+          onMouseEnter={(event) => moveTooltip(node, event)}
+          onMouseMove={(event) => moveTooltip(node, event)}
+          onMouseLeave={() => setTooltip((current) => current?.id === node.id ? null : current)}
+        >
+          {hasChildren ? (
+            <button
+              type="button"
+              aria-label={`${expanded ? '折叠' : '展开'}分类：${node.name}`}
+              aria-expanded={expanded}
+              onClick={() => toggle(node.id)}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+            </button>
+          ) : <span className="w-7 shrink-0" />}
+          <button type="button" onClick={() => onSelect(String(node.id))} className={rowClass}>
+            <span className="truncate">{node.name}</span>
+          </button>
+          {tooltip?.id === node.id && node.description?.trim() && (
+            <div
+              role="tooltip"
+              style={{ left: tooltip.left, top: tooltip.top }}
+              className="pointer-events-none absolute z-50 w-max max-w-60 -translate-y-1/2 rounded-lg border border-slate-200/90 bg-white px-3 py-2 text-xs leading-5 text-slate-600 shadow-xl dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            >
+              {node.description.trim()}
+            </div>
+          )}
+        </div>
+        {hasChildren && expanded && <div>{node.children!.map((child) => renderNode(child, depth + 1))}</div>}
+      </div>
+    );
+  };
+
+  return (
+    <div className={compact ? 'space-y-0.5' : 'space-y-1'}>
+      {nodes.map((node) => renderNode(node))}
+    </div>
+  );
+};
 
 export const BlogPage = () => {
   const { tree, siteInfo } = useOutletContext<PublicOutletContext>();
@@ -30,22 +118,28 @@ export const BlogPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const categories = useMemo(() => flattenCategories(tree), [tree]);
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
   const category = Number(searchParams.get('category')) || undefined;
-  const tag = searchParams.get('tag') || undefined;
+  const selectedTags = [...new Set(searchParams.getAll('tag').map((value) => value.trim()).filter(Boolean))];
+  const tagKey = selectedTags.join('\u0000');
+  const selectedTagSet = new Set(selectedTags);
+  const initialDesktopTags = tags.slice(0, 16);
+  const desktopTags = [
+    ...initialDesktopTags,
+    ...tags.filter((item) => selectedTagSet.has(item.slug) && !initialDesktopTags.some((visible) => visible.id === item.id)),
+  ];
   const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const siteName = siteInfo?.site_name || '知识库';
 
   const canonicalParams = new URLSearchParams();
   if (category) canonicalParams.set('category', String(category));
-  if (tag) canonicalParams.set('tag', tag);
+  selectedTags.forEach((tag) => canonicalParams.append('tag', tag));
   if (page > 1) canonicalParams.set('page', String(page));
   const canonicalQuery = canonicalParams.toString();
   const canonicalPath = `/blog${canonicalQuery ? `?${canonicalQuery}` : ''}`;
   const hasUnsupportedParams = [...searchParams.keys()].some((key) => !['category', 'tag', 'page'].includes(key));
-  const filtered = !!category || !!tag || hasUnsupportedParams;
+  const filtered = !!category || selectedTags.length > 0 || hasUnsupportedParams;
   const pageLabel = page > 1 ? ` - 第 ${page} 页` : '';
 
   useEffect(() => {
@@ -68,7 +162,7 @@ export const BlogPage = () => {
       setLoading(true);
       setError(false);
       try {
-        const data = await api.getDocuments({ page, page_size: pageSize, category_id: category, tag }, controller.signal);
+        const data = await api.getDocuments({ page, page_size: pageSize, category_id: category, tags: selectedTags }, controller.signal);
         if (controller.signal.aborted) return;
         setDocuments(data.list || []);
         setTotal(data.total || 0);
@@ -79,12 +173,30 @@ export const BlogPage = () => {
       }
     });
     return () => controller.abort();
-  }, [category, page, tag]);
+  }, [category, page, tagKey]);
 
-  const updateFilter = (key: 'category' | 'tag' | 'page', value?: string) => {
+  const updateFilter = (key: 'category' | 'page', value?: string) => {
     const next = new URLSearchParams(searchParams);
     if (value) next.set(key, value); else next.delete(key);
     if (key !== 'page') next.delete('page');
+    setSearchParams(next);
+  };
+
+  const toggleTag = (slug: string) => {
+    const nextTags = selectedTagSet.has(slug)
+      ? selectedTags.filter((tag) => tag !== slug)
+      : [...selectedTags, slug];
+    const next = new URLSearchParams(searchParams);
+    next.delete('tag');
+    nextTags.forEach((tag) => next.append('tag', tag));
+    next.delete('page');
+    setSearchParams(next);
+  };
+
+  const clearTags = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('tag');
+    next.delete('page');
     setSearchParams(next);
   };
 
@@ -119,7 +231,7 @@ export const BlogPage = () => {
             </div>
 
             {/* Active filter pill */}
-            {(category || tag) && (
+            {(category || selectedTags.length > 0) && (
               <div className="flex items-center gap-2 self-start sm:self-end">
                 <button
                   type="button"
@@ -145,46 +257,36 @@ export const BlogPage = () => {
           <div className="border-t border-slate-100 p-4 space-y-4 dark:border-slate-800">
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">分类</p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="space-y-1">
                 <button
                   type="button"
                   onClick={() => updateFilter('category')}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                  className={`w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors ${
                     !category
                       ? 'bg-blue-600 text-white'
                       : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
-                  全部
+                  全部分类
                 </button>
-                {categories.map((item) => (
-                  <button
-                    type="button"
-                    key={item.id}
-                    onClick={() => updateFilter('category', String(item.id))}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                      category === item.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {item.name}
-                  </button>
-                ))}
+                <CategoryFilterTree nodes={tree} activeCategory={category} onSelect={(id) => updateFilter('category', id)} compact />
               </div>
             </div>
 
             {!!tags.length && (
               <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">标签</p>
+                <div className="mb-2 flex items-center justify-between gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <span>标签{selectedTags.length ? ` · 已选 ${selectedTags.length} 个` : ''}</span>
+                  {selectedTags.length > 0 && <button type="button" onClick={clearTags} className="normal-case tracking-normal text-blue-600 hover:text-blue-700 dark:text-blue-400">清除</button>}
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {tags.map((item) => (
                     <button
                       type="button"
                       key={item.id}
-                      onClick={() => updateFilter('tag', tag === item.slug ? undefined : item.slug)}
+                      onClick={() => toggleTag(item.slug)}
                       className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                        tag === item.slug
+                        selectedTagSet.has(item.slug)
                           ? 'bg-blue-600 text-white'
                           : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
@@ -201,7 +303,7 @@ export const BlogPage = () => {
         {/* Content Stream & Sidebar Grid */}
         <div className="grid gap-10 pt-8 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
           {/* Left Sidebar Filter */}
-          <aside className="hidden space-y-6 lg:block">
+          <aside className="relative z-20 hidden space-y-6 lg:block">
             <div className="glass-card rounded-2xl p-5 shadow-sm space-y-6">
               {/* Category Filter */}
               <div>
@@ -211,7 +313,7 @@ export const BlogPage = () => {
                     分类筛选
                   </h2>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <button
                     type="button"
                     onClick={() => updateFilter('category')}
@@ -223,41 +325,30 @@ export const BlogPage = () => {
                   >
                     全部分类
                   </button>
-                  {categories.map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      onClick={() => updateFilter('category', String(item.id))}
-                      style={{ paddingLeft: `${14 + item.depth * 14}px` }}
-                      className={`w-full truncate rounded-xl pr-3.5 py-2 text-left text-sm font-medium transition-all ${
-                        category === item.id
-                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-semibold shadow-xs'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-white'
-                      }`}
-                    >
-                      {item.depth > 0 ? '└ ' : ''}{item.name}
-                    </button>
-                  ))}
+                  <CategoryFilterTree nodes={tree} activeCategory={category} onSelect={(id) => updateFilter('category', id)} />
                 </div>
               </div>
 
               {/* Tag Filter */}
               {!!tags.length && (
                 <div>
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-3.5 dark:border-slate-800">
-                    <Tags className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                      标签筛选
-                    </h2>
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-3.5 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Tags className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                        标签筛选{selectedTags.length ? ` · 已选 ${selectedTags.length} 个` : ''}
+                      </h2>
+                    </div>
+                    {selectedTags.length > 0 && <button type="button" onClick={clearTags} className="text-xs font-medium text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400">清除</button>}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {tags.slice(0, 16).map((item) => {
-                      const isActive = tag === item.slug;
+                    {desktopTags.map((item) => {
+                      const isActive = selectedTagSet.has(item.slug);
                       return (
                         <button
                           type="button"
                           key={item.id}
-                          onClick={() => updateFilter('tag', isActive ? undefined : item.slug)}
+                          onClick={() => toggleTag(item.slug)}
                           className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
                             isActive
                               ? 'bg-blue-600 text-white font-semibold shadow-xs'
@@ -279,9 +370,9 @@ export const BlogPage = () => {
             {/* Stream Header */}
             <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-3 text-xs text-text-tertiary">
               <span className="font-semibold text-text-secondary">{loading ? '正在检索文章…' : `共找到 ${total} 篇文章`}</span>
-              {(category || tag) && (
+              {(category || selectedTags.length > 0) && (
                 <span className="inline-flex items-center gap-1 text-text-tertiary">
-                  <Filter className="h-3.5 w-3.5 text-brand" /> 已启用筛选
+                  <Filter className="h-3.5 w-3.5 text-brand" /> {selectedTags.length ? `已选 ${selectedTags.length} 个标签` : '已启用筛选'}
                 </span>
               )}
             </div>
@@ -319,7 +410,7 @@ export const BlogPage = () => {
                 <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
                   尝试清除当前分类或标签筛选条件。
                 </p>
-                {(category || tag) && (
+                {(category || selectedTags.length > 0) && (
                   <button
                     type="button"
                     onClick={() => setSearchParams({})}

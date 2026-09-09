@@ -76,7 +76,11 @@ describe('public document routing', () => {
       { ...summary(1, 'a', '文章 A'), status: 'published', category_id: 1, author_id: 1, sort_order: 0, is_pinned: false, created_at: '2026-01-01T00:00:00Z', category_name: '指南', tags: ['React'], reading_time: 3 },
       { ...summary(2, 'b', '文章 B'), status: 'published', category_id: 1, author_id: 1, sort_order: 0, is_pinned: false, created_at: '2026-01-01T00:00:00Z' },
     ] });
-    apiMocks.getTags.mockReset().mockResolvedValue([{ id: 1, name: 'React', slug: 'react', doc_count: 1 }]);
+    apiMocks.getTags.mockReset().mockResolvedValue([
+      { id: 1, name: 'React', slug: 'react', doc_count: 1 },
+      { id: 2, name: 'Go', slug: 'go', doc_count: 1 },
+      { id: 3, name: 'Claude', slug: 'claude', doc_count: 1 },
+    ]);
   });
 
   afterEach(cleanup);
@@ -94,21 +98,69 @@ describe('public document routing', () => {
   });
 
   it('renders the homepage and article list with real document links', async () => {
+    apiMocks.search.mockResolvedValueOnce([{
+      id: 3,
+      title: '搜索结果',
+      slug: 'search-result',
+      snippet: '...center" class="ace-line old-record-id-example"><strong><mark class="search-highlight">文章</mark></strong>正文</div...',
+      category_name: '指南',
+      category_slug: 'guide',
+      updated_at: '2026-01-01T00:00:00Z',
+    }]);
     render(<App />);
     expect(await screen.findByRole('heading', { name: '知识库', level: 1 })).toBeTruthy();
     expect((await screen.findByRole('link', { name: /文章 A/ })).getAttribute('href')).toBe('/docs/a');
+    expect(screen.getByRole('link', { name: /全部文章/ }).getAttribute('href')).toBe('/blog');
+    expect(document.querySelector<HTMLAnchorElement>('#categories a')?.getAttribute('href')).toBe('/blog?category=1');
+    expect((await screen.findByRole('link', { name: /#React/ })).getAttribute('href')).toBe('/blog?tag=react');
     expect(screen.getByRole('navigation', { name: '主导航' }).querySelectorAll('a')).toHaveLength(2);
     expect(screen.queryByRole('link', { name: '文档' })).toBeNull();
+    expect(screen.queryByText('搜索知识库...')).toBeNull();
 
+    const homeSearch = screen.getByRole('searchbox', { name: '搜索文档、标题和标签' });
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
-    expect(await screen.findByRole('dialog', { name: '搜索知识库' })).toBeTruthy();
-    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(document.activeElement).toBe(homeSearch);
+    fireEvent.change(homeSearch, { target: { value: '文章' } });
+    await waitFor(() => expect(apiMocks.search).toHaveBeenCalledWith('文章', expect.any(AbortSignal)));
+    expect(screen.queryByRole('dialog', { name: '搜索知识库' })).toBeNull();
+    const inlineResult = await screen.findByRole('link', { name: /搜索结果/ });
+    expect(inlineResult.getAttribute('href')).toBe('/docs/search-result');
+    expect(inlineResult.textContent).toContain('文章');
+    expect(inlineResult.textContent).not.toContain('class=');
+    expect(inlineResult.textContent).not.toContain('</div');
 
     cleanup();
     window.history.replaceState(null, '', '/blog');
     render(<App />);
     expect(await screen.findByRole('heading', { name: '文章与文档' })).toBeTruthy();
+    expect(screen.getByText('搜索知识库...')).toBeTruthy();
     expect((await screen.findByRole('link', { name: /文章 A/ })).getAttribute('href')).toBe('/docs/a');
+  });
+
+  it('accumulates public tag filters in the URL and clears them independently', async () => {
+    window.history.replaceState(null, '', '/blog?tag=react&tag=go&page=2');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: '文章与文档' });
+    await waitFor(() => expect(apiMocks.getDocuments).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, tags: ['react', 'go'] }),
+      expect.any(AbortSignal),
+    ));
+    expect(screen.getByText('标签筛选 · 已选 2 个')).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button', { name: '#React' })[0]);
+    await waitFor(() => expect(apiMocks.getDocuments).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, tags: ['go'] }),
+      expect.any(AbortSignal),
+    ));
+    expect(new URL(window.location.href).search).toBe('?tag=go');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /^清除$/ })[0]);
+    await waitFor(() => expect(apiMocks.getDocuments).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, tags: [] }),
+      expect.any(AbortSignal),
+    ));
+    expect(new URL(window.location.href).search).toBe('');
   });
 
   it('updates route-specific metadata from home to blog and article', async () => {

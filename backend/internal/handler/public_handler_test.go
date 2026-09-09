@@ -2,13 +2,19 @@ package handler
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"knowledge-base/backend/internal/config"
+	"knowledge-base/backend/internal/model"
+	"knowledge-base/backend/internal/repository"
+	"knowledge-base/backend/internal/service"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -34,6 +40,49 @@ func TestNormalizePublicPagination(t *testing.T) {
 				t.Fatalf("got page=%d pageSize=%d, want page=%d pageSize=%d", page, pageSize, test.wantPage, test.wantPageSize)
 			}
 		})
+	}
+}
+
+func TestPublicListDocumentsReadsRepeatedTagParams(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := repository.InitDB(&config.Config{
+		DBPath: filepath.Join(t.TempDir(), "public-tags.db"), UploadDir: t.TempDir(), AdminUser: "admin", AdminPass: "test-admin-password", JWTSecret: "test-secret", JWTExpireHrs: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	docs := repository.NewDocumentRepository(db)
+	for _, document := range []*model.Document{
+		{Title: "Go", Slug: "go", Status: "published", AuthorID: 1, Tags: []string{"Go"}},
+		{Title: "Go React", Slug: "go-react", Status: "published", AuthorID: 1, Tags: []string{"Go", "React"}},
+	} {
+		if _, err := docs.Create(document); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h := NewPublicHandler(service.NewDocumentService(docs, repository.NewCategoryRepository(db)), nil, nil, nil, nil, nil)
+	router := gin.New()
+	router.GET("/api/public/documents", h.ListDocuments)
+
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/public/documents?tag=go&tag=react", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("got status %d: %s", response.Code, response.Body.String())
+	}
+	var body struct {
+		Data struct {
+			Total int64 `json:"total"`
+			List  []struct {
+				Slug string `json:"slug"`
+			} `json:"list"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Data.Total != 1 || len(body.Data.List) != 1 || body.Data.List[0].Slug != "go-react" {
+		t.Fatalf("repeated tags returned %#v, want only go-react", body.Data)
 	}
 }
 

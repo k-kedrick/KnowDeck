@@ -87,12 +87,13 @@ type DocumentSummary struct {
 
 // CategoryTreeNode 知识库树节点 (用于前台左侧导航)
 type CategoryTreeNode struct {
-	ID        int64               `json:"id"`
-	Name      string              `json:"name"`
-	Slug      string              `json:"slug"`
-	Icon      string              `json:"icon"`
-	Children  []*CategoryTreeNode `json:"children"`
-	Documents []*DocumentSummary  `json:"documents"`
+	ID          int64               `json:"id"`
+	Name        string              `json:"name"`
+	Slug        string              `json:"slug"`
+	Description string              `json:"description"`
+	Icon        string              `json:"icon"`
+	Children    []*CategoryTreeNode `json:"children"`
+	Documents   []*DocumentSummary  `json:"documents"`
 }
 
 // MediaFolder 媒体文件夹模型
@@ -149,6 +150,11 @@ type LoginReq struct {
 type LoginResp struct {
 	Token string `json:"token"`
 	User  *User  `json:"user"`
+}
+
+type ChangePasswordReq struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
 }
 
 type UpdateCredentialsReq struct {

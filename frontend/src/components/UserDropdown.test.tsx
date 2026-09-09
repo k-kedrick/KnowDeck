@@ -57,6 +57,7 @@ describe('UserDropdown component', () => {
     expect(screen.getByText('管理员')).toBeTruthy();
     expect(screen.getByText('@admin')).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: '进入管理控制台' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: '账号安全' }).getAttribute('href')).toBe('/account/security');
     expect(screen.getByText('切换为暗色模式')).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: '退出登录' })).toBeTruthy();
   });
@@ -79,6 +80,7 @@ describe('UserDropdown component', () => {
     expect(screen.getAllByText('成员小白').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('成员')).toBeTruthy();
     expect(screen.queryByRole('menuitem', { name: '进入管理控制台' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: '账号安全' }).getAttribute('href')).toBe('/account/security');
     expect(screen.getByText('切换为亮色模式')).toBeTruthy();
   });
 

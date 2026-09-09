@@ -25,6 +25,7 @@
 - Backend flow: Gin route/handler -> service -> repository -> SQLite; media operations additionally use `internal/storage`.
 - Public surface: SEO HTML shells plus read-only `/api/public/*` endpoints. Mutations live under JWT-protected `/api/admin/*` routes.
 - Persistence: users, categories, tags, documents, document-tags, media, media-folders, settings, plus an FTS5 document index and synchronization triggers. SQLite uses WAL and one open connection.
+- Category hierarchy writes reject missing, self, descendant, and cyclic parent relationships; tree responses normalize legacy orphan/cycle links so persisted categories cannot disappear from navigation.
 - Frontend entry/routes: `frontend/src/main.tsx` -> `frontend/src/App.tsx`; public routes are `/`, `/blog`, `/docs/:slug`; admin routes are lazy-loaded under `/wang` (with `/wang/dashboard` overview landing); backend management APIs remain under `/api/admin/*`.
 - User/auth: `users` supports admin/member roles, active/disabled status and auth-version invalidation. Public `/api/auth/register` requires an atomically consumed invite, `/api/auth/login` shares the existing JWT system, and authenticated `/api/auth/me` returns the database-current safe user.
 - Invites: plaintext codes are generated with `crypto/rand`, stored only as SHA-256 hashes, and consumed with a conditional SQLite update in the member-creation transaction.
@@ -166,3 +167,7 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
   4. Feature enhancements: multi-select batch actions (batch enable, batch disable, batch delete, batch copy multi-line), view registered users per invite code, edit invite codes (remark, max uses, validity extension), 1-click mono-badge copy with instant feedback.
 - Verification on 2026-09-08: Frontend full test suite (39 test files, 239 passed, 1 skipped), `npm run build` PASS (tsc + vite build 0 errors), Backend `go test ./...` PASS across all packages. Browser and race detector were not run.
 
+## U7 Member Self-Service Password Change
+
+- **COMPLETED**: authenticated users can open `/account/security` from the user menu, verify their current password, and set a new password of at least 12 characters. The backend increments `auth_version`, invalidates every old session, and returns a fresh JWT so the current device remains signed in.
+- Verification on 2026-09-08: backend `go test ./...` and `go vet ./...` PASS; focused frontend tests 45/45 PASS; frontend build and lint PASS (warnings only). The full frontend run passed 241 tests and skipped 1, with the already-recorded intermittent `App.test.tsx` document lazy-route timeout; an immediate focused rerun of `App.test.tsx` passed 6/6.

@@ -24,6 +24,7 @@ import {
 } from '../../hooks/useDocumentDraft';
 import type { LocalDraftEntry } from '../../hooks/useDocumentDraft';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
+import { ModalPortal } from '../../components/ModalPortal';
 import { Button } from '../../components/ui/Button';
 
 export const AdminDocumentList: React.FC = () => {
@@ -506,6 +507,7 @@ export const AdminDocumentList: React.FC = () => {
 
       {/* React Custom Delete Modal */}
       {deletingDoc && (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div role="dialog" aria-modal="true" aria-labelledby="delete-document-title" className="w-full max-w-sm space-y-4 rounded-ds-lg border border-border-default bg-surface-elevated p-6 shadow-modal">
             <div className="flex items-center space-x-3 text-red-600 dark:text-red-400">
@@ -535,9 +537,11 @@ export const AdminDocumentList: React.FC = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {discardingLocalDraft && (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div role="dialog" aria-modal="true" aria-labelledby="discard-draft-title" className="w-full max-w-sm space-y-4 rounded-ds-lg border border-border-default bg-surface-elevated p-6 shadow-modal">
             <div className="flex items-center space-x-3">
@@ -565,6 +569,7 @@ export const AdminDocumentList: React.FC = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

@@ -153,6 +153,91 @@ func TestMemberMeEnforcesCurrentDatabaseState(t *testing.T) {
 	}
 }
 
+func TestMemberCanChangeOwnPasswordAndKeepCurrentSession(t *testing.T) {
+	router, db, auth, _ := newMemberAuthRouter(t)
+	defer db.Close()
+	hash, err := utils.HashPassword("123456789012")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := db.Exec("INSERT INTO users (username, password_hash, nickname, role, status, auth_version) VALUES ('alice', ?, 'alice', 'member', 'active', 3)", hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, _ := result.LastInsertId()
+	oldToken, err := auth.GenerateToken(&model.User{ID: id, Username: "alice", Role: "member", Status: "active", AuthVersion: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := patchPassword(router, oldToken, `{"current_password":"123456789012","new_password":"new-password-123"}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	var decoded struct {
+		Data struct {
+			Token string `json:"token"`
+			User  struct {
+				ID       int64  `json:"id"`
+				Username string `json:"username"`
+			} `json:"user"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Data.Token == "" || decoded.Data.User.ID != id || decoded.Data.User.Username != "alice" {
+		t.Fatalf("unexpected response: %s", response.Body.String())
+	}
+	if response := getWithToken(router, oldToken); response.Code != http.StatusUnauthorized {
+		t.Fatalf("old token status=%d body=%s", response.Code, response.Body.String())
+	}
+	if response := getWithToken(router, decoded.Data.Token); response.Code != http.StatusOK {
+		t.Fatalf("fresh token status=%d body=%s", response.Code, response.Body.String())
+	}
+	if response := postMemberLogin(router, `{"username":"alice","password":"123456789012"}`); response.Code != http.StatusUnauthorized {
+		t.Fatalf("old password login status=%d", response.Code)
+	}
+	if response := postMemberLogin(router, `{"username":"alice","password":"new-password-123"}`); response.Code != http.StatusOK {
+		t.Fatalf("new password login status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestMemberChangePasswordValidation(t *testing.T) {
+	router, db, auth, _ := newMemberAuthRouter(t)
+	defer db.Close()
+	hash, err := utils.HashPassword("123456789012")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := db.Exec("INSERT INTO users (username, password_hash, nickname, role, status) VALUES ('alice', ?, 'alice', 'member', 'active')", hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, _ := result.LastInsertId()
+	user, _ := auth.GetUserByID(id)
+	token, _ := auth.GenerateToken(user)
+
+	tests := []struct {
+		body string
+		want string
+	}{
+		{`{`, "密码参数无效"},
+		{`{"current_password":"wrong-password","new_password":"new-password-123"}`, "当前密码不正确"},
+		{`{"current_password":"123456789012","new_password":"short"}`, "新密码至少需要 12 个字符"},
+		{`{"current_password":"123456789012","new_password":"123456789012"}`, "新密码不能与当前密码相同"},
+	}
+	for _, test := range tests {
+		response := patchPassword(router, token, test.body)
+		if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), test.want) {
+			t.Fatalf("body=%q status=%d response=%s", test.body, response.Code, response.Body.String())
+		}
+	}
+	if response := patchPassword(router, "", `{"current_password":"123456789012","new_password":"new-password-123"}`); response.Code != http.StatusUnauthorized {
+		t.Fatalf("guest status=%d", response.Code)
+	}
+}
+
 func newMemberAuthRouter(t *testing.T) (*gin.Engine, *repository.DB, *service.AuthService, *repository.UserRepository) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -167,11 +252,23 @@ func newMemberAuthRouter(t *testing.T) (*gin.Engine, *repository.DB, *service.Au
 	memberHandler := NewMemberAuthHandler(auth)
 	router.POST("/api/auth/login", memberHandler.Login)
 	router.GET("/api/auth/me", middleware.AuthMiddleware(auth), memberHandler.Me)
+	router.PATCH("/api/auth/password", middleware.AuthMiddleware(auth), memberHandler.ChangePassword)
 	router.POST("/api/admin/auth/login", NewAdminAuthHandler(auth).Login)
 	admin := router.Group("/api/admin")
 	admin.Use(middleware.AuthMiddleware(auth), middleware.RequireAdmin())
 	admin.GET("/invites", func(c *gin.Context) { c.Status(http.StatusOK) })
 	return router, db, auth, users
+}
+
+func patchPassword(router *gin.Engine, token, body string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodPatch, "/api/auth/password", bytes.NewBufferString(body))
+	request.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		request.Header.Set("Authorization", "Bearer "+token)
+	}
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	return response
 }
 
 func postMemberLogin(router *gin.Engine, body string) *httptest.ResponseRecorder {

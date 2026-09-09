@@ -131,6 +131,7 @@ func main() {
 	apiAuthProtected.Use(middleware.AuthMiddleware(authService))
 	{
 		apiAuthProtected.GET("/me", memberAuthHandler.Me)
+		apiAuthProtected.PATCH("/password", memberAuthHandler.ChangePassword)
 	}
 
 	// 管理员认证 API

@@ -102,6 +102,25 @@ func (r *UserRepository) UpdateCredentials(id int64, username, passwordHash stri
 	return tx.Commit()
 }
 
+func (r *UserRepository) UpdatePassword(id int64, passwordHash string) error {
+	result, err := r.db.Exec(`
+		UPDATE users
+		SET password_hash = ?, auth_version = auth_version + 1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`, passwordHash, id)
+	if err != nil {
+		return err
+	}
+	updated, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if updated == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
 // CreateMemberWithInvite consumes an eligible invite and creates a member in one transaction.
 func (r *UserRepository) CreateMemberWithInvite(username, passwordHash, inviteCodeHash string) (int64, error) {
 	tx, err := r.db.Begin()

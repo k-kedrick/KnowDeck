@@ -29,6 +29,7 @@ type DocumentFilter struct {
 	Status     string
 	CategoryID int64
 	Tag        string
+	Tags       []string
 	Keyword    string
 	Page       int
 	PageSize   int
@@ -60,9 +61,22 @@ func (r *DocumentRepository) List(filter DocumentFilter) ([]*model.Document, int
 		args = append(args, filter.CategoryID, filter.CategoryID)
 	}
 
-	if filter.Tag != "" {
+	tags := make([]string, 0, len(filter.Tags)+1)
+	seenTags := make(map[string]struct{})
+	for _, tag := range append([]string{filter.Tag}, filter.Tags...) {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+		if _, seen := seenTags[tag]; seen {
+			continue
+		}
+		seenTags[tag] = struct{}{}
+		tags = append(tags, tag)
+	}
+	for _, tag := range tags {
 		whereClauses = append(whereClauses, "d.id IN (SELECT dt.document_id FROM document_tags dt JOIN tags t ON dt.tag_id = t.id WHERE t.name = ? OR t.slug = ?)")
-		args = append(args, filter.Tag, filter.Tag)
+		args = append(args, tag, tag)
 	}
 
 	if filter.Keyword != "" {

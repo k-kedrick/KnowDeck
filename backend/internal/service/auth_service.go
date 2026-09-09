@@ -20,8 +20,10 @@ type AuthService struct {
 }
 
 var (
-	ErrInvalidCredentials = errors.New("INVALID_CREDENTIALS")
-	ErrAccountDisabled    = errors.New("ACCOUNT_DISABLED")
+	ErrInvalidCredentials     = errors.New("INVALID_CREDENTIALS")
+	ErrAccountDisabled        = errors.New("ACCOUNT_DISABLED")
+	ErrCurrentPasswordInvalid = errors.New("CURRENT_PASSWORD_INVALID")
+	ErrNewPasswordUnchanged   = errors.New("NEW_PASSWORD_UNCHANGED")
 )
 
 type JWTClaims struct {
@@ -113,6 +115,42 @@ func (s *AuthService) ValidateAuthVersion(id, version int64) bool {
 	current, err := s.userRepo.GetAuthVersion(id)
 	return err == nil && current == version
 }
+
+func (s *AuthService) ChangePassword(id int64, currentPassword, newPassword string) (*model.LoginResp, error) {
+	user, err := s.userRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, repository.ErrUserNotFound
+	}
+	if !utils.CheckPasswordHash(currentPassword, user.PasswordHash) {
+		return nil, ErrCurrentPasswordInvalid
+	}
+	if len(newPassword) < 12 {
+		return nil, ErrWeakPassword
+	}
+	if utils.CheckPasswordHash(newPassword, user.PasswordHash) {
+		return nil, ErrNewPasswordUnchanged
+	}
+	hash, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.userRepo.UpdatePassword(id, hash); err != nil {
+		return nil, err
+	}
+	updated, err := s.userRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	token, err := s.GenerateToken(updated)
+	if err != nil {
+		return nil, fmt.Errorf("生成 Token 失败: %w", err)
+	}
+	return &model.LoginResp{Token: token, User: updated}, nil
+}
+
 func (s *AuthService) UpdateCredentials(id int64, req model.UpdateCredentialsReq) error {
 	user, err := s.userRepo.GetByID(id)
 	if err != nil || user == nil {

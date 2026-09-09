@@ -118,7 +118,7 @@ func (h *PublicHandler) ListDocuments(c *gin.Context) {
 	page, pageSize = normalizePublicPagination(page, pageSize)
 	categoryID, _ := strconv.ParseInt(c.Query("category_id"), 10, 64)
 	categorySlug := c.Query("category_slug")
-	tag := c.Query("tag")
+	tags := c.QueryArray("tag")
 	keyword := c.Query("keyword")
 
 	if categorySlug != "" && categoryID == 0 {
@@ -130,7 +130,7 @@ func (h *PublicHandler) ListDocuments(c *gin.Context) {
 	filter := repository.DocumentFilter{
 		Status:     "published",
 		CategoryID: categoryID,
-		Tag:        tag,
+		Tags:       tags,
 		Keyword:    keyword,
 		Page:       page,
 		PageSize:   pageSize,

@@ -39,6 +39,7 @@ export const PublicLayout = () => {
   const [currentDocTitle, setCurrentDocTitle] = useState<string>('');
 
   const isDocumentRoute = location.pathname.startsWith('/docs/');
+  const isHomeRoute = location.pathname === '/';
 
   useEffect(() => {
     applyTheme(darkMode ? 'dark' : 'light');
@@ -73,12 +74,16 @@ export const PublicLayout = () => {
     const handleSearchShortcut = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setIsSearchOpen(true);
+        if (isHomeRoute) {
+          document.getElementById('home-search-input')?.focus();
+        } else {
+          setIsSearchOpen(true);
+        }
       }
     };
     window.addEventListener('keydown', handleSearchShortcut);
     return () => window.removeEventListener('keydown', handleSearchShortcut);
-  }, []);
+  }, [isHomeRoute]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -125,6 +130,7 @@ export const PublicLayout = () => {
       <Header
         siteInfo={siteInfo}
         darkMode={darkMode}
+        showSearch={!isHomeRoute}
         showSidebarToggle={false}
         onToggleDarkMode={toggleTheme}
         onOpenSearch={() => setIsSearchOpen(true)}

@@ -108,6 +108,7 @@ export interface CategoryTreeNode {
   id: number;
   name: string;
   slug: string;
+  description?: string;
   icon: string;
   children?: CategoryTreeNode[];
   documents?: DocumentSummary[];
@@ -242,6 +243,19 @@ export class ApiError extends Error {
 
 const API_BASE = '/api';
 
+const httpErrorMessage = (status: number) => {
+  const messages: Record<number, string> = {
+    400: '请求参数无效',
+    401: '登录状态已失效，请重新登录',
+    403: '当前账号无权执行此操作',
+    404: '请求的服务接口不存在',
+    409: '请求与当前数据状态冲突',
+    429: '请求过于频繁，请稍后再试',
+    500: '服务器处理请求失败',
+  };
+  return messages[status] || `请求失败（状态码 ${status}）`;
+};
+
 async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('kb_token');
   const headers: Record<string, string> = {
@@ -256,7 +270,7 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> 
   const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
   if (!res.ok) {
     const errorText = await res.text();
-    let msg = `HTTP ${res.status}`;
+    let msg = httpErrorMessage(res.status);
     try {
       const errJson = JSON.parse(errorText);
       msg = errJson.message || msg;
@@ -279,10 +293,12 @@ export const api = {
   getSiteInfo: (signal?: AbortSignal) => fetchJson<SiteInfo>('/public/site/info', { signal }),
   getKnowledgeTree: (signal?: AbortSignal) =>
     fetchJson<CategoryTreeNode[] | null>('/public/categories/tree', { signal }).then((tree) => tree ?? []),
-  getDocuments: (params: { category_id?: number; tag?: string; keyword?: string; page?: number; page_size?: number }, signal?: AbortSignal) => {
+  getDocuments: (params: { category_id?: number; tags?: string[]; keyword?: string; page?: number; page_size?: number }, signal?: AbortSignal) => {
     const query = new URLSearchParams();
     if (params.category_id) query.set('category_id', String(params.category_id));
-    if (params.tag) query.set('tag', params.tag);
+    params.tags?.forEach((tag) => {
+      if (tag) query.append('tag', tag);
+    });
     if (params.keyword) query.set('keyword', params.keyword);
     if (params.page) query.set('page', String(params.page));
     if (params.page_size) query.set('page_size', String(params.page_size));
@@ -296,6 +312,11 @@ export const api = {
   memberLogin: (username: string, password: string) => fetchJson<{ token: string; user: User }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   memberRegister: (username: string, password: string, invite_code: string) => fetchJson<null>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password, invite_code }) }),
   memberMe: () => fetchJson<User>('/auth/me'),
+  memberChangePassword: (current_password: string, new_password: string) =>
+    fetchJson<{ token: string; user: User }>('/auth/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ current_password, new_password }),
+    }),
 
   // Admin Auth API
   login: (username: string, password: string) =>

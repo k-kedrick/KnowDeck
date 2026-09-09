@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronDown,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Moon,
@@ -129,6 +130,16 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({
 
           {/* Action Links & Operations */}
           <div className="space-y-0.5 py-1">
+            <Link
+              to="/account/security"
+              role="menuitem"
+              onClick={() => setIsOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-brand-soft hover:text-brand"
+            >
+              <KeyRound className="h-4 w-4" />
+              <span>账号安全</span>
+            </Link>
+
             {isAdmin && (
               <Link
                 to="/wang"

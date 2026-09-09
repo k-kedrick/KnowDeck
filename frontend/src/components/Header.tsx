@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Sun, Moon, BookOpen, Layers, Menu, X } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import type { SiteInfo } from '../api';
 import { Button } from './ui/Button';
 import { UserDropdown } from './UserDropdown';
@@ -10,6 +10,7 @@ import { IconButton } from './ui/IconButton';
 interface HeaderProps {
   siteInfo: SiteInfo | null;
   darkMode: boolean;
+  showSearch?: boolean;
   showSidebarToggle: boolean;
   onToggleDarkMode: () => void;
   onOpenSearch: () => void;
@@ -19,6 +20,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   siteInfo,
   darkMode,
+  showSearch = true,
   showSidebarToggle,
   onToggleDarkMode,
   onOpenSearch,
@@ -90,31 +92,35 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Center/Right: Quick Search Trigger */}
-        <div className="hidden max-w-xs flex-1 sm:block lg:max-w-sm xl:max-w-md">
-          <Button
-            variant="secondary"
-            onClick={onOpenSearch}
-            className="w-full justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-2 font-normal text-slate-400 shadow-xs hover:border-blue-400 hover:bg-white hover:text-slate-600 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:bg-slate-800 transition-all"
-          >
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4" />
-              <span className="text-sm">搜索知识库...</span>
-            </div>
-            <kbd className="hidden items-center rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-medium text-slate-400 dark:border-slate-700 dark:bg-slate-900 lg:inline-flex shadow-2xs">
-              Ctrl K
-            </kbd>
-          </Button>
-        </div>
+        {showSearch && (
+          <div className="hidden max-w-xs flex-1 sm:block lg:max-w-sm xl:max-w-md">
+            <Button
+              variant="secondary"
+              onClick={onOpenSearch}
+              className="w-full justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-2 font-normal text-slate-400 shadow-xs hover:border-blue-400 hover:bg-white hover:text-slate-600 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:bg-slate-800 transition-all"
+            >
+              <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4" />
+                <span className="text-sm">搜索知识库...</span>
+              </div>
+              <kbd className="hidden items-center rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-medium text-slate-400 dark:border-slate-700 dark:bg-slate-900 lg:inline-flex shadow-2xs">
+                Ctrl K
+              </kbd>
+            </Button>
+          </div>
+        )}
 
         {/* Right Actions: Theme Toggle, Search Icon (Mobile), User Dropdown, Mobile Menu */}
         <div className="flex items-center gap-2">
-          <IconButton
-            label="搜索"
-            onClick={onOpenSearch}
-            className="sm:hidden"
-          >
-            <Search className="h-5 w-5" />
-          </IconButton>
+          {showSearch && (
+            <IconButton
+              label="搜索"
+              onClick={onOpenSearch}
+              className="sm:hidden"
+            >
+              <Search className="h-5 w-5" />
+            </IconButton>
+          )}
 
           {!loading && (
             user ? (

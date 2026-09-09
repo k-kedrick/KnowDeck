@@ -2,11 +2,36 @@ package repository
 
 import (
 	"fmt"
+	"html"
+	"regexp"
 	"strings"
 
 	"knowledge-base/backend/internal/model"
 	"knowledge-base/backend/pkg/utils"
 )
+
+const (
+	searchMarkOpenToken  = "\x00SEARCH_MARK_OPEN\x00"
+	searchMarkCloseToken = "\x00SEARCH_MARK_CLOSE\x00"
+)
+
+var (
+	searchLeadingTagFragment = regexp.MustCompile(`(?i)^(\.{3})?[^<>]*(?:\s(?:class|style|id|data-[\w-]+)=["'][^"']*["'])[^>]*>`)
+	searchHTMLTag            = regexp.MustCompile(`(?s)<[^>]*>`)
+	searchDanglingHTMLTag    = regexp.MustCompile(`(?s)<[^>]*$`)
+)
+
+func normalizeSearchSnippet(snippet string) string {
+	snippet = searchLeadingTagFragment.ReplaceAllString(snippet, "$1")
+	snippet = searchDanglingHTMLTag.ReplaceAllString(snippet, " ")
+	snippet = strings.ReplaceAll(snippet, `<mark class="search-highlight">`, searchMarkOpenToken)
+	snippet = strings.ReplaceAll(snippet, `</mark>`, searchMarkCloseToken)
+	snippet = searchHTMLTag.ReplaceAllString(snippet, " ")
+	snippet = html.UnescapeString(snippet)
+	snippet = strings.Join(strings.Fields(snippet), " ")
+	snippet = strings.ReplaceAll(snippet, searchMarkOpenToken, `<mark class="search-highlight">`)
+	return strings.ReplaceAll(snippet, searchMarkCloseToken, `</mark>`)
+}
 
 type SearchRepository struct {
 	db *DB
@@ -77,6 +102,7 @@ func (r *SearchRepository) searchFTS5(query string, limit int, publicOnly bool) 
 		if err := rows.Scan(&item.ID, &item.Title, &item.Slug, &item.Snippet, &item.CategoryName, &item.CategorySlug, &updatedAt); err != nil {
 			return nil, err
 		}
+		item.Snippet = normalizeSearchSnippet(item.Snippet)
 		item.UpdatedAt = utils.ParseFlexibleTime(updatedAt)
 		results = append(results, &item)
 	}
@@ -126,7 +152,7 @@ func (r *SearchRepository) searchLike(query string, limit int, publicOnly bool) 
 				snippet = content
 			}
 		}
-		item.Snippet = snippet
+		item.Snippet = normalizeSearchSnippet(snippet)
 		results = append(results, &item)
 	}
 

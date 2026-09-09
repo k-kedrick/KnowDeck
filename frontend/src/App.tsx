@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AuthProvider } from './auth/AuthContext';
+import { useAuth } from './auth/useAuth';
 import { LoginPage } from './pages/public/LoginPage';
 import { RegisterPage } from './pages/public/RegisterPage';
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useOutletContext, useParams } from 'react-router-dom';
@@ -9,6 +10,7 @@ import { PublicLayout } from './components/PublicLayout';
 import type { DocumentLoadError } from './components/DocViewer';
 import { HomePage } from './pages/public/HomePage';
 import { BlogPage } from './pages/public/BlogPage';
+import { AccountSecurityPage } from './pages/public/AccountSecurityPage';
 import { SEOHead } from './components/SEOHead';
 import type { PublicOutletContext } from './components/publicLayoutContext';
 import { getSiteUrl, textDescription, toAbsoluteUrl } from './utils/seo';
@@ -138,6 +140,7 @@ export const App: React.FC = () => (
           <Route index element={<HomePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="account/security" element={<AccountSecurityPage />} />
           <Route path="blog" element={<BlogPage />} />
           <Route path="docs/:slug" element={<DocumentPage />} />
           <Route path="*" element={<NotFoundPage />} />

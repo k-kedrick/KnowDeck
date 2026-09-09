@@ -18,6 +18,7 @@ import {
 import { api } from '../../api';
 import type { Tag } from '../../api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
+import { ModalPortal } from '../../components/ModalPortal';
 import { Button } from '../../components/ui/Button';
 
 export const AdminTagManager: React.FC = () => {
@@ -152,16 +153,6 @@ export const AdminTagManager: React.FC = () => {
         icon={TagIcon}
         title="标签管理"
         description="创建与维护用于组织、筛选以及多维度关联知识库内容的技术标签。"
-        actions={
-          <button
-            type="button"
-            onClick={resetForm}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-brand/20 transition-all hover:shadow-lg hover:shadow-brand/30 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            <span>新建标签</span>
-          </button>
-        }
       />
 
       {/* Top Metric Stats */}
@@ -298,7 +289,7 @@ export const AdminTagManager: React.FC = () => {
         </section>
 
         {/* Right Tag List Panel */}
-        <section className="flex min-w-0 flex-col rounded-3xl border border-border-subtle/80 bg-surface-elevated/90 p-6 backdrop-blur-xl shadow-xs space-y-5">
+        <section className="flex min-w-0 self-start flex-col space-y-5 rounded-3xl border border-border-subtle/80 bg-surface-elevated/90 p-6 shadow-xs backdrop-blur-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle/80 pb-4">
             <div className="flex items-center space-x-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand/10 text-brand">
@@ -329,10 +320,10 @@ export const AdminTagManager: React.FC = () => {
           </div>
 
           {loading ? (
-            <div className="text-center py-20 text-xs text-text-tertiary animate-pulse">加载标签列表中...</div>
+            <div className="animate-pulse py-20 text-center text-xs text-text-tertiary">加载标签列表中...</div>
           ) : filteredTags.length === 0 ? (
-            <div className="text-center py-16 text-xs text-text-tertiary space-y-3 rounded-2xl border border-dashed border-border-subtle/80 bg-surface/50 p-6">
-              <TagIcon className="w-10 h-10 text-text-tertiary/40 mx-auto" />
+            <div className="space-y-3 rounded-2xl border border-dashed border-border-subtle/80 bg-surface/50 p-6 py-16 text-center text-xs text-text-tertiary">
+              <TagIcon className="mx-auto h-10 w-10 text-text-tertiary/40" />
               <div>
                 <p className="font-semibold text-text-primary">
                   {searchQuery ? '未找到匹配的标签' : '暂无标签'}
@@ -343,84 +334,88 @@ export const AdminTagManager: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
-              {filteredTags.map((t) => (
-                <div
-                  key={t.id}
-                  className="group flex min-w-0 flex-col justify-between rounded-2xl border border-border-subtle/80 bg-surface/85 p-4 backdrop-blur-md shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:bg-surface hover:shadow-md"
-                >
-                  <div className="space-y-2 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0 truncate">
-                        <span className="font-bold text-sm text-brand truncate">
-                          #{t.name}
+            <div className="overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface/70">
+              <div className="hidden min-h-9 grid-cols-[minmax(7.5rem,1fr)_minmax(9rem,1.35fr)_7.25rem_5.75rem_7.5rem] items-center gap-x-3 border-b border-border-subtle/80 bg-surface-subtle/70 px-3.5 py-2 text-[11px] font-semibold leading-4 text-text-tertiary xl:grid">
+                <span>标签名称</span>
+                <span>URL Slug</span>
+                <span>创建时间</span>
+                <span className="text-center">关联文档</span>
+                <span className="text-right">操作</span>
+              </div>
+
+              <div className="max-h-[min(56vh,34rem)] divide-y divide-border-subtle/80 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                {filteredTags.map((t) => (
+                  <div
+                    key={t.id}
+                    className="group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3.5 py-2.5 transition-colors hover:bg-brand/5 xl:min-h-14 xl:grid-cols-[minmax(7.5rem,1fr)_minmax(9rem,1.35fr)_7.25rem_5.75rem_7.5rem]"
+                  >
+                    <span className="min-w-0 whitespace-normal break-words text-sm font-bold leading-5 text-brand xl:col-start-1 xl:row-start-1">
+                      #{t.name}
+                    </span>
+
+                    <Link
+                      to={`/wang/documents?tag=${encodeURIComponent(t.slug)}`}
+                      className="col-start-2 row-start-1 inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-blue-500/10 px-2 py-1 text-xs font-semibold text-brand transition hover:bg-blue-500/20 xl:col-start-4 xl:row-start-1 xl:justify-self-center"
+                      title={`查看使用 #${t.name} 的文档`}
+                    >
+                      <BookOpen className="h-3 w-3" />
+                      <span>{t.doc_count ?? 0} 篇</span>
+                    </Link>
+
+                    <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 xl:contents">
+                      <button
+                        type="button"
+                        onClick={() => handleCopySlug(t.id, t.slug)}
+                        className="inline-flex max-w-full items-center gap-1 rounded-md border border-border-subtle/80 bg-surface-subtle px-2 py-1 text-left font-mono text-[10px] leading-4 text-text-tertiary transition hover:border-brand/30 hover:bg-surface hover:text-brand xl:col-start-2 xl:row-start-1 xl:w-full xl:justify-between"
+                        title="复制 Slug"
+                      >
+                        <span className="min-w-0 break-all">/{t.slug}</span>
+                        {copiedSlugId === t.id ? (
+                          <Check className="h-2.5 w-2.5 shrink-0 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-2.5 w-2.5 shrink-0 opacity-60" />
+                        )}
+                      </button>
+
+                      <div className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-[11px] text-text-tertiary xl:col-start-3 xl:row-start-1">
+                        <Calendar className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                        <span>
+                          {t.created_at
+                            ? new Date(t.created_at).toLocaleDateString('zh-CN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                              })
+                            : '最近'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopySlug(t.id, t.slug)}
-                          className="inline-flex items-center gap-1 rounded-md border border-border-subtle/80 bg-surface-subtle px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary transition hover:border-brand/30 hover:text-brand"
-                          title="复制 Slug"
-                        >
-                          <span>/{t.slug}</span>
-                          {copiedSlugId === t.id ? (
-                            <Check className="h-2.5 w-2.5 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-2.5 w-2.5 opacity-60" />
-                          )}
-                        </button>
                       </div>
 
-                      <Link
-                        to={`/wang/documents?tag=${encodeURIComponent(t.slug)}`}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500/10 text-brand hover:bg-blue-500/20 text-xs font-semibold shrink-0 transition"
-                        title={`查看使用 #${t.name} 的文档`}
-                      >
-                        <BookOpen className="w-3 h-3" />
-                        <span>{t.doc_count ?? 0} 篇</span>
-                      </Link>
-                    </div>
-
-                    {/* Creation Time Display */}
-                    <div className="flex items-center space-x-1.5 text-[11px] text-text-tertiary font-mono">
-                      <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span>
-                        创建于{' '}
-                        {t.created_at
-                          ? new Date(t.created_at).toLocaleDateString('zh-CN', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                            })
-                          : '最近'}
-                      </span>
+                      <div className="ml-auto flex shrink-0 items-center justify-end gap-1 whitespace-nowrap xl:col-start-5 xl:row-start-1 xl:ml-0">
+                        <button
+                          type="button"
+                          onClick={() => handleEditClick(t)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition hover:bg-brand/10 hover:text-brand"
+                          title="编辑标签"
+                          aria-label={`编辑标签 ${t.name}`}
+                        >
+                          <Edit className="h-3 w-3" />
+                          <span>编辑</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingTag(t)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-text-tertiary transition hover:bg-red-500/10 hover:text-red-600"
+                          title="删除标签"
+                          aria-label={`删除标签 ${t.name}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>删除</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-end space-x-1 pt-3 mt-2 border-t border-border-subtle/80">
-                    <button
-                      type="button"
-                      onClick={() => handleEditClick(t)}
-                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-text-secondary transition hover:bg-brand/10 hover:text-brand"
-                      title="编辑标签"
-                      aria-label={`编辑标签 ${t.name}`}
-                    >
-                      <Edit className="w-3 h-3" />
-                      <span>编辑</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeletingTag(t)}
-                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-text-tertiary transition hover:bg-red-500/10 hover:text-red-600"
-                      title="删除标签"
-                      aria-label={`删除标签 ${t.name}`}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>删除</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
@@ -439,6 +434,7 @@ export const AdminTagManager: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       {deletingTag && (
+        <ModalPortal>
         <div
           role="dialog"
           aria-modal="true"
@@ -486,6 +482,7 @@ export const AdminTagManager: React.FC = () => {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

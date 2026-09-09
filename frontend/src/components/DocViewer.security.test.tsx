@@ -167,6 +167,7 @@ $E = mc^2$
     expect(links.map((link) => link.dataset.level)).toEqual(['2', '3', '4']);
     expect(links.map((link) => link.style.paddingLeft)).toEqual(['20px', '34px', '48px']);
     expect(allLinks[0].getAttribute('aria-current')).toBe('location');
+    expect(allLinks[0].className).not.toContain('bg-[#3370ff]');
     expect(desktopToc.className).toContain('document-reading-toc');
     expect(links[0].className).toContain('overflow-hidden');
     expect(links[0].querySelector('span:last-child')?.className).toContain('text-ellipsis');

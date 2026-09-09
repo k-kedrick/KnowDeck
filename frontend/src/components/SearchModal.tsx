@@ -4,7 +4,8 @@ import { Search, X, FileText, Folder, Loader2 } from 'lucide-react';
 import { api } from '../api';
 import type { SearchResult } from '../api';
 import { IconButton } from './ui/IconButton';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
+import { ModalPortal } from './ModalPortal';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -86,6 +87,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4">
       {/* Backdrop */}
       <div
@@ -186,5 +188,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, LockKeyhole, LogIn } from 'lucide-react';
 import { ApiError } from '../../api';
-import { useAuth } from '../../auth/AuthContext';
+import { useAuth } from '../../auth/useAuth';
 import { sanitizeReturnTo } from '../../utils/returnTo';
 
 export const LoginPage: React.FC = () => {

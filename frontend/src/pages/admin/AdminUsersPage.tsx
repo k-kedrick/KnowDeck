@@ -29,6 +29,7 @@ import {
   type User,
 } from '../../api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
+import { ModalPortal } from '../../components/ModalPortal';
 import { Button } from '../../components/ui/Button';
 
 const PAGE_SIZE = 20;
@@ -1674,6 +1675,7 @@ function PasswordField({
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div
         role="dialog"
@@ -1695,6 +1697,7 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
         {children}
       </div>
     </div>
+    </ModalPortal>
   );
 }
 

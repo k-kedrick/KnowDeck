@@ -68,6 +68,40 @@ func TestListLoadsTagsInBatchAndPreservesDocumentOrder(t *testing.T) {
 	}
 }
 
+func TestListMatchesAllRequestedTagsAndKeepsSingleTagCompatibility(t *testing.T) {
+	db := newTestDB(t)
+	if _, err := db.Exec("DELETE FROM document_tags; DELETE FROM documents; DELETE FROM tags"); err != nil {
+		t.Fatalf("clear seed documents: %v", err)
+	}
+	repo := NewDocumentRepository(db)
+	publishedAt := time.Now()
+	for _, document := range []*model.Document{
+		{Title: "Go only", Slug: "go-only", Status: "published", AuthorID: 1, Tags: []string{"Go"}, PublishedAt: &publishedAt},
+		{Title: "Go and React", Slug: "go-react", Status: "published", AuthorID: 1, Tags: []string{"Go", "React"}, PublishedAt: &publishedAt},
+		{Title: "React only", Slug: "react-only", Status: "published", AuthorID: 1, Tags: []string{"React"}, PublishedAt: &publishedAt},
+	} {
+		if _, err := repo.Create(document); err != nil {
+			t.Fatalf("create %s: %v", document.Title, err)
+		}
+	}
+
+	single, singleTotal, err := repo.List(DocumentFilter{Status: "published", Tag: "go", Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("single-tag List returned error: %v", err)
+	}
+	if singleTotal != 2 || len(single) != 2 {
+		t.Fatalf("single-tag got total=%d len=%d, want 2", singleTotal, len(single))
+	}
+
+	multi, multiTotal, err := repo.List(DocumentFilter{Status: "published", Tags: []string{"go", "react"}, Page: 1, PageSize: 1})
+	if err != nil {
+		t.Fatalf("multi-tag List returned error: %v", err)
+	}
+	if multiTotal != 1 || len(multi) != 1 || multi[0].Slug != "go-react" {
+		t.Fatalf("multi-tag got total=%d documents=%#v, want only go-react", multiTotal, multi)
+	}
+}
+
 func TestListPublishedForTreeDoesNotSilentlyTruncateAtOneThousand(t *testing.T) {
 	db := newTestDB(t)
 	if _, err := db.Exec("DELETE FROM document_tags; DELETE FROM documents"); err != nil {

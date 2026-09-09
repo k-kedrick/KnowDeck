@@ -31,6 +31,8 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { ReadingProgressBar } from './ReadingProgressBar';
+import { ImageLightbox } from './ImageLightbox';
+import { ModalPortal } from './ModalPortal';
 
 type MarkdownMathPlugins = typeof import('./markdownMath');
 
@@ -98,7 +100,7 @@ const TocNav = ({ items, activeId, onSelect, filterText = '' }: TocNavProps) => 
             data-level={item.level}
             title={item.text}
             aria-current={isActive ? 'location' : undefined}
-            className={`group relative flex h-[28px] w-full min-w-0 max-w-full items-center overflow-hidden rounded px-1.5 text-left whitespace-nowrap transition-all ${
+            className={`group relative flex h-[28px] w-full min-w-0 max-w-full items-center overflow-hidden px-1.5 text-left whitespace-nowrap transition-colors ${
               depth === 0
                 ? 'mt-2.5 first:mt-0 font-medium text-[13px] text-slate-800 dark:text-slate-100'
                 : depth === 1
@@ -106,8 +108,8 @@ const TocNav = ({ items, activeId, onSelect, filterText = '' }: TocNavProps) => 
                 : 'mt-0.5 text-[12.5px] text-slate-500 dark:text-slate-400'
             } ${
               isActive
-                ? '!text-[#3370ff] dark:!text-blue-400 !font-semibold bg-[#3370ff]/10 dark:bg-blue-500/15'
-                : 'hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                ? '!text-[#3370ff] dark:!text-blue-400 !font-semibold'
+                : 'hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
             <span className="block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -169,6 +171,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   const [mathPlugins, setMathPlugins] = useState<MarkdownMathPlugins | null>(null);
   const [mathLoadFailed, setMathLoadFailed] = useState(false);
   const [isTocOpen, setIsTocOpen] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
   const [isTocCollapsed, setIsTocCollapsed] = useState(() => {
     try {
       return localStorage.getItem('doc_toc_collapsed') === 'true';
@@ -428,6 +431,21 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     navigate(href);
   };
 
+  const handleArticleClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (!event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      const image = event.target instanceof Element ? event.target.closest<HTMLImageElement>('img[src]') : null;
+      if (image && articleRef.current?.contains(image)) {
+        const src = image.currentSrc || image.src;
+        if (src) {
+          event.preventDefault();
+          setImagePreview({ src, alt: image.alt || '文章图片' });
+          return;
+        }
+      }
+    }
+    handleArticleLinkClick(event);
+  };
+
   if (loading) {
     return (
       <div className="layout-reading mx-auto w-full animate-pulse space-y-6 px-4 py-8 sm:px-8">
@@ -557,7 +575,8 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
             目录
           </button>
           {isTocOpen && (
-            <div className="fixed inset-0 z-50 xl:hidden">
+            <ModalPortal>
+            <div className="fixed inset-0 z-[9999] xl:hidden">
               <button type="button" aria-label="关闭目录" onClick={() => setIsTocOpen(false)} className="absolute inset-0 bg-black/40" />
               <aside aria-label="目录" className="absolute left-0 top-0 flex h-full w-[min(20rem,85vw)] flex-col bg-white dark:bg-slate-900 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5">
@@ -571,6 +590,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
                 </div>
               </aside>
             </div>
+            </ModalPortal>
           )}
         </>
       )}
@@ -633,7 +653,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
         </header>
 
         {/* Document Body */}
-        <article ref={articleRef} className="document-body markdown-body" onClick={handleArticleLinkClick}>
+        <article ref={articleRef} className="document-body markdown-body [&_img]:cursor-zoom-in" onClick={handleArticleClick}>
           {isHtmlContent ? (
             <div dangerouslySetInnerHTML={{ __html: processedContent }} />
           ) : needsMath && !markdownReady ? (
@@ -655,7 +675,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
                       referrerPolicy="no-referrer"
                       loading="lazy"
                       decoding="async"
-                      className="my-5 h-auto max-w-full rounded-lg border border-slate-200/70 dark:border-slate-800"
+                      className="my-5 h-auto max-w-full cursor-zoom-in rounded-lg border border-slate-200/70 dark:border-slate-800"
                       {...props}
                     />
                   );
@@ -774,6 +794,13 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
         )}
       </main>
     </div>
+    {imagePreview && (
+      <ImageLightbox
+        src={imagePreview.src}
+        alt={imagePreview.alt}
+        onClose={() => setImagePreview(null)}
+      />
+    )}
   </div>
   );
 };
