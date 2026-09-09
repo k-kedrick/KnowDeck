@@ -191,36 +191,3 @@ func (s *AuthService) UpdateCredentials(id int64, req model.UpdateCredentialsReq
 	return s.userRepo.UpdateCredentials(id, username, hash)
 }
 
-func (s *AuthService) UpdateProfile(id int64, req model.UpdateProfileReq) error {
-	user, err := s.userRepo.GetByID(id)
-	if err != nil || user == nil {
-		return errors.New("用户不存在")
-	}
-
-	var newHash string
-	if req.NewPassword != "" {
-		if req.OldPassword == "" {
-			return errors.New("修改密码必须提供当前原密码")
-		}
-		if !utils.CheckPasswordHash(req.OldPassword, user.PasswordHash) {
-			return errors.New("原密码错误")
-		}
-		if len(req.NewPassword) < 6 {
-			return errors.New("新密码长度不能少于 6 位")
-		}
-		hash, err := utils.HashPassword(req.NewPassword)
-		if err != nil {
-			return err
-		}
-		newHash = hash
-	}
-
-	nickname := req.Nickname
-	if nickname == "" {
-		nickname = user.Nickname
-	}
-	email := req.Email
-	avatar := req.Avatar
-
-	return s.userRepo.UpdateProfile(id, nickname, email, avatar, newHash)
-}

@@ -59,10 +59,6 @@ func (s *SettingService) GetAllSettings() (map[string]string, error) {
 	return s.settingRepo.GetAll()
 }
 
-func (s *SettingService) GetSettingsList() ([]*model.Setting, error) {
-	return s.settingRepo.GetSettingsList()
-}
-
 func (s *SettingService) SaveSettings(settings map[string]string) error {
 	return s.settingRepo.SetBatch(settings)
 }

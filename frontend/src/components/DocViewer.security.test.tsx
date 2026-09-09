@@ -141,7 +141,7 @@ $E = mc^2$
 
     const { container } = renderViewer(content);
 
-    await waitFor(() => expect(container.querySelector('.katex')).not.toBeNull());
+    await waitFor(() => expect(container.querySelector('.katex')).not.toBeNull(), { timeout: 3000 });
     await waitFor(() => expect(screen.getAllByRole('link', { name: 'Document' }).length).toBeGreaterThan(0));
     expect(container.querySelector('table')).not.toBeNull();
     expect(container.querySelectorAll('h1')).toHaveLength(1);

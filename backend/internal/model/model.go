@@ -163,13 +163,6 @@ type UpdateCredentialsReq struct {
 	NewPassword     string `json:"new_password"`
 }
 
-type UpdateProfileReq struct {
-	Nickname    string `json:"nickname"`
-	Email       string `json:"email"`
-	Avatar      string `json:"avatar"`
-	OldPassword string `json:"old_password"`
-	NewPassword string `json:"new_password"`
-}
 
 type DocumentSaveReq struct {
 	Title       string   `json:"title" binding:"required"`

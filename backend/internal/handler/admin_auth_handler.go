@@ -51,28 +51,6 @@ func (h *AdminAuthHandler) Me(c *gin.Context) {
 	response.Success(c, user)
 }
 
-// UpdateProfile 更新个人资料与密码
-func (h *AdminAuthHandler) UpdateProfile(c *gin.Context) {
-	userID, exists := c.Get(middleware.ContextUserIDKey)
-	if !exists {
-		response.Unauthorized(c, "未登录")
-		return
-	}
-
-	var req model.UpdateProfileReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数格式错误")
-		return
-	}
-
-	if err := h.authService.UpdateProfile(userID.(int64), req); err != nil {
-		response.BadRequest(c, err.Error())
-		return
-	}
-
-	response.SuccessMsg(c, "资料更新成功", nil)
-}
-
 func (h *AdminAuthHandler) UpdateCredentials(c *gin.Context) {
 	userID, exists := c.Get(middleware.ContextUserIDKey)
 	if !exists {

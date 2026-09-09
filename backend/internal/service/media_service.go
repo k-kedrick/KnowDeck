@@ -293,10 +293,6 @@ func (s *MediaService) MoveMedia(id int64, folderID int64) error {
 	return s.mediaRepo.MoveToFolder(id, folderID)
 }
 
-func (s *MediaService) BatchMoveMedia(ids []int64, folderID int64) error {
-	return s.mediaRepo.BatchMove(ids, folderID)
-}
-
 func (s *MediaService) GetFolderStats() (int64, int64, error) {
 	return s.folderRepo.GetStats()
 }

@@ -20,17 +20,13 @@ const uniqueHeadingId = (base: string, usedIds: Set<string>) => {
   return candidate;
 };
 
-/** Add stable anchors before historical HTML is mounted by React. */
-export const ensureDocumentHeadingIds = (html: string): string => {
-  if (!html || typeof document === 'undefined') return html;
-
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  const headings = Array.from(container.querySelectorAll<HTMLElement>(HEADING_SELECTOR));
+/** Add stable anchors directly to headings in a DOM container. */
+export const applyDocumentHeadingIds = (root: ParentNode): void => {
+  const headings = Array.from(root.querySelectorAll<HTMLElement>(HEADING_SELECTOR));
   const headingSet = new Set(headings);
   const usedIds = new Set<string>();
 
-  container.querySelectorAll<HTMLElement>('[id]').forEach((element) => {
+  root.querySelectorAll<HTMLElement>('[id]').forEach((element) => {
     if (!headingSet.has(element) && isUsableHeadingId(element.id)) usedIds.add(element.id);
   });
 
@@ -44,7 +40,15 @@ export const ensureDocumentHeadingIds = (html: string): string => {
     const slug = headingSlug(heading.textContent?.trim() || '') || 'section';
     heading.id = uniqueHeadingId(`heading-${index}-${slug}`, usedIds);
   });
+};
 
+/** Add stable anchors before historical HTML is mounted by React. */
+export const ensureDocumentHeadingIds = (html: string): string => {
+  if (!html || typeof document === 'undefined') return html;
+
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  applyDocumentHeadingIds(container);
   return container.innerHTML;
 };
 

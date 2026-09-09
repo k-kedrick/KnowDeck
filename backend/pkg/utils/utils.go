@@ -26,10 +26,6 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-// GenerateUUID 生成唯一ID
-func GenerateUUID() string {
-	return uuid.New().String()
-}
 
 // GenerateRandomHex 生成随机十六进制字符串
 func GenerateRandomHex(n int) string {

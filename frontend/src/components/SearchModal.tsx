@@ -61,7 +61,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
 
   // Search logic with debounce
   useEffect(() => {
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      setResults([]);
+      setSelectedIndex(0);
+      setLoading(false);
+      return;
+    }
 
     const controller = new AbortController();
     const timer = setTimeout(async () => {

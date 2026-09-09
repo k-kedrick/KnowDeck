@@ -1,37 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { api } from '../../api';
-import type { User } from '../../api';
+import { useAuth } from '../../auth/useAuth';
 
 export const AdminAuthGuard: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(true);
-  const [authenticated, setAuthenticated] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('kb_token');
-      if (!token) {
-        setLoading(false);
-        setAuthenticated(false);
-        return;
-      }
-
-      try {
-        const user = await api.getMe();
-        setCurrentUser(user);
-        setAuthenticated(true);
-      } catch (err) {
-        console.warn('Authentication token invalid or expired:', err);
-        localStorage.removeItem('kb_token');
-        setAuthenticated(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -47,9 +19,9 @@ export const AdminAuthGuard: React.FC = () => {
     );
   }
 
-  if (!authenticated) {
+  if (!user || user.role !== 'admin') {
     return <Navigate to="/wang/login" replace />;
   }
 
-  return <Outlet context={{ user: currentUser }} />;
+  return <Outlet context={{ user }} />;
 };

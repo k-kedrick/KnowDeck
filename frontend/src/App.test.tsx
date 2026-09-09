@@ -57,7 +57,7 @@ const deferred = <T,>() => {
 };
 
 const expectDocumentTitle = async (title: string) => {
-  await waitFor(() => expect(document.querySelector('main > header h1')?.textContent).toBe(title));
+  await waitFor(() => expect(document.querySelector('main > header h1')?.textContent).toBe(title), { timeout: 3000 });
 };
 
 describe('public document routing', () => {

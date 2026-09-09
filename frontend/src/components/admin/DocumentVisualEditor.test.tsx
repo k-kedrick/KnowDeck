@@ -32,6 +32,45 @@ const openUploadInput = () => {
 };
 
 describe('DocumentVisualEditor media upload regression paths', () => {
+  it('exposes font selection and four heading levels in the persistent toolbar', () => {
+    render(<DocumentVisualEditor markdownContent="" onChange={vi.fn()} onUploadFile={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /默认字体/ })).toBeTruthy();
+    fireEvent.click(screen.getByTitle('设置当前行/选区字号'));
+    expect(screen.getByText('18px (小标题/强调)')).toBeTruthy();
+    expect(screen.queryByText('20px (中标题)')).toBeNull();
+    fireEvent.click(screen.getByTitle('切换当前行标题格式 (光标停留即可生效)'));
+    expect(screen.getByText('四级标题')).toBeTruthy();
+  });
+
+  it('shows the selected text formats in both toolbars', async () => {
+    Object.defineProperty(document, 'queryCommandState', {
+      configurable: true,
+      value: vi.fn((command: string) => command === 'bold' || command === 'justifyCenter'),
+    });
+    const { container } = render(
+      <DocumentVisualEditor markdownContent="<h1>你好</h1>" onChange={vi.fn()} onUploadFile={vi.fn()} />,
+    );
+    const root = container.firstElementChild as HTMLElement;
+    const text = container.querySelector('h1')!.firstChild!;
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    Object.defineProperty(range, 'getBoundingClientRect', {
+      value: () => new DOMRect(100, 100, 80, 20),
+    });
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 900, 800));
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+
+    await waitFor(() => expect(screen.getByTitle('加粗 (Ctrl+B)').className).toContain('bg-blue-100'));
+    expect(screen.getByTitle('文本居中').className).toContain('bg-blue-100');
+    expect(screen.getByTitle('斜体 (Ctrl+I)').className).not.toContain('bg-blue-100');
+    expect(screen.getByTitle('加粗 (Bold)').className).toContain('bg-blue-100');
+    expect(screen.getByTitle('对齐与列表').className).toContain('bg-blue-100');
+    Reflect.deleteProperty(document, 'queryCommandState');
+  });
+
   it('uploads an image and inserts it into the editable canvas', async () => {
     const onChange = vi.fn();
     const onUploadFile = vi.fn().mockResolvedValue(media());

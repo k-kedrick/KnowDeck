@@ -16,7 +16,6 @@ const apiMocks = vi.hoisted(() => ({
   batchDeleteAdminInvites: vi.fn(),
   batchUpdateAdminInvitesStatus: vi.fn(),
   getAdminInviteUsers: vi.fn(),
-  disableAdminInvite: vi.fn(),
 }));
 
 vi.mock('../../api', async (importOriginal) => {
@@ -44,7 +43,6 @@ describe('AdminUsersPage', () => {
     apiMocks.batchDeleteAdminInvites.mockReset().mockResolvedValue({ deleted: 1 });
     apiMocks.batchUpdateAdminInvitesStatus.mockReset().mockResolvedValue({ updated: 1 });
     apiMocks.getAdminInviteUsers.mockReset().mockResolvedValue({ items: [{ id: 5, username: 'registered-user', created_at: '2026-09-08T10:00:00Z' }] });
-    apiMocks.disableAdminInvite.mockReset().mockResolvedValue({ id: 11, status: 'disabled' });
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } });
   });
   afterEach(cleanup);

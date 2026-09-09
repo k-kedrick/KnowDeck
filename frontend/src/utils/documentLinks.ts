@@ -28,16 +28,15 @@ const normalizeExistingAnchor = (anchor: HTMLAnchorElement) => {
 };
 
 /**
- * Adds safe links to bare HTTP(S) URLs in sanitized HTML text nodes.
- * It never applies regex replacement to raw markup or attributes.
+ * Directly enhances links on a DOM node (normalizing anchors and auto-linking text nodes).
  */
-export function enhanceDocumentHtmlLinks(sanitizedHtml: string): string {
-  if (!sanitizedHtml.trim()) return sanitizedHtml;
+export function applyDocumentHtmlLinks(root: ParentNode, doc?: Document): void {
+  const ownerDoc = doc || (root instanceof Document ? root : root.ownerDocument) || (typeof document !== 'undefined' ? document : null);
+  if (!ownerDoc) return;
 
-  const doc = new DOMParser().parseFromString(sanitizedHtml, 'text/html');
-  doc.body.querySelectorAll<HTMLAnchorElement>('a').forEach(normalizeExistingAnchor);
+  root.querySelectorAll<HTMLAnchorElement>('a').forEach(normalizeExistingAnchor);
 
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const walker = ownerDoc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
   let current = walker.nextNode();
   while (current) {
@@ -50,7 +49,7 @@ export function enhanceDocumentHtmlLinks(sanitizedHtml: string): string {
 
   textNodes.forEach((textNode) => {
     const value = textNode.nodeValue || '';
-    const fragment = doc.createDocumentFragment();
+    const fragment = ownerDoc.createDocumentFragment();
     let cursor = 0;
     let linked = false;
 
@@ -62,7 +61,7 @@ export function enhanceDocumentHtmlLinks(sanitizedHtml: string): string {
       if (!safeUrl || !isSafeHttpUrl(safeUrl)) continue;
 
       fragment.append(value.slice(cursor, start));
-      const anchor = doc.createElement('a');
+      const anchor = ownerDoc.createElement('a');
       anchor.href = safeUrl;
       anchor.textContent = safeUrl;
       anchor.target = '_blank';
@@ -77,6 +76,16 @@ export function enhanceDocumentHtmlLinks(sanitizedHtml: string): string {
     fragment.append(value.slice(cursor));
     textNode.replaceWith(fragment);
   });
+}
 
+/**
+ * Adds safe links to bare HTTP(S) URLs in sanitized HTML text nodes.
+ * It never applies regex replacement to raw markup or attributes.
+ */
+export function enhanceDocumentHtmlLinks(sanitizedHtml: string): string {
+  if (!sanitizedHtml.trim() || typeof document === 'undefined') return sanitizedHtml;
+
+  const doc = new DOMParser().parseFromString(sanitizedHtml, 'text/html');
+  applyDocumentHtmlLinks(doc.body, doc);
   return doc.body.innerHTML;
 }

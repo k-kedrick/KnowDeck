@@ -21,19 +21,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  const setSession = (token: string, newUser: User) => {
+    localStorage.setItem('kb_token', token);
+    setUser(newUser);
+  };
+
   const value = useMemo<AuthState>(() => ({
     user,
     loading,
+    setSession,
     login: async (username, password) => {
       const result = await api.memberLogin(username, password);
-      localStorage.setItem('kb_token', result.token);
-      setUser(result.user);
+      setSession(result.token, result.user);
+    },
+    adminLogin: async (username, password) => {
+      const result = await api.login(username, password);
+      setSession(result.token, result.user);
     },
     changePassword: async (currentPassword, newPassword) => {
       try {
         const result = await api.memberChangePassword(currentPassword, newPassword);
-        localStorage.setItem('kb_token', result.token);
-        setUser(result.user);
+        setSession(result.token, result.user);
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           localStorage.removeItem('kb_token');

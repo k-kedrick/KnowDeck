@@ -328,11 +328,6 @@ export const api = {
   getMe: () => fetchJson<User>('/admin/auth/me'),
   updateCredentials: (data: { username: string; current_password: string; new_password?: string }) =>
     fetchJson<null>('/admin/auth/credentials', { method: 'PATCH', body: JSON.stringify(data) }),
-  updateProfile: (data: { nickname?: string; email?: string; avatar?: string; old_password?: string; new_password?: string }) =>
-    fetchJson<null>('/admin/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
 
   // Admin User API
   listAdminUsers: (params: { q?: string; role?: AdminUserRole; status?: AdminUserStatus; page?: number; page_size?: number }) => {
@@ -406,11 +401,6 @@ export const api = {
     }),
   getAdminInviteUsers: (id: number) =>
     fetchJson<{ items: AdminInviteUserUsage[] }>(`/admin/invites/${id}/users`),
-  disableAdminInvite: (id: number) =>
-    fetchJson<Pick<AdminInvite, 'id' | 'status'>>(`/admin/invites/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: 'disabled' }),
-    }),
 
   // Admin Document API
   getAdminDocuments: (params: { status?: string; category_id?: number; tag?: string; keyword?: string; page?: number; page_size?: number }) => {
@@ -557,11 +547,6 @@ export const api = {
     fetchJson<null>(`/admin/media/${id}/move`, {
       method: 'PUT',
       body: JSON.stringify({ folder_id }),
-    }),
-  batchMoveMedia: (media_ids: number[], folder_id: number) =>
-    fetchJson<null>('/admin/media/batch-move', {
-      method: 'POST',
-      body: JSON.stringify({ media_ids, folder_id }),
     }),
   saveExternalMedia: (url: string, options?: { folder_id?: number; document_id?: number; doc_title?: string }) =>
     fetchJson<Media>('/admin/media/save-external', {

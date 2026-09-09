@@ -10,11 +10,9 @@ import type { DocDetailData } from '../api';
 import type { PublicOutletContext } from './publicLayoutContext';
 import { formatDateTime } from '../utils/format';
 import { isHtmlDocumentContent, rehypeHardenDocument, sanitizeDocumentHtml, sanitizeUrlAndText } from '../utils/htmlToMarkdown';
-import { enhanceDocumentHtmlLinks } from '../utils/documentLinks';
-import { proxyHistoricalDocumentImages } from '../utils/documentImages';
+import { processDocumentHtml } from '../utils/documentHtml';
 import {
   decodeHeadingHash,
-  ensureDocumentHeadingIds,
   findDocumentHeading,
   scrollToDocumentHeading,
 } from '../utils/documentHeadings';
@@ -217,9 +215,8 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     const raw = doc?.content || doc?.excerpt || '';
     if (!raw) return '';
     if (isHtmlContent) {
-      const safeHtml = sanitizeDocumentHtml(raw)
-        .replace(/<img\b/gi, '<img loading="lazy" decoding="async"');
-      return ensureDocumentHeadingIds(enhanceDocumentHtmlLinks(proxyHistoricalDocumentImages(safeHtml)));
+      const safeHtml = sanitizeDocumentHtml(raw);
+      return processDocumentHtml(safeHtml);
     }
     return raw.replace(/[!！]\s*\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" referrerpolicy="no-referrer" class="max-w-full h-auto rounded-xl my-4" />');
   }, [doc?.content, doc?.excerpt, isHtmlContent]);
@@ -311,14 +308,18 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
 
   React.useEffect(() => {
     if (!activeHeadingId) return;
-    try {
-      const activeEl = document.querySelector(`[data-toc-id="${CSS.escape(activeHeadingId)}"]`);
-      if (activeEl) {
-        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    let rafId = 0;
+    rafId = requestAnimationFrame(() => {
+      try {
+        const activeEl = document.querySelector(`[data-toc-id="${CSS.escape(activeHeadingId)}"]`);
+        if (activeEl) {
+          activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [activeHeadingId]);
 
   React.useEffect(() => {

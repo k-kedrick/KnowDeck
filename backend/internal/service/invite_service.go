@@ -44,10 +44,6 @@ func GenerateRandom8Code() (string, error) {
 	return string(bytes), nil
 }
 
-func (s *InviteService) Generate(createdBy int64, maxUses int, expiresAt *time.Time) (string, int64, error) {
-	return s.GenerateSingle(createdBy, "", maxUses, 0, expiresAt, "")
-}
-
 func (s *InviteService) GenerateSingle(createdBy int64, customCode string, maxUses int, validDays int, expiresAt *time.Time, remark string) (string, int64, error) {
 	if maxUses <= 0 {
 		maxUses = 1

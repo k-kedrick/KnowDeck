@@ -39,7 +39,7 @@ describe('htmlToMarkdown', () => {
 
   it('sanitizes saved document HTML without flattening editor spacing and styles', () => {
     const html = sanitizeDocumentHtml(`
-      <h1 style="text-align: center; font-size: 32px; color: #0f172a">Title</h1>
+      <h1 style="text-align: center; font-size: 12px; line-height: 3; color: #0f172a"><span style="font-size: 48px; color: #ef4444">Title</span></h1>
       <p><br></p>
       <p style="text-align: center; line-height: 2">Next</p>
       <img src="javascript:alert(1)" onerror="alert(1)" style="width: 60%" />
@@ -51,7 +51,9 @@ describe('htmlToMarkdown', () => {
     `);
 
     expect(html).toContain('text-align: center');
-    expect(html).toContain('font-size: 32px');
+    expect(html).not.toContain('font-size');
+    expect(html).toContain('text-align: center');
+    expect(html).toContain('color: #ef4444');
     expect(html).toContain('color: #0f172a');
     expect(html).toContain('<p><br></p>');
     expect(html).toContain('line-height: 2');

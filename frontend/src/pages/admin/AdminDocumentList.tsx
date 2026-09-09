@@ -39,12 +39,20 @@ export const AdminDocumentList: React.FC = () => {
   const [pageSize] = useState<number>(10);
 
   const [keyword, setKeyword] = useState<string>('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<number>(0);
   const tagFilter = searchParams.get('tag') || '';
 
   const [loading, setLoading] = useState<boolean>(true);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keyword);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [keyword]);
 
   const refreshLocalDrafts = useCallback(() => {
     setLocalDrafts(listLocalDrafts().filter((entry) => entry.kind === 'new'));
@@ -62,7 +70,7 @@ export const AdminDocumentList: React.FC = () => {
 
   const visibleLocalDrafts = useMemo(() => {
     if (statusFilter && statusFilter !== 'draft') return [];
-    const normalizedKeyword = keyword.trim().toLocaleLowerCase();
+    const normalizedKeyword = debouncedKeyword.trim().toLocaleLowerCase();
     return localDrafts.filter((entry) => {
       const draft = entry.draft;
       if (normalizedKeyword && !`${draft.title} ${draft.excerpt} ${draft.content}`.toLocaleLowerCase().includes(normalizedKeyword)) return false;
@@ -73,7 +81,7 @@ export const AdminDocumentList: React.FC = () => {
       }
       return true;
     });
-  }, [categoryFilter, keyword, localDrafts, statusFilter, tagFilter, tags]);
+  }, [categoryFilter, debouncedKeyword, localDrafts, statusFilter, tagFilter, tags]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -100,7 +108,7 @@ export const AdminDocumentList: React.FC = () => {
       const res = await api.getAdminDocuments({
         page,
         page_size: pageSize,
-        keyword: keyword.trim() || undefined,
+        keyword: debouncedKeyword.trim() || undefined,
         status: statusFilter || undefined,
         category_id: categoryFilter > 0 ? categoryFilter : undefined,
         tag: tagFilter || undefined,
@@ -113,7 +121,7 @@ export const AdminDocumentList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword, statusFilter, categoryFilter, tagFilter]);
+  }, [page, pageSize, debouncedKeyword, statusFilter, categoryFilter, tagFilter]);
 
   useEffect(() => {
     loadCategories();

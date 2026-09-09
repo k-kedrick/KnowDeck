@@ -152,7 +152,6 @@ func main() {
 		apiAdmin.POST("/users/:id/reset-password", adminUserHandler.ResetPassword)
 		// 资料与状态
 		apiAdmin.GET("/auth/me", adminAuthHandler.Me)
-		apiAdmin.PUT("/auth/profile", adminAuthHandler.UpdateProfile)
 		apiAdmin.PATCH("/auth/credentials", adminAuthHandler.UpdateCredentials)
 
 		// 分类管理
@@ -180,7 +179,6 @@ func main() {
 		apiAdmin.GET("/media", adminMediaHandler.List)
 		apiAdmin.DELETE("/media/:id", adminMediaHandler.Delete)
 		apiAdmin.PUT("/media/:id/move", adminMediaHandler.MoveMedia)
-		apiAdmin.POST("/media/batch-move", adminMediaHandler.BatchMoveMedia)
 		apiAdmin.GET("/media/folders", adminMediaHandler.ListFolders)
 		apiAdmin.POST("/media/folders", adminMediaHandler.CreateFolder)
 		apiAdmin.PUT("/media/folders/:id", adminMediaHandler.UpdateFolder)

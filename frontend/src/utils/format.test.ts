@@ -1,12 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatDateTime } from './format';
+import { formatDateTime } from './format';
 
 describe('format utilities', () => {
   it('handles empty or invalid date gracefully', () => {
-    expect(formatDate('')).toBe('');
-    expect(formatDate(undefined)).toBe('');
-    expect(formatDate('invalid-date')).toBe('');
-
     expect(formatDateTime('')).toBe('');
     expect(formatDateTime(undefined)).toBe('');
     expect(formatDateTime('invalid-date')).toBe('');

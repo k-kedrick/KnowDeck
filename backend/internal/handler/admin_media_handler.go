@@ -191,25 +191,6 @@ func (h *AdminMediaHandler) MoveMedia(c *gin.Context) {
 	response.SuccessMsg(c, "移动成功", nil)
 }
 
-type BatchMoveReq struct {
-	MediaIDs []int64 `json:"media_ids" binding:"required"`
-	FolderID int64   `json:"folder_id"`
-}
-
-func (h *AdminMediaHandler) BatchMoveMedia(c *gin.Context) {
-	var req BatchMoveReq
-	if err := c.ShouldBindJSON(&req); err != nil || len(req.MediaIDs) == 0 {
-		response.BadRequest(c, "请选择需要移动的媒体文件")
-		return
-	}
-
-	if err := h.mediaService.BatchMoveMedia(req.MediaIDs, req.FolderID); err != nil {
-		response.ServerError(c, "批量移动失败: "+err.Error())
-		return
-	}
-
-	response.SuccessMsg(c, "批量移动成功", nil)
-}
 
 type SaveExternalReq struct {
 	URL        string `json:"url" binding:"required"`

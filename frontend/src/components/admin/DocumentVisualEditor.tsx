@@ -3,11 +3,11 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
   Bold,
   Italic,
   Underline,
   Strikethrough,
-  Code as CodeIcon,
   List,
   CheckSquare,
   Image as ImageIcon,
@@ -33,22 +33,10 @@ import {
   normalizePastedDocumentHtml,
   sanitizeDocumentHtml,
 } from '../../utils/htmlToMarkdown';
+import { FONT_FAMILIES, FONT_SIZES } from './tiptap/typographyConstants';
 
-export interface FontFamilyOption {
-  label: string;
-  value: string;
-  css: string;
-  desc: string;
-}
-
-export const FONT_FAMILIES: FontFamilyOption[] = [
-  { label: '默认字体', value: 'default', css: '', desc: '系统默认无衬线' },
-  { label: '黑体 (现代)', value: 'sans', css: "'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', sans-serif", desc: '现代无衬线' },
-  { label: '宋体 (典雅)', value: 'serif', css: "Songti SC, SimSun, 'Source Han Serif SC', STSong, serif", desc: '经典衬线体' },
-  { label: '楷体 (手书)', value: 'kaiti', css: "Kaiti SC, KaiTi, STKaiti, BiauKai, cursive", desc: '文雅手写体' },
-  { label: '仿宋 (公文)', value: 'fangsong', css: "FangSong, STFangsong, SimSun, serif", desc: '典雅公文体' },
-  { label: '等宽代码', value: 'mono', css: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", desc: '程序代码体' },
-];
+const BODY_FONT_SIZES = FONT_SIZES.filter(({ value }) => Number.parseInt(value, 10) <= 18);
+const HEADING_FONT_SIZES: Record<string, string> = { H1: '32px', H2: '24px', H3: '20px', H4: '18px' };
 
 interface DocumentVisualEditorProps {
   markdownContent: string;
@@ -77,6 +65,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
   const [showHeadingMenu, setShowHeadingMenu] = useState<boolean>(false);
   const [showAlignMenu, setShowAlignMenu] = useState<boolean>(false);
   const [showPlusMenu, setShowPlusMenu] = useState<boolean>(false);
+  const [topActiveMenu, setTopActiveMenu] = useState<'heading' | 'fontfamily' | 'fontsize' | 'lineheight' | null>(null);
 
   // Mutable DOM identity stays in a ref; only overlay geometry drives React rendering.
   const selectedImgRef = useRef<HTMLImageElement | null>(null);
@@ -108,6 +97,13 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
   const [showFontSizeMenu, setShowFontSizeMenu] = useState<boolean>(false);
   const [currentLineHeight, setCurrentLineHeight] = useState<string>('默认');
   const [showLineHeightMenu, setShowLineHeightMenu] = useState<boolean>(false);
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strike: false,
+    align: 'left' as 'left' | 'center' | 'right',
+  });
 
   // Sync Markdown prop to innerHTML when not actively editing
   useEffect(() => {
@@ -284,7 +280,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
     return () => cleanups.forEach((cleanup) => cleanup());
   }, [markdownContent, selectVideo, selectImage]);
 
-  // Handle Selection Change for Floating Text Context Toolbar
+  // Handle Selection Change for Floating Text Context Toolbar & Top Toolbar Sync
   const updateSelectionBubble = useCallback(() => {
     if (selectedImgRef.current) {
       setBubblePos(null);
@@ -292,7 +288,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
     }
 
     const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || !canvasRef.current || !containerRef.current) {
+    if (!selection || !canvasRef.current || !containerRef.current || selection.rangeCount === 0) {
       setBubblePos(null);
       setShowColorMenu(false);
       setShowHeadingMenu(false);
@@ -311,17 +307,41 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
 
     // Detect block type (H1, H2, H3, P)
     const anchor = selection.anchorNode;
-    const block = anchor?.parentElement?.closest('h1, h2, h3, h4, p, blockquote, div');
+    const anchorElement = anchor?.nodeType === Node.ELEMENT_NODE
+      ? anchor as HTMLElement
+      : anchor?.parentElement;
+    const block = anchorElement?.closest('h1, h2, h3, h4, p, blockquote, div');
     if (block) {
       const tag = block.tagName.toUpperCase();
       if (tag === 'H1') setCurrentBlockType('H1');
       else if (tag === 'H2') setCurrentBlockType('H2');
       else if (tag === 'H3') setCurrentBlockType('H3');
+      else if (tag === 'H4') setCurrentBlockType('H4');
       else setCurrentBlockType('正文');
     }
 
+    const queryCommandState = (command: string) => {
+      try {
+        return typeof document.queryCommandState === 'function' && document.queryCommandState(command);
+      } catch {
+        return false;
+      }
+    };
+    const blockAlignment = (block as HTMLElement | null)?.style.textAlign;
+    setActiveFormats({
+      bold: queryCommandState('bold'),
+      italic: queryCommandState('italic'),
+      underline: queryCommandState('underline'),
+      strike: queryCommandState('strikeThrough'),
+      align: blockAlignment === 'center' || queryCommandState('justifyCenter')
+        ? 'center'
+        : blockAlignment === 'right' || queryCommandState('justifyRight')
+          ? 'right'
+          : 'left',
+    });
+
     // Detect inline font family on selection
-    const fontSpanEl = anchor?.parentElement?.closest('span[style*="font-family"]') as HTMLElement | null;
+    const fontSpanEl = anchorElement?.closest('span[style*="font-family"]') as HTMLElement | null;
     if (fontSpanEl && fontSpanEl.style.fontFamily) {
       const ff = fontSpanEl.style.fontFamily.toLowerCase();
       if (ff.includes('songti') || ff.includes('simsun') || ff.includes('stsong')) {
@@ -341,20 +361,34 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
       setCurrentFontFamily('默认字体');
     }
 
-    // Detect inline font size on selection
-    const spanEl = anchor?.parentElement?.closest('span[style*="font-size"]') as HTMLElement | null;
+    // Detect inline font size on selection or enclosing block
+    const spanEl = anchorElement?.closest('span[style*="font-size"]') as HTMLElement | null;
     if (spanEl && spanEl.style.fontSize) {
       setCurrentFontSize(spanEl.style.fontSize);
+    } else if (block && (block as HTMLElement).style.fontSize) {
+      setCurrentFontSize((block as HTMLElement).style.fontSize);
     } else {
       setCurrentFontSize('15px');
     }
 
     // Detect block line height on selection
-    const lhBlock = anchor?.parentElement?.closest('p, h1, h2, h3, h4, h5, h6, blockquote, li, td, div:not(.callout)') as HTMLElement | null;
+    const lhBlock = anchorElement?.closest('p, h1, h2, h3, h4, h5, h6, blockquote, li, td, div:not(.callout)') as HTMLElement | null;
     if (lhBlock && lhBlock.style.lineHeight) {
       setCurrentLineHeight(lhBlock.style.lineHeight);
     } else {
       setCurrentLineHeight('默认');
+    }
+
+    // 🌟 Floating Bubble is only shown when there is an active text selection
+    if (selection.isCollapsed) {
+      setBubblePos(null);
+      setShowColorMenu(false);
+      setShowHeadingMenu(false);
+      setShowFontMenu(false);
+      setShowFontSizeMenu(false);
+      setShowLineHeightMenu(false);
+      setShowAlignMenu(false);
+      return;
     }
 
     const rect = range.getBoundingClientRect();
@@ -536,15 +570,39 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
     updateSelectionBubble();
   };
 
-  // Format Inline Font Size with anti-nesting and preservation of enclosing block structure
+  // Format Inline / Block Font Size with anti-nesting and preservation of enclosing block structure
   const applyFontSize = (fontSize: string) => {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+    if (!selection || selection.rangeCount === 0) {
       setShowFontSizeMenu(false);
       return;
     }
 
     const range = selection.getRangeAt(0);
+    const anchorElement = selection.anchorNode?.nodeType === Node.TEXT_NODE
+      ? selection.anchorNode.parentElement
+      : selection.anchorNode as HTMLElement | null;
+    const heading = anchorElement?.closest('h1, h2, h3, h4');
+    if (heading && canvasRef.current?.contains(heading)) {
+      setShowFontSizeMenu(false);
+      return;
+    }
+
+    // 🌟 支持光标未划选文字时，直接修改当前光标所在行的字号
+    if (selection.isCollapsed) {
+      const anchor = selection.anchorNode;
+      let block = (anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor) as HTMLElement | null;
+      block = block?.closest('p, h1, h2, h3, h4, h5, h6, li, blockquote, div') || null;
+      if (block && canvasRef.current?.contains(block)) {
+        block.style.fontSize = fontSize === 'default' ? '' : fontSize;
+        setCurrentFontSize(fontSize === 'default' ? '15px' : fontSize);
+        setShowFontSizeMenu(false);
+        handleContentChange();
+        if (canvasRef.current) canvasRef.current.focus();
+        return;
+      }
+    }
+
     const selectedText = range.toString();
     if (!selectedText.trim()) {
       setShowFontSizeMenu(false);
@@ -615,25 +673,26 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
   };
 
   // Format Heading Block with instant DOM class assignment
-  const applyHeadingBlock = (tag: 'H1' | 'H2' | 'H3' | 'P') => {
+  const applyHeadingBlock = (tag: 'H1' | 'H2' | 'H3' | 'H4' | 'P') => {
     try {
       document.execCommand('formatBlock', false, `<${tag.toLowerCase()}>`);
     } catch {
       document.execCommand('formatBlock', false, tag);
     }
 
-    // If tag is 'P', clear ad-hoc inline font-size and line-height inside selected nodes
+    // Block type owns its typography; remove stale manual sizing left by earlier formatting.
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const anchorNode = selection.anchorNode;
-      const blockEl = anchorNode?.parentElement?.closest('p, div, h1, h2, h3');
+      const anchorElement = anchorNode?.nodeType === Node.ELEMENT_NODE
+        ? anchorNode as HTMLElement
+        : anchorNode?.parentElement;
+      const blockEl = anchorElement?.closest('p, div, h1, h2, h3, h4') as HTMLElement | null;
       if (blockEl) {
-        const styledElements = blockEl.querySelectorAll('[style]');
-        styledElements.forEach((el) => {
-          const htmlEl = el as HTMLElement;
-          htmlEl.style.fontSize = '';
-          htmlEl.style.lineHeight = '';
-          htmlEl.style.fontFamily = '';
+        [blockEl, ...blockEl.querySelectorAll<HTMLElement>('[style]')].forEach((el) => {
+          el.style.removeProperty('font-size');
+          el.style.removeProperty('line-height');
+          if (!el.getAttribute('style')?.trim()) el.removeAttribute('style');
         });
       }
     }
@@ -654,20 +713,6 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
   const applyHighlightColor = (bgColor: string) => {
     document.execCommand('hiliteColor', false, bgColor);
     setShowColorMenu(false);
-    handleContentChange();
-  };
-
-  // Format Inline Code
-  const applyInlineCode = () => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) return;
-    const range = selection.getRangeAt(0);
-    const text = range.toString();
-    const codeNode = document.createElement('code');
-    codeNode.className = 'px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono text-xs text-blue-600 dark:text-blue-400';
-    codeNode.textContent = text;
-    range.deleteContents();
-    range.insertNode(codeNode);
     handleContentChange();
   };
 
@@ -993,6 +1038,13 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
     }
   };
 
+  const headingFontSize = HEADING_FONT_SIZES[currentBlockType];
+  const formatButtonClass = (active: boolean) => `rounded-lg p-1 transition ${
+    active
+      ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:ring-blue-700'
+      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+  }`;
+
   return (
     <div ref={containerRef} className="relative flex flex-col space-y-3 w-full">
       {/* 划词浮动工具条 */}
@@ -1000,20 +1052,34 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
         <div
           onMouseDown={(e) => e.preventDefault()}
           style={{ top: `${bubblePos.top}px`, left: `${bubblePos.left}px` }}
-          className="absolute z-50 flex max-w-[calc(100vw-2rem)] items-center gap-1 rounded-xl border border-slate-700/70 bg-slate-950/95 p-1.5 text-xs text-white shadow-xl shadow-slate-900/20 backdrop-blur-lg transition-all"
+          className="absolute z-50 flex max-w-[calc(100vw-2rem)] items-center gap-1 rounded-xl border border-slate-200/90 bg-white/95 p-1.5 text-xs text-slate-700 shadow-xl shadow-slate-900/10 backdrop-blur-lg transition-all dark:border-slate-700/80 dark:bg-slate-900/95 dark:text-slate-200"
         >
           {/* Heading Selector Dropdown */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setShowHeadingMenu(!showHeadingMenu)}
-              className="px-2 py-1 hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-200 text-[11px]"
+              className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-700 dark:text-slate-200 text-[11px]"
             >
               <span>{currentBlockType}</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
             {showHeadingMenu && (
-              <div className={`absolute left-0 ${bubblePos.placement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] w-40 rounded-xl border border-slate-700/80 bg-slate-950 p-1.5 text-xs shadow-2xl shadow-slate-900/30`}>
+              <div className={`absolute left-0 ${(bubblePos.placement === 'above' && bubblePos.top >= 220) ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] w-44 rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 p-1.5 text-xs shadow-2xl shadow-slate-900/30`}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyHeadingBlock('H1');
+                    setCurrentBlockType('H1');
+                    setShowHeadingMenu(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-extrabold text-slate-900 transition dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <Heading1 className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="flex-1">一级标题</span>
+                  <span className="text-[10px] font-semibold text-slate-400">H1 · 32px</span>
+                </button>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1022,11 +1088,11 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     setCurrentBlockType('H2');
                     setShowHeadingMenu(false);
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-bold text-white transition hover:bg-slate-800"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-bold text-slate-900 transition dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <Heading2 className="w-3.5 h-3.5 text-blue-400" />
                   <span className="flex-1">二级标题</span>
-                  <span className="text-[10px] font-semibold text-slate-500">H2</span>
+                  <span className="text-[10px] font-semibold text-slate-400">H2 · 24px</span>
                 </button>
                 <button
                   type="button"
@@ -1036,25 +1102,25 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     setCurrentBlockType('H3');
                     setShowHeadingMenu(false);
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-semibold text-white transition hover:bg-slate-800"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-semibold text-slate-900 transition dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <Heading3 className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="flex-1">三级标题</span>
-                  <span className="text-[10px] font-semibold text-slate-500">H3</span>
+                  <span className="text-[10px] font-semibold text-slate-400">H3 · 20px</span>
                 </button>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    applyHeadingBlock('H1');
-                    setCurrentBlockType('H1');
+                    applyHeadingBlock('H4');
+                    setCurrentBlockType('H4');
                     setShowHeadingMenu(false);
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-extrabold text-white transition hover:bg-slate-800"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-semibold text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
-                  <Heading1 className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="flex-1">一级标题</span>
-                  <span className="text-[10px] font-semibold text-slate-500">H1</span>
+                  <Heading4 className="h-3.5 w-3.5 text-cyan-500" />
+                  <span className="flex-1">四级标题</span>
+                  <span className="text-[10px] font-semibold text-slate-400">H4 · 18px</span>
                 </button>
                 <button
                   type="button"
@@ -1064,10 +1130,11 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     setCurrentBlockType('正文');
                     setShowHeadingMenu(false);
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-slate-300 transition hover:bg-slate-800"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-slate-700 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <Type className="w-3.5 h-3.5 text-slate-400" />
                   <span className="flex-1">正文文本</span>
+                  <span className="text-[10px] font-semibold text-slate-400">P · 16px</span>
                 </button>
               </div>
             )}
@@ -1086,22 +1153,22 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                 setShowAlignMenu(false);
                 setShowColorMenu(false);
               }}
-              className="px-2 py-1 hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-200 text-[11px] transition"
+              className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-700 dark:text-slate-200 text-[11px] transition"
               title="选择正文字体 (Font Family)"
             >
               <span className="max-w-[75px] truncate">{currentFontFamily}</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
             {showFontMenu && (
-              <div className={`absolute left-0 ${bubblePos.placement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] max-h-64 w-44 overflow-y-auto rounded-xl border border-slate-700/80 bg-slate-950 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
+              <div className={`absolute left-0 ${(bubblePos.placement === 'above' && bubblePos.top >= 220) ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] max-h-64 w-44 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
                 {FONT_FAMILIES.map((item) => (
                   <button
                     key={item.value}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => applyFontFamily(item.value)}
-                    className={`w-full px-2.5 py-1.5 text-left hover:bg-slate-700 rounded flex items-center justify-between transition ${
-                      currentFontFamily === item.label ? 'bg-blue-600 text-white font-bold' : 'text-slate-300'
+                    className={`w-full px-2.5 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800 rounded flex items-center justify-between transition ${
+                      currentFontFamily === item.label ? 'bg-blue-600 text-white font-bold' : 'text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     <span style={item.css ? { fontFamily: item.css } : undefined}>{item.label}</span>
@@ -1118,6 +1185,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
+                if (headingFontSize) return;
                 setShowFontSizeMenu(!showFontSizeMenu);
                 setShowFontMenu(false);
                 setShowHeadingMenu(false);
@@ -1125,32 +1193,22 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                 setShowAlignMenu(false);
                 setShowColorMenu(false);
               }}
-              className="px-2 py-1 hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-200 text-[11px]"
-              title="字号大小"
+              disabled={Boolean(headingFontSize)}
+              className="flex items-center space-x-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-default disabled:text-slate-400 disabled:hover:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800"
+              title={headingFontSize ? '标题字号由标题级别统一控制' : '调整正文字号'}
             >
-              <span>{currentFontSize}</span>
+              <span>{headingFontSize ?? currentFontSize}</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
-            {showFontSizeMenu && (
-              <div className={`absolute left-0 ${bubblePos.placement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] max-h-60 w-36 overflow-y-auto rounded-xl border border-slate-700/80 bg-slate-950 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
-                {[
-                  { label: '12px (小标注)', value: '12px' },
-                  { label: '13px (次要说明)', value: '13px' },
-                  { label: '14px (小正文)', value: '14px' },
-                  { label: '15px (正文默认)', value: '15px' },
-                  { label: '16px (增强正文)', value: '16px' },
-                  { label: '18px (小标题/强调)', value: '18px' },
-                  { label: '20px (中标题)', value: '20px' },
-                  { label: '24px (大标题)', value: '24px' },
-                  { label: '28px (特大号)', value: '28px' },
-                  { label: '32px (巨大展板字)', value: '32px' },
-                ].map((item) => (
+            {showFontSizeMenu && !headingFontSize && (
+              <div className={`absolute left-0 ${(bubblePos.placement === 'above' && bubblePos.top >= 220) ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] max-h-60 w-36 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
+                {BODY_FONT_SIZES.map((item) => (
                   <button
                     key={item.value}
                     type="button"
                     onClick={() => applyFontSize(item.value)}
-                    className={`w-full px-2 py-1 text-left hover:bg-slate-700 rounded flex items-center justify-between transition ${
-                      currentFontSize === item.value ? 'bg-blue-600 text-white font-bold' : 'text-slate-300'
+                    className={`w-full px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 rounded flex items-center justify-between transition ${
+                      currentFontSize === item.value ? 'bg-blue-600 text-white font-bold' : 'text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -1173,20 +1231,20 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                 setShowAlignMenu(false);
                 setShowColorMenu(false);
               }}
-              className="px-2 py-1 hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-200 text-[11px]"
+              className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-700 dark:text-slate-200 text-[11px]"
               title="段落行距"
             >
               <span>{currentLineHeight === '默认' ? '行距' : `${currentLineHeight}x`}</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
             {showLineHeightMenu && (
-              <div className={`absolute left-0 ${bubblePos.placement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] max-h-60 w-32 overflow-y-auto rounded-xl border border-slate-700/80 bg-slate-950 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
+              <div className={`absolute left-0 ${(bubblePos.placement === 'above' && bubblePos.top >= 220) ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] max-h-60 w-32 overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => applyLineHeight('default')}
-                  className={`w-full px-2 py-1 text-left hover:bg-slate-700 rounded flex items-center justify-between transition ${
-                    currentLineHeight === '默认' ? 'bg-blue-600 text-white font-bold' : 'text-slate-300'
+                  className={`w-full px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 rounded flex items-center justify-between transition ${
+                    currentLineHeight === '默认' ? 'bg-blue-600 text-white font-bold' : 'text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <span>默认 (1.75)</span>
@@ -1200,8 +1258,8 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => applyLineHeight(lh)}
-                    className={`w-full px-2 py-1 text-left hover:bg-slate-700 rounded flex items-center justify-between transition ${
-                      currentLineHeight === lh ? 'bg-blue-600 text-white font-bold' : 'text-slate-300'
+                    className={`w-full px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 rounded flex items-center justify-between transition ${
+                      currentLineHeight === lh ? 'bg-blue-600 text-white font-bold' : 'text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     <span>{lh} 倍行距</span>
@@ -1211,7 +1269,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
             )}
           </div>
 
-          <div className="h-3.5 w-px bg-slate-700 mx-0.5" />
+          <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
 
           {/* Alignment & List Menu */}
           <div className="relative">
@@ -1226,13 +1284,13 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                 setShowLineHeightMenu(false);
                 setShowColorMenu(false);
               }}
-              className="p-1 hover:bg-slate-800 rounded-lg text-slate-200 transition"
+              className={formatButtonClass(activeFormats.align !== 'left')}
               title="对齐与列表"
             >
               <AlignLeft className="w-3.5 h-3.5" />
             </button>
             {showAlignMenu && (
-              <div className={`absolute left-0 ${bubblePos.placement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] w-32 rounded-xl border border-slate-700/80 bg-slate-950 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
+              <div className={`absolute left-0 ${(bubblePos.placement === 'above' && bubblePos.top >= 220) ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] w-32 rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 p-1 text-xs shadow-2xl shadow-slate-900/30`}>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1240,7 +1298,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     execFormat('justifyLeft');
                     setShowAlignMenu(false);
                   }}
-                  className="w-full px-2 py-1 text-left hover:bg-slate-700 rounded text-slate-200 flex items-center space-x-2"
+                  className={`flex w-full items-center space-x-2 rounded px-2 py-1 text-left transition ${activeFormats.align === 'left' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
                 >
                   <AlignLeft className="w-3.5 h-3.5" />
                   <span>左对齐</span>
@@ -1252,7 +1310,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     execFormat('justifyCenter');
                     setShowAlignMenu(false);
                   }}
-                  className="w-full px-2 py-1 text-left hover:bg-slate-700 rounded text-slate-200 flex items-center space-x-2"
+                  className={`flex w-full items-center space-x-2 rounded px-2 py-1 text-left transition ${activeFormats.align === 'center' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
                 >
                   <AlignCenter className="w-3.5 h-3.5" />
                   <span>居中对齐</span>
@@ -1264,12 +1322,12 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     execFormat('justifyRight');
                     setShowAlignMenu(false);
                   }}
-                  className="w-full px-2 py-1 text-left hover:bg-slate-700 rounded text-slate-200 flex items-center space-x-2"
+                  className={`flex w-full items-center space-x-2 rounded px-2 py-1 text-left transition ${activeFormats.align === 'right' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
                 >
                   <AlignRight className="w-3.5 h-3.5" />
                   <span>右对齐</span>
                 </button>
-                <div className="h-px bg-slate-700 my-1" />
+                <div className="my-1 h-px bg-slate-200 dark:bg-slate-700" />
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1277,7 +1335,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     execFormat('insertUnorderedList');
                     setShowAlignMenu(false);
                   }}
-                  className="w-full px-2 py-1 text-left hover:bg-slate-700 rounded text-slate-200 flex items-center space-x-2"
+                  className="w-full px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-200 flex items-center space-x-2"
                 >
                   <List className="w-3.5 h-3.5" />
                   <span>无序列表</span>
@@ -1289,7 +1347,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     execFormat('insertOrderedList');
                     setShowAlignMenu(false);
                   }}
-                  className="w-full px-2 py-1 text-left hover:bg-slate-700 rounded text-slate-200 flex items-center space-x-2"
+                  className="w-full px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-200 flex items-center space-x-2"
                 >
                   <CheckSquare className="w-3.5 h-3.5" />
                   <span>有序列表</span>
@@ -1298,14 +1356,14 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
             )}
           </div>
 
-          <div className="h-3.5 w-px bg-slate-700 mx-0.5" />
+          <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
 
           {/* Text Style Quick Action Icons */}
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => execFormat('bold')}
-            className="p-1 hover:bg-slate-800 rounded-lg text-slate-200 font-bold"
+            className={`${formatButtonClass(activeFormats.bold)} font-bold`}
             title="加粗 (Bold)"
           >
             <Bold className="w-3.5 h-3.5" />
@@ -1313,17 +1371,8 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => execFormat('strikeThrough')}
-            className="p-1 hover:bg-slate-800 rounded-lg text-slate-200"
-            title="删除线 (Strikethrough)"
-          >
-            <Strikethrough className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={() => execFormat('italic')}
-            className="p-1 hover:bg-slate-800 rounded-lg text-slate-200 italic"
+            className={`${formatButtonClass(activeFormats.italic)} italic`}
             title="斜体 (Italic)"
           >
             <Italic className="w-3.5 h-3.5" />
@@ -1332,7 +1381,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => execFormat('underline')}
-            className="p-1 hover:bg-slate-800 rounded-lg text-slate-200 underline"
+            className={`${formatButtonClass(activeFormats.underline)} underline`}
             title="下划线 (Underline)"
           >
             <Underline className="w-3.5 h-3.5" />
@@ -1340,14 +1389,14 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={applyInlineCode}
-            className="p-1 hover:bg-slate-800 rounded-lg text-slate-200 font-mono text-[11px]"
-            title="行内代码 (Inline Code)"
+            onClick={() => execFormat('strikeThrough')}
+            className={formatButtonClass(activeFormats.strike)}
+            title="删除线 (Strikethrough)"
           >
-            <CodeIcon className="w-3.5 h-3.5" />
+            <Strikethrough className="w-3.5 h-3.5" />
           </button>
 
-          <div className="h-3.5 w-px bg-slate-700 mx-0.5" />
+          <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
 
           {/* 🌟 Text Color & Background Highlight Picker Dropdown */}
           <div className="relative">
@@ -1362,7 +1411,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                 setShowLineHeightMenu(false);
                 setShowAlignMenu(false);
               }}
-              className="px-1.5 py-1 hover:bg-slate-800 rounded-lg flex items-center space-x-1 text-emerald-400 font-bold"
+              className="px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center space-x-1 text-emerald-400 font-bold"
               title="文本颜色与荧光高亮笔 (Color & Highlight)"
             >
               <Palette className="w-3.5 h-3.5" />
@@ -1370,7 +1419,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
             </button>
 
             {showColorMenu && (
-              <div className={`absolute left-0 ${bubblePos.placement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] w-48 rounded-xl border border-slate-700/80 bg-slate-950 p-3 text-xs shadow-2xl shadow-slate-900/30`}>
+              <div className={`absolute left-0 ${(bubblePos.placement === 'above' && bubblePos.top >= 220) ? 'bottom-full mb-2' : 'top-full mt-2'} z-[60] w-48 rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 p-3 text-xs shadow-2xl shadow-slate-900/30`}>
                 {/* 文字前景色 */}
                 <div>
                   <div className="text-[10px] font-semibold text-slate-400 mb-1.5 uppercase">文字颜色</div>
@@ -1421,7 +1470,7 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
                     <button
                       type="button"
                       onClick={() => applyHighlightColor('transparent')}
-                      className="px-1.5 py-0.5 rounded border border-slate-600 text-[10px] text-slate-300 hover:bg-slate-700"
+                      className="px-1.5 py-0.5 rounded border border-slate-600 text-[10px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                       无背景
                     </button>
@@ -1455,17 +1504,6 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
             )}
           </div>
 
-          <div className="h-3.5 w-px bg-slate-700 mx-0.5" />
-
-          {/* Prompt Callout & Hyperlink */}
-          <button
-            type="button"
-            onClick={() => insertCallout('warning')}
-            className="p-1 hover:bg-slate-800 rounded-lg text-amber-400"
-            title="转为警告提示框"
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-          </button>
         </div>
       )}
 
@@ -1679,12 +1717,291 @@ export const DocumentVisualEditor: React.FC<DocumentVisualEditorProps> = ({
         </div>
       )}
 
-      {/* 文档画布控制顶栏 */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 text-xs text-slate-500">
-        <span className="flex items-center space-x-2 font-semibold text-slate-700 dark:text-slate-300">
-          <Sparkles className="w-4 h-4 text-blue-500" />
-          <span>沉浸式可视化文档画布（支持视频与图片插入 / 拖拽缩放 / 划词排版）</span>
-        </span>
+      {/* 文档画布常驻快捷排版顶栏 */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 text-xs text-slate-600 dark:text-slate-300 shadow-xs">
+        {/* 左侧：常用格式快捷工具组（无需划词，直接作用于当前光标行或选区） */}
+        <div className="flex items-center flex-wrap gap-1">
+          {/* 标题级别切换下拉菜单 */}
+          <div className="relative">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setTopActiveMenu(topActiveMenu === 'heading' ? null : 'heading');
+              }}
+              className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-700 dark:text-slate-200 text-xs transition"
+              title="切换当前行标题格式 (光标停留即可生效)"
+            >
+              <span>{currentBlockType}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+            {topActiveMenu === 'heading' && (
+              <div className="absolute left-0 top-full mt-1.5 z-40 w-44 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1.5 text-xs shadow-xl">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyHeadingBlock('H1');
+                    setCurrentBlockType('H1');
+                    setTopActiveMenu(null);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-extrabold text-slate-900 dark:text-white transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <Heading1 className="w-3.5 h-3.5 text-purple-500" />
+                  <span className="flex-1">一级标题</span>
+                  <span className="text-[10px] font-semibold text-slate-400">32px</span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyHeadingBlock('H2');
+                    setCurrentBlockType('H2');
+                    setTopActiveMenu(null);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-bold text-slate-900 dark:text-white transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <Heading2 className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="flex-1">二级标题</span>
+                  <span className="text-[10px] font-semibold text-slate-400">24px</span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyHeadingBlock('H3');
+                    setCurrentBlockType('H3');
+                    setTopActiveMenu(null);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-semibold text-slate-900 dark:text-white transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <Heading3 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="flex-1">三级标题</span>
+                  <span className="text-[10px] font-semibold text-slate-400">20px</span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyHeadingBlock('H4');
+                    setCurrentBlockType('H4');
+                    setTopActiveMenu(null);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left font-semibold text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <Heading4 className="h-3.5 w-3.5 text-cyan-500" />
+                  <span className="flex-1">四级标题</span>
+                  <span className="text-[10px] font-semibold text-slate-400">18px</span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyHeadingBlock('P');
+                    setCurrentBlockType('正文');
+                    setTopActiveMenu(null);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-slate-700 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <Type className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="flex-1">正文文本</span>
+                  <span className="text-[10px] font-semibold text-slate-400">16px</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 字体选择器 */}
+          <div className="relative">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setTopActiveMenu(topActiveMenu === 'fontfamily' ? null : 'fontfamily')}
+              className="flex items-center space-x-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              title="设置选区字体"
+            >
+              <span className="max-w-24 truncate">{currentFontFamily}</span>
+              <ChevronDown className="h-3 w-3 text-slate-400" />
+            </button>
+            {topActiveMenu === 'fontfamily' && (
+              <div className="absolute left-0 top-full z-40 mt-1.5 max-h-64 w-44 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 text-xs shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                {FONT_FAMILIES.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      applyFontFamily(item.value);
+                      setTopActiveMenu(null);
+                    }}
+                    className={`flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left transition ${
+                      currentFontFamily === item.label
+                        ? 'bg-blue-600 font-bold text-white'
+                        : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <span style={item.css ? { fontFamily: item.css } : undefined}>{item.label}</span>
+                    <span className="text-[10px] font-normal text-slate-400">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 字号大小下拉菜单 */}
+          <div className="relative">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (headingFontSize) return;
+                setTopActiveMenu(topActiveMenu === 'fontsize' ? null : 'fontsize');
+              }}
+              disabled={Boolean(headingFontSize)}
+              className="flex items-center space-x-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-default disabled:text-slate-400 disabled:hover:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800"
+              title={headingFontSize ? '标题字号由标题级别统一控制' : '设置当前行/选区字号'}
+            >
+              <span>{headingFontSize ?? currentFontSize}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+            {topActiveMenu === 'fontsize' && !headingFontSize && (
+              <div className="absolute left-0 top-full mt-1.5 z-40 max-h-60 w-36 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 text-xs shadow-xl">
+                {BODY_FONT_SIZES.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      applyFontSize(item.value);
+                      setTopActiveMenu(null);
+                    }}
+                    className={`w-full px-2.5 py-1 text-left rounded flex items-center justify-between transition ${
+                      currentFontSize === item.value ? 'bg-blue-600 text-white font-bold' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 行距选择器 */}
+          <div className="relative">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setTopActiveMenu(topActiveMenu === 'lineheight' ? null : 'lineheight');
+              }}
+              className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center space-x-1 font-semibold text-slate-700 dark:text-slate-200 text-xs transition"
+              title="段落行距"
+            >
+              <span>{currentLineHeight === '默认' ? '行距' : `${currentLineHeight}x`}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+            {topActiveMenu === 'lineheight' && (
+              <div className="absolute left-0 top-full mt-1.5 z-40 max-h-60 w-32 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 text-xs shadow-xl">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyLineHeight('default');
+                    setTopActiveMenu(null);
+                  }}
+                  className={`w-full px-2 py-1 text-left rounded flex items-center justify-between transition ${
+                    currentLineHeight === '默认' ? 'bg-blue-600 text-white font-bold' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <span>默认 (1.75)</span>
+                </button>
+                {['1.0', '1.2', '1.4', '1.5', '1.6', '1.8', '2.0'].map((lh) => (
+                  <button
+                    key={lh}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      applyLineHeight(lh);
+                      setTopActiveMenu(null);
+                    }}
+                    className={`w-full px-2 py-1 text-left rounded flex items-center justify-between transition ${
+                      currentLineHeight === lh ? 'bg-blue-600 text-white font-bold' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <span>{lh} 倍行距</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+
+          {/* 粗斜下划删除与对齐快捷按钮 */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execFormat('bold')}
+            className={formatButtonClass(activeFormats.bold)}
+            title="加粗 (Ctrl+B)"
+          >
+            <Bold className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execFormat('italic')}
+            className={formatButtonClass(activeFormats.italic)}
+            title="斜体 (Ctrl+I)"
+          >
+            <Italic className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execFormat('underline')}
+            className={formatButtonClass(activeFormats.underline)}
+            title="下划线 (Ctrl+U)"
+          >
+            <Underline className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execFormat('strikeThrough')}
+            className={formatButtonClass(activeFormats.strike)}
+            title="删除线"
+          >
+            <Strikethrough className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execFormat('justifyLeft')}
+            className={formatButtonClass(activeFormats.align === 'left')}
+            title="文本左对齐"
+          >
+            <AlignLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execFormat('justifyCenter')}
+            className={formatButtonClass(activeFormats.align === 'center')}
+            title="文本居中"
+          >
+            <AlignCenter className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => execFormat('justifyRight')}
+            className={formatButtonClass(activeFormats.align === 'right')}
+            title="文本右对齐"
+          >
+            <AlignRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         {/* Quick Inserter Menu Dropdown */}
         <div className="relative flex items-center space-x-2">

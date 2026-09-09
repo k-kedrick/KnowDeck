@@ -128,10 +128,8 @@ describe('api', () => {
 
     await api.listAdminInvites();
     await api.createAdminInvite({ max_uses: 3 });
-    await api.disableAdminInvite(9);
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/invites', expect.any(Object));
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/invites', expect.objectContaining({ method: 'POST', body: JSON.stringify({ max_uses: 3 }) }));
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/admin/invites/9/status', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ status: 'disabled' }) }));
   });
 });

@@ -17,13 +17,16 @@ import {
 } from 'lucide-react';
 import { api } from '../../api';
 import type { User } from '../../api';
+import { AuthContext } from '../../auth/useAuth';
 
-interface AuthContext {
-  user: User | null;
+interface AdminOutletContext {
+  user?: User | null;
 }
 
 export const AdminLayout: React.FC = () => {
-  const { user } = useOutletContext<AuthContext>();
+  const outletContext = useOutletContext<AdminOutletContext | null>();
+  const auth = React.useContext(AuthContext);
+  const user = outletContext?.user ?? auth?.user ?? null;
   const navigate = useNavigate();
   const location = useLocation();
   const [isEditorAdminNavOpen, setIsEditorAdminNavOpen] = React.useState(false);
@@ -34,6 +37,7 @@ export const AdminLayout: React.FC = () => {
     } catch {
       // ignore
     } finally {
+      auth?.logout();
       localStorage.removeItem('kb_token');
       navigate('/wang/login', { replace: true });
     }

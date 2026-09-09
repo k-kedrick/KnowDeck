@@ -23,7 +23,7 @@ func TestInviteGenerate(t *testing.T) {
 	defer db.Close()
 	svc := NewInviteService(repository.NewInviteRepository(db))
 	expiry := time.Now().Add(time.Hour)
-	code, _, e := svc.Generate(1, 5, &expiry)
+	code, _, e := svc.GenerateSingle(1, "", 5, 0, &expiry, "")
 	if e != nil || code == "" {
 		t.Fatal(e)
 	}
@@ -32,7 +32,7 @@ func TestInviteGenerate(t *testing.T) {
 	if e != nil || v.CodeHash == code || v.MaxUses == nil || *v.MaxUses != 5 || v.Status != "active" {
 		t.Fatal("bad persistence")
 	}
-	if _, _, e = svc.Generate(1, 1001, nil); e == nil {
+	if _, _, e = svc.GenerateSingle(1, "", 1001, 0, nil, ""); e == nil {
 		t.Fatal("expected validation")
 	}
 }
@@ -47,7 +47,7 @@ func TestInviteConsumeBoundaries(t *testing.T) {
 	repo := repository.NewInviteRepository(db)
 	svc := NewInviteService(repo)
 
-	code, _, err := svc.Generate(1, 1, nil)
+	code, _, err := svc.GenerateSingle(1, "", 1, 0, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestInviteConsumeConcurrentMaxUses(t *testing.T) {
 			defer db.Close()
 			repo := repository.NewInviteRepository(db)
 			svc := NewInviteService(repo)
-			code, _, err := svc.Generate(1, maxUses, nil)
+			code, _, err := svc.GenerateSingle(1, "", maxUses, 0, nil, "")
 			if err != nil {
 				t.Fatal(err)
 			}

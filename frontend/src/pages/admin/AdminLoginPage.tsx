@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Lock, User as UserIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { api } from '../../api';
+import { useAuth } from '../../auth/useAuth';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { adminLogin } = useAuth();
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -22,13 +23,8 @@ export const AdminLoginPage: React.FC = () => {
     setErrorMsg(null);
 
     try {
-      const data = await api.login(username, password);
-      if (data.token) {
-        localStorage.setItem('kb_token', data.token);
-        navigate('/wang/dashboard', { replace: true });
-      } else {
-        setErrorMsg('登录失败：未收到有效签名令牌');
-      }
+      await adminLogin(username.trim(), password.trim());
+      navigate('/wang/dashboard', { replace: true });
     } catch (err: any) {
       setErrorMsg(err.message || '登录失败，请检查用户名和密码');
     } finally {

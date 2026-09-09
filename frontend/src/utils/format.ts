@@ -1,13 +1,3 @@
-export const formatDate = (value?: string) => {
-  if (!value) return '';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-};
-
 export const formatDateTime = (value?: string) => {
   if (!value) return '';
   const date = new Date(value);
