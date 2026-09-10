@@ -80,9 +80,7 @@ describe('DocViewer Markdown security pipeline', () => {
     expect(container.querySelector('article')).not.toBeNull();
   });
 
-  it('keeps copied state stable and isolated for duplicate code blocks', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+  it('renders code blocks in the readonly Tiptap canvas', () => {
     const content = `\`\`\`ts
 const same = true
 \`\`\`
@@ -91,16 +89,11 @@ const same = true
 const same = true
 \`\`\``;
 
-    renderViewer(content);
+    const { container } = renderViewer(content);
 
-    const copyButtons = screen.getAllByRole('button', { name: '复制 ts 代码' });
-    fireEvent.click(copyButtons[0]);
-    await waitFor(() => expect(screen.getAllByText('已复制')).toHaveLength(1));
-    expect(screen.getAllByText('复制代码')).toHaveLength(1);
-
-    fireEvent.click(screen.getAllByRole('button', { name: '复制 ts 代码' })[1]);
-    await waitFor(() => expect(screen.getAllByText('已复制')).toHaveLength(2));
-    expect(writeText).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('tiptap-reader-canvas').getAttribute('contenteditable')).toBe('false');
+    expect(container.querySelectorAll('pre code')).toHaveLength(2);
+    expect(container.querySelectorAll('pre code')[0]?.textContent).toContain('const same = true');
   });
 
   it('sanitizes raw HTML embedded in Markdown before it reaches the DOM', () => {
@@ -117,35 +110,25 @@ const same = true
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('[onerror], [onclick]')).toBeNull();
     expect(container.querySelector('iframe')).toBeNull();
-    expect(container.querySelector('article a')?.getAttribute('href')).toBe('#');
+    expect(container.querySelector('article a')).toBeNull();
     expect(container.textContent).toContain('Safe heading');
     expect(container.textContent).toContain('safe text');
     expect(container.innerHTML).not.toContain('url(');
   });
 
-  it('preserves supported Markdown, rich media, tables, code, and lazily loaded KaTeX', async () => {
-    const content = `# Document
-
-| A | B |
-| - | - |
-| 1 | 2 |
-
-\`\`\`ts
-const safe = true
-\`\`\`
-
-$E = mc^2$
-
+  it('renders rich documents through the readonly Tiptap canvas', () => {
+    const content = `<h1>Document</h1>
+<table><tbody><tr><td>A</td><td>B</td></tr><tr><td>1</td><td>2</td></tr></tbody></table>
+<pre><code>const safe = true</code></pre>
 <video src="/uploads/videos/demo.mp4" controls></video>
 <iframe src="https://video.example.com/embed/1" title="Video"></iframe>`;
 
     const { container } = renderViewer(content);
 
-    await waitFor(() => expect(container.querySelector('.katex')).not.toBeNull(), { timeout: 3000 });
-    await waitFor(() => expect(screen.getAllByRole('link', { name: 'Document' }).length).toBeGreaterThan(0));
+    expect(screen.getByTestId('tiptap-reader-canvas').getAttribute('contenteditable')).toBe('false');
     expect(container.querySelector('table')).not.toBeNull();
-    expect(container.querySelectorAll('h1')).toHaveLength(1);
-    expect(container.querySelector('article h2')?.textContent).toBe('Document');
+    expect(container.querySelectorAll('article h1')).toHaveLength(1);
+    expect(container.querySelector('article h1')?.textContent).toBe('Document');
     expect(container.querySelector('pre code')?.textContent).toContain('const safe');
     expect(container.querySelector('video')?.getAttribute('src')).toBe('/uploads/videos/demo.mp4');
     expect(container.querySelector('iframe')?.getAttribute('sandbox')).toContain('allow-scripts');
@@ -164,8 +147,8 @@ $E = mc^2$
     const links = allLinks.slice(1);
 
     expect(links).toHaveLength(3);
-    expect(links.map((link) => link.dataset.level)).toEqual(['2', '3', '4']);
-    expect(links.map((link) => link.style.paddingLeft)).toEqual(['20px', '34px', '48px']);
+    expect(links.map((link) => link.dataset.level)).toEqual(['1', '2', '3']);
+    expect(links.map((link) => link.style.paddingLeft)).toEqual(['6px', '20px', '34px']);
     expect(allLinks[0].getAttribute('aria-current')).toBe('location');
     expect(allLinks[0].className).not.toContain('bg-[#3370ff]');
     expect(desktopToc.className).toContain('document-reading-toc');
@@ -233,10 +216,10 @@ $E = mc^2$
 
     renderViewer(content);
 
-    const downloadLink = screen.getByRole('link', { name: 'Download' });
+    const downloadLink = screen.getByRole('link', { name: '📎 Download' });
     const articleLink = screen.getByRole('link', { name: 'Article' });
     expect(downloadLink.getAttribute('href')).toBe('/api/public/media/download/7');
-    expect(screen.getByRole('link', { name: 'Uploaded file' }).getAttribute('href')).toBe('/uploads/files/manual.pdf');
+    expect(screen.getByRole('link', { name: '📎 Uploaded file' }).getAttribute('href')).toBe('/uploads/files/manual.pdf');
     expect(articleLink.getAttribute('href')).toBe('/docs/internal-article');
     expect(fireEvent.click(downloadLink)).toBe(true);
     expect(fireEvent.click(articleLink)).toBe(false);

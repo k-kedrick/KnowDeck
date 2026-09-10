@@ -12,13 +12,6 @@ const DOCUMENT_ALLOWED_ATTR = [
   'allowfullscreen', 'title', 'type', 'preload', 'poster',
 ];
 
-interface HastNode {
-  type?: string;
-  tagName?: string;
-  properties?: Record<string, unknown>;
-  children?: HastNode[];
-}
-
 const DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|gif|webp);base64,[a-z0-9+/=\s]+$/i;
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
@@ -50,50 +43,6 @@ function isSafeDocumentUrl(tagName: string, rawValue: string): boolean {
       (url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname));
   }
   return false;
-}
-
-function hardenElementUrl(tagName: string, properties: Record<string, unknown>): boolean {
-  const propertyName = tagName === 'a' ? 'href' : 'src';
-  const value = properties[propertyName];
-  if (typeof value !== 'string' || !isSafeDocumentUrl(tagName, value)) {
-    delete properties[propertyName];
-    return tagName !== 'iframe';
-  }
-  return true;
-}
-
-// Runs after rehypeRaw and before rehype-sanitize. It preserves approved rich-text
-// styles while removing unsafe CSS and URL protocols from mixed Markdown/HTML.
-export function rehypeHardenDocument() {
-  return (tree: HastNode) => {
-    const walk = (node: HastNode): boolean => {
-      if (node.type === 'element' && node.tagName && node.properties) {
-        const tagName = node.tagName.toLowerCase();
-        const style = node.properties.style;
-        if (typeof style === 'string') {
-          const cleaned = cleanInlineStyle(style);
-          if (cleaned) node.properties.style = cleaned;
-          else delete node.properties.style;
-        }
-        if (['a', 'img', 'video', 'source', 'iframe'].includes(tagName) && !hardenElementUrl(tagName, node.properties)) {
-          return false;
-        }
-        if (tagName === 'a') {
-          node.properties.target = '_blank';
-          node.properties.rel = ['noopener', 'noreferrer'];
-        } else if (tagName === 'img') {
-          node.properties.referrerPolicy = 'no-referrer';
-        } else if (tagName === 'iframe') {
-          node.properties.loading = 'lazy';
-          node.properties.referrerPolicy = 'no-referrer';
-          node.properties.sandbox = ['allow-scripts', 'allow-same-origin', 'allow-presentation'];
-        }
-      }
-      if (node.children) node.children = node.children.filter(walk);
-      return true;
-    };
-    walk(tree);
-  };
 }
 
 /**

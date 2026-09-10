@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useOutletContext, useLocation } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
-import rehypeRaw from 'rehype-raw';
-import rehypeSlug from 'rehype-slug';
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import type { DocDetailData } from '../api';
 import type { PublicOutletContext } from './publicLayoutContext';
 import { formatDateTime } from '../utils/format';
-import { isHtmlDocumentContent, rehypeHardenDocument, sanitizeDocumentHtml, sanitizeUrlAndText } from '../utils/htmlToMarkdown';
-import { processDocumentHtml } from '../utils/documentHtml';
 import {
   decodeHeadingHash,
   findDocumentHeading,
@@ -18,8 +10,6 @@ import {
 } from '../utils/documentHeadings';
 import {
   Eye,
-  Copy,
-  Check,
   List,
   ListTree,
   Lock,
@@ -32,8 +22,6 @@ import { ReadingProgressBar } from './ReadingProgressBar';
 import { ImageLightbox } from './ImageLightbox';
 import { ModalPortal } from './ModalPortal';
 import { TiptapReadonlyDocument } from './admin/tiptap/TiptapReadonlyDocument';
-
-type MarkdownMathPlugins = typeof import('./markdownMath');
 
 interface DocViewerProps {
   data: DocDetailData | null;
@@ -55,7 +43,7 @@ interface HeadingScope {
   content: string | undefined;
   title: string | undefined;
   rendered: boolean;
-  markdownReady: boolean;
+  readerRevision: number;
 }
 
 const EMPTY_TOC_ITEMS: TocItem[] = [];
@@ -121,42 +109,6 @@ const TocNav = ({ items, activeId, onSelect, filterText = '' }: TocNavProps) => 
   );
 };
 
-const documentSanitizeSchema = {
-  ...defaultSchema,
-  tagNames: [
-    ...(defaultSchema.tagNames || []),
-    'iframe', 'video', 'source', 'mark', 'u', 'table', 'thead', 'tbody', 'tr', 'td', 'th',
-  ],
-  attributes: {
-    ...defaultSchema.attributes,
-    '*': [...(defaultSchema.attributes?.['*'] || []), 'className', 'id', 'style', 'align'],
-    a: [...(defaultSchema.attributes?.a || []), 'href', 'target', 'rel'],
-    img: [...(defaultSchema.attributes?.img || []), 'src', 'alt', 'width', 'height', 'referrerPolicy'],
-    video: ['src', 'controls', 'width', 'height', 'preload', 'poster'],
-    source: ['src', 'type'],
-    iframe: ['src', 'title', 'width', 'height', 'loading', 'sandbox', 'allow', 'allowFullScreen', 'referrerPolicy'],
-    td: ['colSpan', 'rowSpan', 'align'],
-    th: ['colSpan', 'rowSpan', 'align'],
-    code: [...(defaultSchema.attributes?.code || []), ['className', /^language-./, 'math-inline', 'math-display']],
-  },
-  protocols: {
-    ...defaultSchema.protocols,
-    href: ['http', 'https', 'mailto', 'tel'],
-    src: ['http', 'https', 'data', 'blob'],
-  },
-};
-
-const fingerprintCode = (value: string) => {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-};
-
-const containsMarkdownMath = (content: string) => /(^|[^\\])\$\$?[\s\S]*?\$\$?/.test(content);
-
 export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = null }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -164,11 +116,9 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   const setOutletTocItems = outletContext?.setTocItems;
   const setOutletDocTitle = outletContext?.setCurrentDocTitle;
   const setOutletActiveHeadingId = outletContext?.setActiveHeadingId;
-  const [copiedCodeIds, setCopiedCodeIds] = useState<Set<string>>(() => new Set());
   const [tocSnapshot, setTocSnapshot] = useState<{ scope: HeadingScope; items: TocItem[] } | null>(null);
   const [activeHeading, setActiveHeading] = useState<{ scope: HeadingScope; id: string } | null>(null);
-  const [mathPlugins, setMathPlugins] = useState<MarkdownMathPlugins | null>(null);
-  const [mathLoadFailed, setMathLoadFailed] = useState(false);
+  const [readerRevision, setReaderRevision] = useState(0);
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<{ src: string; alt: string } | null>(null);
   const [isTocCollapsed, setIsTocCollapsed] = useState(() => {
@@ -179,7 +129,6 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     }
   });
   const articleRef = React.useRef<HTMLElement>(null);
-  const copyTimersRef = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const handleToggleToc = (collapsed: boolean) => {
     setIsTocCollapsed(collapsed);
@@ -195,41 +144,23 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   const locked = data?.locked === true;
 
   const rawContent = doc?.content || doc?.excerpt || '';
-  const isHtmlContent = React.useMemo(() => isHtmlDocumentContent(rawContent), [rawContent]);
-  const needsMath = React.useMemo(() => !isHtmlContent && containsMarkdownMath(rawContent), [isHtmlContent, rawContent]);
-  const markdownReady = !needsMath || mathPlugins !== null || mathLoadFailed;
   const documentId = doc?.id;
   const documentSlug = doc?.slug;
   const documentContent = doc?.content;
   const rendered = Boolean(doc) && !loading && !error && !locked;
   // Bind DOM-derived state and asynchronous callbacks to the current document render.
   const headingScope = React.useMemo<HeadingScope>(() => ({
-    documentId, slug: documentSlug, content: documentContent, title: docTitle, rendered, markdownReady,
-  }), [documentId, documentSlug, documentContent, docTitle, rendered, markdownReady]);
+    documentId, slug: documentSlug, content: documentContent, title: docTitle, rendered, readerRevision,
+  }), [documentId, documentSlug, documentContent, docTitle, rendered, readerRevision]);
   const tocItems = tocSnapshot?.scope === headingScope ? tocSnapshot.items : EMPTY_TOC_ITEMS;
-  const tocReady = rendered && markdownReady && (!documentContent || tocSnapshot?.scope === headingScope);
+  const tocReady = rendered && (!documentContent || tocSnapshot?.scope === headingScope);
   const setActiveHeadingId = React.useCallback((id: string) => {
     setActiveHeading((current) => current?.scope === headingScope && current.id === id
       ? current : { scope: headingScope, id });
   }, [headingScope]);
-  const processedContent = React.useMemo(() => {
-    const raw = doc?.content || doc?.excerpt || '';
-    if (!raw) return '';
-    if (isHtmlContent) {
-      const safeHtml = sanitizeDocumentHtml(raw);
-      return processDocumentHtml(safeHtml);
-    }
-    return raw.replace(/[!！]\s*\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" referrerpolicy="no-referrer" class="max-w-full h-auto rounded-xl my-4" />');
-  }, [doc?.content, doc?.excerpt, isHtmlContent]);
-
-  React.useEffect(() => {
-    const timers = copyTimersRef.current;
-    return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-      timers.clear();
-    };
+  const handleReaderReady = React.useCallback(() => {
+    setReaderRevision((current) => current + 1);
   }, []);
-
   React.useEffect(() => {
     if (!isTocOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -245,18 +176,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   }, [isTocOpen]);
 
   React.useEffect(() => {
-    if (!needsMath) return;
-    let active = true;
-    import('./markdownMath').then((plugins) => {
-      if (active) setMathPlugins(plugins);
-    }).catch(() => {
-      if (active) setMathLoadFailed(true);
-    });
-    return () => { active = false; };
-  }, [needsMath]);
-
-  React.useEffect(() => {
-    if (!headingScope.rendered || !headingScope.content || !headingScope.markdownReady) return;
+    if (!headingScope.rendered || !headingScope.content) return;
 
     const timer = setTimeout(() => {
       if (articleRef.current) {
@@ -277,7 +197,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
 
         setTocSnapshot({ scope: headingScope, items });
       }
-    }, 120);
+    }, headingScope.readerRevision ? 0 : 120);
 
     return () => clearTimeout(timer);
   }, [headingScope]);
@@ -377,26 +297,6 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
       window.removeEventListener('popstate', handleHistoryNavigation);
     };
   }, [allTocItems, tocReady, setActiveHeadingId]);
-
-  const copyCode = async (codeText: string, codeId: string) => {
-    try {
-      await navigator.clipboard.writeText(codeText);
-      setCopiedCodeIds((current) => new Set(current).add(codeId));
-
-      const existingTimer = copyTimersRef.current.get(codeId);
-      if (existingTimer) clearTimeout(existingTimer);
-      copyTimersRef.current.set(codeId, setTimeout(() => {
-        setCopiedCodeIds((current) => {
-          const next = new Set(current);
-          next.delete(codeId);
-          return next;
-        });
-        copyTimersRef.current.delete(codeId);
-      }, 2000));
-    } catch {
-      // Keep default state
-    }
-  };
 
   const handleTocClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -560,8 +460,6 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     );
   }
 
-  const codeOccurrences = new Map<string, number>();
-
   return (
     <div className="relative w-full min-h-full flex-1 flex justify-center">
       <ReadingProgressBar />
@@ -656,121 +554,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
 
         {/* Document Body */}
         <article ref={articleRef} className="document-body markdown-body [&_img]:cursor-zoom-in" onClick={handleArticleClick}>
-          {isHtmlContent ? (
-            <TiptapReadonlyDocument content={rawContent} />
-          ) : needsMath && !markdownReady ? (
-            <div className="min-h-96 animate-pulse space-y-3 py-2" aria-label="文章公式渲染加载中">
-              <div className="h-4 w-full rounded bg-slate-200 dark:bg-slate-800" />
-              <div className="h-4 w-5/6 rounded bg-slate-200 dark:bg-slate-800" />
-              <div className="mt-8 h-20 w-full rounded bg-slate-200 dark:bg-slate-800" />
-            </div>
-          ) : (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm, ...(mathPlugins ? [mathPlugins.remarkMath] : []), remarkBreaks]}
-              rehypePlugins={[rehypeRaw, rehypeHardenDocument, [rehypeSanitize, documentSanitizeSchema], ...(mathPlugins ? [mathPlugins.rehypeKatex] : []), rehypeSlug]}
-              components={{
-                img({ src, alt, ...props }) {
-                  return (
-                    <img
-                      src={src}
-                      alt={alt || '图片'}
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                      decoding="async"
-                      className="my-5 h-auto max-w-full cursor-zoom-in rounded-lg border border-slate-200/70 dark:border-slate-800"
-                      {...props}
-                    />
-                  );
-                },
-                a({ href, children, ...props }) {
-                  const childStr = String(children);
-                  const { url: cleanUrl, textAfterUrl, label } = sanitizeUrlAndText(href || '#', childStr);
-                  const isAnchor = cleanUrl.startsWith('#');
-                  const isInternal = (cleanUrl.startsWith('/') && !cleanUrl.startsWith('//'))
-                    || (!isAnchor && !/^[a-z][a-z\d+.-]*:/i.test(cleanUrl));
-                  const isBackendResource = /^\/(?:api|uploads)(?:\/|$)/.test(cleanUrl);
-                  const hasRichChild = React.Children.toArray(children).some((child) => React.isValidElement(child));
-                  if (isInternal && !isBackendResource) return <Link to={cleanUrl} className="font-medium text-blue-600 underline decoration-blue-300 underline-offset-4 dark:text-blue-400">{children}</Link>;
-                  if (hasRichChild) return <a href={cleanUrl} target={isAnchor || isBackendResource ? undefined : '_blank'} rel={isAnchor || isBackendResource ? undefined : 'noopener noreferrer'} {...props}>{children}</a>;
-                  return (
-                    <>
-                      <a
-                        href={cleanUrl}
-                        target={isAnchor || isBackendResource ? undefined : '_blank'}
-                        rel={isAnchor || isBackendResource ? undefined : 'noopener noreferrer'}
-                        className="text-blue-600 dark:text-blue-400 underline font-medium hover:text-blue-700"
-                        {...props}
-                      >
-                        {label}
-                      </a>
-                      {textAfterUrl}
-                    </>
-                  );
-                },
-                h1({ children, ...props }) {
-                  return <h2 {...props}>{children}</h2>;
-                },
-                h2({ children, ...props }) {
-                  return <h3 {...props}>{children}</h3>;
-                },
-                h3({ children, ...props }) {
-                  return <h4 {...props}>{children}</h4>;
-                },
-                h4({ children, ...props }) {
-                  return <h5 {...props}>{children}</h5>;
-                },
-                table({ children, ...props }) {
-                  return <div className="table-scroll" tabIndex={0}><table {...props}>{children}</table></div>;
-                },
-                pre({ children }) {
-                  return <>{children}</>;
-                },
-                code({ className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  const codeString = String(children).replace(/\n$/, '');
-
-                  if (match) {
-                    const fingerprint = `${match[1]}-${fingerprintCode(codeString)}`;
-                    const occurrence = codeOccurrences.get(fingerprint) || 0;
-                    codeOccurrences.set(fingerprint, occurrence + 1);
-                    const codeId = `${fingerprint}-${occurrence}`;
-                    const isCopied = copiedCodeIds.has(codeId);
-                    return (
-                      <div className="code-block group relative my-5 min-w-0 overflow-hidden rounded-lg border border-slate-800 bg-[#090d16]">
-                        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3.5 py-1.5 text-xs font-mono text-slate-400">
-                          <span>{match[1]}</span>
-                          <button
-                            type="button"
-                            onClick={() => copyCode(codeString, codeId)}
-                            aria-label={`复制 ${match[1]} 代码`}
-                            className="flex items-center space-x-1 rounded px-1.5 py-0.5 transition-colors hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                          >
-                            {isCopied ? (
-                              <Check className="w-3.5 h-3.5 text-green-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                            <span>{isCopied ? '已复制' : '复制代码'}</span>
-                          </button>
-                        </div>
-                        <pre className="!m-0 !rounded-none">
-                          <code>{children}</code>
-                        </pre>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
-              }}
-            >
-              {processedContent}
-            </ReactMarkdown>
-          )}
+          <TiptapReadonlyDocument content={rawContent} onReady={handleReaderReady} />
         </article>
         {data.neighbor && (data.neighbor.prev || data.neighbor.next) && (
           <nav aria-label="文章导航" className="mt-10 grid grid-cols-1 gap-3 border-t border-slate-200 pt-5 text-sm dark:border-slate-800 sm:grid-cols-2">

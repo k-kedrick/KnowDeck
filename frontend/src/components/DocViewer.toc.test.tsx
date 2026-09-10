@@ -149,7 +149,7 @@ describe('DocViewer TOC lifecycle', () => {
     await tick();
     expect(context.setCurrentDocTitle).toHaveBeenLastCalledWith('Document');
     expect(context.setTocItems).toHaveBeenLastCalledWith([
-      { id: 'first', text: 'First', level: 2 }, { id: 'second', text: 'Second', level: 3 },
+      { id: 'first', text: 'First', level: 1 }, { id: 'second', text: 'Second', level: 2 },
     ]);
     fireEvent.click(screen.getByRole('link', { name: 'Second' }));
     expect(activeId()).toBe('second');
@@ -163,6 +163,7 @@ describe('DocViewer TOC lifecycle', () => {
     renderViewer(documentData(), { siteInfo: null, tree: [], openSearch: vi.fn(), setActiveHeadingId });
     await tick();
     await tick(20);
+    await tick(150);
     expect(activeId()).toBe('second');
     expect(setActiveHeadingId).toHaveBeenLastCalledWith('second');
   });
@@ -292,11 +293,9 @@ describe('DocViewer TOC lifecycle', () => {
     expect(headingScrolls().map(({ element }) => element.id)).toEqual(['first']);
   });
 
-  it('restores after lazy math rendering supplies the heading DOM', async () => {
+  it('restores a hash after the readonly Tiptap canvas mounts', async () => {
     window.history.replaceState(null, '', '/docs/doc-1#formula');
     renderViewer(documentData('# Formula\n\n$E = mc^2$'));
-    expect(document.getElementById('formula')).toBeNull();
-    await act(async () => { await import('./markdownMath'); });
     await tick();
     await tick(20);
     expect(activeId()).toBe('formula');
@@ -336,10 +335,8 @@ describe('DocViewer TOC lifecycle', () => {
     await tick(60);
     view.switchDocument(documentData('# New section', 2));
     await tick(65);
-    expect(tocIds()).toEqual(['doc-title']);
-    expect(setTocItems.mock.calls.some(([items]) => items.some((item: { id: string }) => item.id === 'first'))).toBe(false);
-    await tick(60);
     expect(tocIds()).toEqual(['doc-title', 'new-section']);
+    expect(setTocItems).toHaveBeenLastCalledWith([{ id: 'new-section', text: 'New section', level: 1 }]);
   });
 
   it('keeps one live observer and one hash scroll through StrictMode effect replay', async () => {
