@@ -633,7 +633,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
 
       {/* Main Reading Canvas: Strictly centered horizontally across all states */}
       <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <main className="w-full max-w-[860px] bg-transparent transition-colors">
+        <main className="min-h-[680px] w-full max-w-4xl overflow-x-hidden rounded-3xl border border-slate-200/90 bg-white p-8 shadow-xl transition-colors dark:border-slate-700/80 dark:bg-slate-900 md:p-14">
           {/* Document Header Metadata */}
           <header className="mb-6">
           {/* Document Title */}
