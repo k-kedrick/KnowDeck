@@ -6,7 +6,10 @@ import {
   prepareContentForEditor,
   serializeEditorContent,
 } from './editorContentAdapter';
-import realDoc from './historicalRealDocument.json';
+
+const realDoc = {
+  content: `<table><tbody><tr><td>Historical table</td></tr></tbody></table><p><img src="/uploads/images/historical.png" alt="Historical image" /></p>${'x'.repeat(30000)}`,
+};
 
 describe('TipTap E6 Full Regression & Historical Content Safety Gate', () => {
   const editors: Editor[] = [];
