@@ -10,7 +10,7 @@ Browser
   └─ protected React routes: /wang/*
             │
             ▼
-Nginx frontend container (:80, host 127.0.0.1:5185)
+Nginx frontend container (:80, host ${APP_PORT:-8080})
   ├─ static SPA assets
   ├─ /api/* -> backend:8090
   └─ /uploads/* -> read-only upload volume
@@ -113,7 +113,7 @@ SQLite DSN 启用 `foreign_keys(1)`、WAL、`busy_timeout(5000)` 和 `synchronou
 - frontend：Nginx 静态服务，仅绑定宿主回环地址，上传卷只读挂载。
 - 两个服务均启用资源限制、PID 限制、日志轮转和 `no-new-privileges`。
 
-宿主 HTTPS 与域名反向代理使用独立 Nginx 配置接入，不覆盖现有站点。迁移、备份和恢复见 [运维文档](docs/operations/BACKUP.md)。
+Docker Compose 默认将前端映射到所有宿主网卡的 `${APP_PORT:-8080}`，因此可直接通过 IP 加端口访问。宿主 HTTPS 与域名反向代理是可选配置，使用独立 Nginx 配置接入且不覆盖现有站点。生产环境未设置 `SITE_URL` 时，SEO 地址从当前请求推导；自动 JWT Secret 与 SQLite 一同保存在 `docker_kb-data`。迁移、备份和恢复见 [运维文档](docs/operations/BACKUP.md)。
 
 ## 架构约束
 

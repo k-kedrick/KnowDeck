@@ -7,14 +7,14 @@
 - 访客只能使用公开 GET API；公开文档查询必须在仓储层限制为 `published`。
 - 管理写操作位于 `/api/admin/*`，由 Bearer JWT 中间件保护。
 - 管理页面位于 `/wang/*`；该页面路径不构成安全边界，真实鉴权边界仍是 `/api/admin/*` 的 Bearer JWT。隐藏或修改管理路径不能替代认证。
-- 宿主 Nginx 是外部 HTTPS 边界；前端容器仅绑定 `127.0.0.1:5185`，后端只在 Compose 网络暴露 `8090`。
+- 前端容器默认发布 `${APP_PORT:-8080}`，可直接提供 IP + 端口访问；宿主 Nginx 仅是可选 HTTPS 边界，后端始终只在 Compose 网络暴露 `8090`。
 - SQLite、上传目录、生产环境文件和备份不得由 Web 静态目录直接暴露。
 
 ## 认证
 
 - 管理员密码使用 bcrypt 哈希。
 - JWT 固定使用 HS256，解析时要求允许的方法、issuer `feishu-kb` 和过期时间。
-- 生产环境要求非默认且至少 32 字符的 `JWT_SECRET`；`JWT_EXPIRE_HOURS` 必须为 1–168。
+- 生产环境使用非默认且至少 32 字符的 `JWT_SECRET`；未显式设置时首次启动由 `crypto/rand` 生成并持久化到 `/data/.jwt_secret`；`JWT_EXPIRE_HOURS` 必须为 1–168。
 - 管理端 Token 当前保存在 localStorage，退出接口不维护服务端撤销列表。因此内容净化和管理端 XSS 防护是认证安全的一部分。
 - `ADMIN_PASSWORD` 只在数据库没有用户时用于创建首个管理员，不会重置已有账号。
 - 管理员凭据变更要求 bcrypt 验证当前密码；新密码仅保存 bcrypt 哈希，成功后递增 `auth_version` 使已签发 JWT 失效。
@@ -30,7 +30,7 @@
 ## 请求与浏览器边界
 
 - CORS 只回显 `CORS_ALLOWED_ORIGINS` 中的来源；生产环境拒绝通配来源。
-- `TRUSTED_PROXIES` 必须列出真实反向代理，生产环境拒绝信任全部地址。
+- Compose 生产部署默认仅信任 Docker 私有网段中的前端代理；仅自定义反向代理拓扑时才需要高级覆盖 `TRUSTED_PROXIES`，生产环境拒绝信任全部地址。
 - 全局响应设置 nosniff、frame、referrer、permissions 和 CSP 头；上传附件使用更严格的 sandbox CSP。
 - 登录、搜索和公开外部图片代理使用进程内 IP 限流。该限流器不是多实例共享配额。
 - 公开外部图片代理仅允许源码白名单中的 HTTPS 主机、端口和路径，限制重定向、MIME 与响应大小。

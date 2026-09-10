@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func validProductionConfig() *Config {
 	return &Config{
@@ -55,5 +59,38 @@ func TestProductionRejectsUnsafeSecretsAndOrigins(t *testing.T) {
 func TestProductionConfigIsAccepted(t *testing.T) {
 	if err := validProductionConfig().Validate(); err != nil {
 		t.Fatalf("valid production config rejected: %v", err)
+	}
+}
+
+func TestProductionAllowsOptionalSiteURLAndCORS(t *testing.T) {
+	cfg := validProductionConfig()
+	cfg.SiteURL = ""
+	cfg.CORSOrigins = nil
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("optional production site URL and CORS rejected: %v", err)
+	}
+}
+
+func TestLoadOrCreateJWTSecretPersistsGeneratedValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".jwt_secret")
+	first, err := loadOrCreateJWTSecret(path)
+	if err != nil || len(first) < 32 {
+		t.Fatalf("generate secret: %q, %v", first, err)
+	}
+	second, err := loadOrCreateJWTSecret(path)
+	if err != nil || first != second {
+		t.Fatalf("persistent secret changed: %q, %q, %v", first, second, err)
+	}
+}
+
+func TestExplicitJWTSecretIsNotReplaced(t *testing.T) {
+	dir := t.TempDir()
+	const explicit = "existing-secret-that-must-remain-compatible-12345"
+	secret, err := resolveJWTSecret("production", explicit, dir)
+	if err != nil || secret != explicit {
+		t.Fatalf("explicit secret changed: %q, %v", secret, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".jwt_secret")); !os.IsNotExist(err) {
+		t.Fatalf("explicit secret created a persistent replacement: %v", err)
 	}
 }

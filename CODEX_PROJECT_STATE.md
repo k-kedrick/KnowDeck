@@ -7,7 +7,7 @@
 - Lightweight personal blog and read-only knowledge base with an authenticated administration SPA.
 - Backend: Go 1.26.4, Gin, pure-Go SQLite (`modernc.org/sqlite`), local media storage.
 - Frontend: React 19, TypeScript 6, Vite 8, Tailwind CSS; Markdown/HTML rendering with DOMPurify and rehype sanitization.
-- Deployment: root `docker-compose.yml` defines two Docker services. Frontend Nginx binds `127.0.0.1:5185`; backend is internal on `8090`; named volumes hold SQLite data and uploads. Local development uses frontend `3788` and backend `3799`.
+- Deployment: root `docker-compose.yml` defines two Docker services. Frontend Nginx publishes `${APP_PORT:-8080}` on all host interfaces by default; backend is internal on `8090`; named volumes hold SQLite, generated JWT Secret, and uploads. Local development uses frontend `3788` and backend `3799`.
 - Local Git is initialized on branch `main`; initial project baseline: `1a48894`.
 - Repository-wide Codex behavior is defined by `AGENTS.md`.
 - `.agents/skills/project-owner/SKILL.md` is the default repository maintenance workflow.
@@ -40,14 +40,14 @@ Aggregate SHA-256 over sorted relevant inputs. The maintained-documentation fing
 
 | Scope | Fingerprint |
 | --- | --- |
-| Backend Go source + modules | `069cab7f88cb686d5fbdd371f25779693947b295ec381df07388e7e62a089acf` |
+| Backend Go source + modules | `43712f82001019184213bbe8774e8da6355229e2fa46403046a183e091a27253` |
 | Frontend source/config | `8d08d63cfbcfcf4c75f3cc6b62db1817d2e2317d79d154977843ee7ad1466f1c` |
-| Deployment config | `f066d94ca9bf9b31fadb4032bfa9097d33d4ee249ed97357f85c269fdd67aafd` |
-| Maintained Markdown except this state file | `2256c3e4fe2449f5ac563a41be4f459f929a44f990433afd8b1f2baa08a9d9bd` |
+| Deployment config | `2a9ecd684abf2ab2f33683fe1d7813ff8d32c9d5bfbcb206183557fb99073770` |
+| Maintained Markdown except this state file | `2de00f471a8063f95fe62291fd133fa345f6f6b2732daa84c9fcc7449739c464` |
 
 The backend, frontend, and deployment fingerprints above remain valid only while their recorded input scopes remain unchanged.
 
-All four fingerprints were recomputed on 2026-09-10 from sorted tracked and nonignored pending-addition scope paths plus raw contents, with NUL separators between path/content records; the Markdown scope excludes this state file.
+Fingerprints were recomputed on 2026-09-11 from sorted tracked scope paths plus raw contents, with NUL separators between path/content records; the Markdown scope excludes this state file.
 
 ## Documentation Map
 
@@ -105,13 +105,13 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 ### deployment-compose-config
 
 - Command: `docker compose --env-file .env.example config --quiet`
-- Result: **PASS** on 2026-09-10. The root Compose entry point publishes frontend at `127.0.0.1:5185:80` and keeps backend Compose-internal on `8090`.
+- Result: **PASS** on 2026-09-11. The root Compose entry point accepts a minimal `.env`, publishes frontend at `${APP_PORT:-8080}:80`, keeps backend Compose-internal on `8090`, and retains health checks and named volumes.
 - Valid for the deployment fingerprint above.
 
 ### deployment-runtime-rc
 
 - Isolated project: `boke-rc-validation` with disposable named volumes, a fresh production configuration, and a first-boot administrator.
-- Result: **PASS** on 2026-09-10. `docker compose build --no-cache` built backend (85 MB) and frontend (97.3 MB); both services became healthy. Public/admin HTTP smoke, document create/edit/publish/read/delete, image upload/public access/article reference, restart, `down`/`up`, non-root execution, placeholder-secret rejection, and disposable-volume backup all passed.
+- Result: **PASS** on 2026-09-11. A fresh disposable Compose deployment using only `APP_PORT`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` built successfully; both services became healthy; homepage/API/admin login, generated `/data/.jwt_secret`, restart, and `down`/`up` persistence passed. Explicit `JWT_SECRET` compatibility also passed.
 - Cleanup: the disposable containers, network, volumes, test document, and test image were removed after validation.
 
 ### browser-runtime-acceptance

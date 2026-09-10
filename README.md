@@ -102,44 +102,47 @@ npm run build
 
 ## Docker 部署
 
+### Quick Start
+
 ```bash
+git clone https://github.com/k-kedrick/KnowDeck.git
+cd KnowDeck
 cp .env.example .env
-# Edit .env: replace every CHANGE_ME value and set your public HTTPS domain.
-docker compose up -d --build
-```
-
-前端只映射到宿主机 `127.0.0.1:5185`，后端仅暴露在 Compose 网络的 `8090`。
-
-生产环境必须配置：
-
-- 完整站点 URL；
-- 明确的 CORS 来源；
-- 正确的可信代理；
-- 至少 32 字符的非默认 `JWT_SECRET`；
-- 至少 12 字符的非默认 `ADMIN_PASSWORD`。
-
-生产部署、数据迁移、备份和恢复的权威流程见 `docs/operations/BACKUP.md`。
-
-### 配置与持久化
-
-`.env` 是部署唯一的环境文件；不要提交它。`JWT_SECRET`、`ADMIN_USER`、`ADMIN_PASSWORD`、`SITE_URL` 和 `CORS_ALLOWED_ORIGINS` 必须替换示例值。`ADMIN_PASSWORD` 仅用于首次创建管理员，之后修改环境变量不会重置已有账号。
-
-Docker 使用两个命名卷：`docker_kb-data` 保存 SQLite 数据库，`docker_kb-uploads` 保存所有上传文件。升级时不要使用 `docker compose down -v`。
-
-### 升级与备份
-
-```bash
-git pull
-docker compose build
+# Edit .env: set APP_PORT, ADMIN_USERNAME, and ADMIN_PASSWORD.
 docker compose up -d
 ```
 
-升级前按 [备份、迁移与恢复](docs/operations/BACKUP.md) 同时备份数据库卷和上传卷；两者是同一个业务数据单元。
+打开 `http://服务器IP:APP_PORT`，例如默认端口为 `http://服务器IP:8080`；管理入口为 `/wang`。
 
-### 生产反向代理
+`.env` 的普通部署配置只有：
 
-将 HTTPS 反向代理指向 `127.0.0.1:5185`，并使用 `deploy/nginx/host-site.example.conf` 作为宿主 Nginx 站点配置参考。不要直接公开 SQLite、上传卷或后端端口。
+```dotenv
+APP_PORT=8080
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=CHANGE_ME_choose_a_strong_admin_password
+```
 
+首次启动会自动创建 SQLite、Schema、迁移、FTS 索引和首个管理员。`ADMIN_PASSWORD` 只在数据库尚无用户时使用，之后修改 `.env` 不会重置管理员。
+
+### 可选高级配置
+
+- `SITE_URL=https://example.com`：配置域名后为 SEO canonical、sitemap 和 OpenGraph 使用固定地址；留空时使用当前请求的地址。
+- `JWT_SECRET`：留空时后端首次启动以 `crypto/rand` 生成，并以 `0600` 权限写入数据卷的 `/data/.jwt_secret`；后续启动复用。已有用户显式配置的 `JWT_SECRET` 始终优先。
+- `APP_BIND_ADDRESS=127.0.0.1`：仅在使用宿主反向代理时限制监听地址；默认公开在所有宿主网卡。
+- `CORS_ALLOWED_ORIGINS`：仅跨域前端场景需要；同源 `/api` 部署无需设置。
+
+Docker 使用两个持久化命名卷：`docker_kb-data` 保存 SQLite 和自动 JWT Secret，`docker_kb-uploads` 保存上传文件。升级时不要使用 `docker compose down -v`。
+
+### 升级、备份与域名
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+升级保留数据库、上传文件、管理员和自动生成的 Secret。备份、恢复和现有开发数据首次迁移见 [备份、迁移与恢复](docs/operations/BACKUP.md)。
+
+域名 / HTTPS 是可选步骤：先设置 `SITE_URL=https://example.com`，再将宿主 Nginx 反向代理到 `127.0.0.1:APP_PORT`。参考 `deploy/nginx/host-site.example.conf`；该示例不会修改现有宿主 Nginx 站点。
 ## Codex 项目维护
 
 本仓库使用以下三层长期维护结构：

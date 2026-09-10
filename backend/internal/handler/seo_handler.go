@@ -142,14 +142,15 @@ func (h *SEOHandler) Home(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	siteURL := h.requestSiteURL(c)
 	jsonLD := safeJSON(map[string]any{
 		"@context":    "https://schema.org",
 		"@type":       "WebSite",
 		"name":        info.SiteName,
 		"description": info.SiteSubtitle,
-		"url":         h.siteURL + "/",
+		"url":         siteURL + "/",
 	})
-	h.render(c, http.StatusOK, seoPageMeta{Title: info.SiteName, Description: info.SiteSubtitle, Robots: "index,follow", SiteURL: h.siteURL, Canonical: h.siteURL + "/", SiteName: info.SiteName, OGType: "website", JSONLD: jsonLD})
+	h.render(c, http.StatusOK, seoPageMeta{Title: info.SiteName, Description: info.SiteSubtitle, Robots: "index,follow", SiteURL: siteURL, Canonical: siteURL + "/", SiteName: info.SiteName, OGType: "website", JSONLD: jsonLD})
 }
 
 func (h *SEOHandler) Blog(c *gin.Context) {
@@ -158,6 +159,7 @@ func (h *SEOHandler) Blog(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	siteURL := h.requestSiteURL(c)
 	page, _ := strconv.Atoi(c.Query("page"))
 	if page < 1 {
 		page = 1
@@ -179,7 +181,7 @@ func (h *SEOHandler) Blog(c *gin.Context) {
 		}
 	}
 	filtered := canonicalQuery.Has("category") || canonicalQuery.Has("tag") || hasUnsupported
-	canonical := h.siteURL + "/blog"
+	canonical := siteURL + "/blog"
 	if encoded := canonicalQuery.Encode(); encoded != "" {
 		canonical += "?" + encoded
 	}
@@ -192,7 +194,7 @@ func (h *SEOHandler) Blog(c *gin.Context) {
 		robots = "noindex,follow"
 	}
 	description := "浏览 " + info.SiteName + " 的技术文章、项目说明与知识库文档" + pageLabel + "。"
-	h.render(c, http.StatusOK, seoPageMeta{Title: "文章" + pageLabel + " - " + info.SiteName, Description: description, Robots: robots, SiteURL: h.siteURL, Canonical: canonical, SiteName: info.SiteName, OGType: "website"})
+	h.render(c, http.StatusOK, seoPageMeta{Title: "文章" + pageLabel + " - " + info.SiteName, Description: description, Robots: robots, SiteURL: siteURL, Canonical: canonical, SiteName: info.SiteName, OGType: "website"})
 }
 
 func (h *SEOHandler) Article(c *gin.Context) {
@@ -206,21 +208,22 @@ func (h *SEOHandler) Article(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	siteURL := h.requestSiteURL(c)
 	if document == nil || document.Status != "published" {
-		h.render(c, http.StatusNotFound, seoPageMeta{Title: "文章不存在 - " + info.SiteName, Description: "该文章不存在、未发布或地址有误。", Robots: "noindex,nofollow", SiteURL: h.siteURL, SiteName: info.SiteName, OGType: "website"})
+		h.render(c, http.StatusNotFound, seoPageMeta{Title: "文章不存在 - " + info.SiteName, Description: "该文章不存在、未发布或地址有误。", Robots: "noindex,nofollow", SiteURL: siteURL, SiteName: info.SiteName, OGType: "website"})
 		return
 	}
 
-	canonical := h.siteURL + "/docs/" + url.PathEscape(document.Slug)
+	canonical := siteURL + "/docs/" + url.PathEscape(document.Slug)
 	if document.AccessLevel == "authenticated" {
-		h.render(c, http.StatusOK, seoPageMeta{Title: document.Title + " - " + info.SiteName, Description: "此内容仅对登录用户开放。", Robots: "noindex,nofollow", SiteURL: h.siteURL, Canonical: canonical, SiteName: info.SiteName, OGType: "article"})
+		h.render(c, http.StatusOK, seoPageMeta{Title: document.Title + " - " + info.SiteName, Description: "此内容仅对登录用户开放。", Robots: "noindex,nofollow", SiteURL: siteURL, Canonical: canonical, SiteName: info.SiteName, OGType: "article"})
 		return
 	}
 	description := seoDescription(document.Excerpt, document.Content, 160)
 	if description == "" {
 		description = document.Title
 	}
-	image := absoluteSiteURL(h.siteURL, document.Cover)
+	image := absoluteSiteURL(siteURL, document.Cover)
 	structuredData := map[string]any{
 		"@context":         "https://schema.org",
 		"@type":            "TechArticle",
@@ -242,7 +245,7 @@ func (h *SEOHandler) Article(c *gin.Context) {
 	if image != "" {
 		structuredData["image"] = image
 	}
-	meta := seoPageMeta{Title: document.Title + " - " + info.SiteName, Description: description, Robots: "index,follow", SiteURL: h.siteURL, Canonical: canonical, SiteName: info.SiteName, OGType: "article", Image: image, ModifiedTime: document.UpdatedAt.Format(time.RFC3339), Section: document.CategoryName, Tags: document.Tags, JSONLD: safeJSON(structuredData)}
+	meta := seoPageMeta{Title: document.Title + " - " + info.SiteName, Description: description, Robots: "index,follow", SiteURL: siteURL, Canonical: canonical, SiteName: info.SiteName, OGType: "article", Image: image, ModifiedTime: document.UpdatedAt.Format(time.RFC3339), Section: document.CategoryName, Tags: document.Tags, JSONLD: safeJSON(structuredData)}
 	if document.PublishedAt != nil {
 		meta.PublishedTime = document.PublishedAt.Format(time.RFC3339)
 	}
@@ -250,7 +253,7 @@ func (h *SEOHandler) Article(c *gin.Context) {
 }
 
 func (h *SEOHandler) Robots(c *gin.Context) {
-	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("User-agent: *\nAllow: /\nDisallow: /wang\nDisallow: /api/\n\nSitemap: "+h.siteURL+"/sitemap.xml\n"))
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("User-agent: *\nAllow: /\nDisallow: /wang\nDisallow: /api/\n\nSitemap: "+h.requestSiteURL(c)+"/sitemap.xml\n"))
 }
 
 type sitemapURL struct {
@@ -270,9 +273,10 @@ func (h *SEOHandler) Sitemap(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	entries := []sitemapURL{{Loc: h.siteURL + "/"}, {Loc: h.siteURL + "/blog"}}
+	siteURL := h.requestSiteURL(c)
+	entries := []sitemapURL{{Loc: siteURL + "/"}, {Loc: siteURL + "/blog"}}
 	for _, document := range documents {
-		entries = append(entries, sitemapURL{Loc: h.siteURL + "/docs/" + url.PathEscape(document.Slug), LastMod: document.UpdatedAt.Format("2006-01-02")})
+		entries = append(entries, sitemapURL{Loc: siteURL + "/docs/" + url.PathEscape(document.Slug), LastMod: document.UpdatedAt.Format("2006-01-02")})
 	}
 	payload, err := xml.MarshalIndent(sitemapURLSet{XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: entries}, "", "  ")
 	if err != nil {
@@ -280,6 +284,21 @@ func (h *SEOHandler) Sitemap(c *gin.Context) {
 		return
 	}
 	c.Data(http.StatusOK, "application/xml; charset=utf-8", append([]byte(xml.Header), payload...))
+}
+
+func (h *SEOHandler) requestSiteURL(c *gin.Context) string {
+	if h.siteURL != "" {
+		return h.siteURL
+	}
+	host := strings.TrimSpace(c.Request.Host)
+	if host == "" || strings.ContainsAny(host, "\r\n") {
+		return ""
+	}
+	scheme := "http"
+	if forwarded := strings.Split(c.GetHeader("X-Forwarded-Proto"), ",")[0]; strings.EqualFold(strings.TrimSpace(forwarded), "https") {
+		scheme = "https"
+	}
+	return scheme + "://" + host
 }
 
 func (h *SEOHandler) render(c *gin.Context, status int, meta seoPageMeta) {

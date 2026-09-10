@@ -132,6 +132,16 @@ func TestSEOSitemapAndRobotsOnlyExposePublicRoutes(t *testing.T) {
 	}
 }
 
+func TestSEOUsesRequestOriginWhenSiteURLIsUnset(t *testing.T) {
+	request := httptest.NewRequest(http.MethodGet, "http://203.0.113.10:8080/sitemap.xml", nil)
+	request.Header.Set("X-Forwarded-Proto", "https")
+	context, _ := gin.CreateTestContext(httptest.NewRecorder())
+	context.Request = request
+	if actual := (&SEOHandler{}).requestSiteURL(context); actual != "https://203.0.113.10:8080" {
+		t.Fatalf("unexpected request origin: %q", actual)
+	}
+}
+
 func TestSEORestrictedDocumentNeverLeaksBodyOrSitemapURL(t *testing.T) {
 	router, db := newSEOTestRouter(t)
 	const secret = "SEO-RESTRICTED-SECRET-9F31A7"

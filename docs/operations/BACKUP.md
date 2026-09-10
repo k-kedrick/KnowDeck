@@ -9,7 +9,7 @@
 
 Docker 生产环境固定使用以下命名卷，名称不随 Compose 项目名改变：
 
-- `docker_kb-data` → 容器 `/data` → `/data/app.db`
+- `docker_kb-data` → 容器 `/data` → `/data/app.db` 与自动生成的 `/data/.jwt_secret`
 - `docker_kb-uploads` → 容器 `/uploads`
 
 不要在数据库在线写入时只复制 `app.db`。安全选择是 SQLite `.backup` API，或按本文执行短暂停机备份并把数据库目录作为一个整体复制。任何 `docker compose down` 命令都不得附加 `-v`。
@@ -126,7 +126,7 @@ docker compose --project-name knowledge-base \
 docker compose --project-name knowledge-base \
   --env-file .env \
   -f docker-compose.yml up -d
-curl --fail http://127.0.0.1:5185/api/health
+curl --fail http://127.0.0.1:${APP_PORT:-8080}/api/health
 ```
 
-`ADMIN_PASSWORD` 只用于数据库中尚无用户时创建首个管理员。修改环境变量不会重置已有管理员密码；已有账号必须登录管理后台并提供原密码后修改。
+`ADMIN_PASSWORD` 只用于数据库中尚无用户时创建首个管理员。修改环境变量不会重置已有管理员密码；已有账号必须登录管理后台并提供原密码后修改。未配置 `JWT_SECRET` 时，应用将其生成并持久化在 `/data/.jwt_secret`；备份 `docker_kb-data` 会一并保留该值。
