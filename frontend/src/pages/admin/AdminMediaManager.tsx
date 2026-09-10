@@ -39,6 +39,7 @@ import type {
   DocumentSummary,
   BatchDeleteResult,
   UploadMediaOptions,
+  UploadProgress,
 } from '../../api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 import { ImageLightbox } from '../../components/ImageLightbox';
@@ -62,6 +63,12 @@ const formatRemainingTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+};
+
+const uploadProgressLabel = (progress: UploadProgress | null) => {
+  if (!progress || progress.completedChunks === 0) return '正在创建上传任务…';
+  const percent = Math.round((progress.uploadedBytes / progress.totalBytes) * 100);
+  return `已上传 ${progress.completedChunks}/${progress.chunks}（${percent}%）· ${(progress.speedBytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s · 剩余约 ${formatRemainingTime(progress.remainingSeconds)}`;
 };
 
 const folderDepth = (folder: MediaFolder, folders: MediaFolder[], seen = new Set<number>()): number => {
@@ -373,7 +380,7 @@ export const AdminMediaManager: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('latest');
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
   // 消息提示
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -585,19 +592,12 @@ export const AdminMediaManager: React.FC = () => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     setUploading(true);
-    setUploadProgress('正在创建上传任务…');
+    setUploadProgress(null);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      const uploadOptions: UploadMediaOptions = {
-        onProgress: ({ completedChunks, chunks, uploadedBytes, totalBytes, speedBytesPerSecond, remainingSeconds }) => {
-          const percent = Math.round((uploadedBytes / totalBytes) * 100);
-          setUploadProgress(
-            `已上传 ${completedChunks}/${chunks}（${percent}%）· ${(speedBytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s · 剩余约 ${formatRemainingTime(remainingSeconds)}`,
-          );
-        },
-      };
+      const uploadOptions: UploadMediaOptions = { onProgress: setUploadProgress };
       if (viewMode.type === 'folder' && viewMode.folderId > 0) {
         uploadOptions.folder_id = viewMode.folderId;
       } else if (viewMode.type === 'doc' && viewMode.docId > 0) {
@@ -613,7 +613,7 @@ export const AdminMediaManager: React.FC = () => {
       setErrorMsg(err.message || '上传文件失败');
     } finally {
       setUploading(false);
-      setUploadProgress('');
+      setUploadProgress(null);
       e.target.value = '';
     }
   };
@@ -902,7 +902,7 @@ export const AdminMediaManager: React.FC = () => {
               <Upload className="w-4 h-4" />
               <span>
                 {uploading
-                  ? uploadProgress || '正在上传…'
+                  ? uploadProgressLabel(uploadProgress)
                   : viewMode.type === 'folder'
                   ? `上传至《${viewMode.folderName}》`
                   : viewMode.type === 'doc'
@@ -922,6 +922,18 @@ export const AdminMediaManager: React.FC = () => {
       />
 
       {/* Notifications */}
+      {uploading && (
+        <div role="status" aria-live="polite" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100">
+          <div className="flex items-center justify-between gap-3 font-semibold">
+            <span>大文件上传中</span>
+            <span>{uploadProgress ? `${Math.round((uploadProgress.uploadedBytes / uploadProgress.totalBytes) * 100)}%` : '准备中'}</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
+            <div className="h-full rounded-full bg-blue-600 transition-[width] duration-300" style={{ width: `${uploadProgress ? Math.round((uploadProgress.uploadedBytes / uploadProgress.totalBytes) * 100) : 0}%` }} />
+          </div>
+          <p className="mt-2 text-xs font-medium">{uploadProgressLabel(uploadProgress)}</p>
+        </div>
+      )}
       {errorMsg && (
         <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
           <div className="flex items-center space-x-2 min-w-0">

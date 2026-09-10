@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '../../api';
-import type { DocumentSaveReq, Category, Media, Tag, DocumentDetail, DocumentAccessLevel } from '../../api';
+import type { DocumentSaveReq, Category, Media, Tag, DocumentDetail, DocumentAccessLevel, UploadProgress } from '../../api';
 import { TagCombobox } from '../../components/admin/TagCombobox';
 import type { TiptapEditorHandle } from '../../components/admin/tiptap/TiptapEditor';
 import { detectContentFormat } from '../../components/admin/tiptap/editorContentAdapter';
@@ -47,6 +47,12 @@ const formatRemainingTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+};
+
+const uploadProgressLabel = (progress: UploadProgress | null) => {
+  if (!progress || progress.completedChunks === 0) return '正在创建上传任务…';
+  const percent = Math.round((progress.uploadedBytes / progress.totalBytes) * 100);
+  return `已上传 ${progress.completedChunks}/${progress.chunks}（${percent}%）· ${formatTransferRate(progress.speedBytesPerSecond)} · 剩余约 ${formatRemainingTime(progress.remainingSeconds)}`;
 };
 
 const localDraftMatchesSnapshot = (draft: LocalDraftData, snapshot: LocalDraftData) => documentSnapshotsEqual(draft, snapshot);
@@ -126,7 +132,7 @@ export const AdminDocumentEditor: React.FC = () => {
   const tiptapEditorRef = useRef<TiptapEditorHandle>(null);
 
   const [uploading, setUploading] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
   useEffect(() => {
     if (!isEdit && localDraftId && requestedDraftId !== localDraftId) {
@@ -573,7 +579,7 @@ export const AdminDocumentEditor: React.FC = () => {
   // Upload Media and return it to the visual editor for cursor-position insertion
   const handleUploadFile = async (file: File): Promise<Media> => {
     setUploading(true);
-    setUploadProgress('正在创建上传任务…');
+    setUploadProgress(null);
     setErrorMsg(null);
     try {
       const docId = id ? Number(id) : undefined;
@@ -581,12 +587,7 @@ export const AdminDocumentEditor: React.FC = () => {
       const media = await api.uploadMedia(file, {
         document_id: docId,
         doc_title: docTitle,
-        onProgress: ({ completedChunks, chunks, uploadedBytes, totalBytes, speedBytesPerSecond, remainingSeconds }) => {
-          const percent = Math.round((uploadedBytes / totalBytes) * 100);
-          setUploadProgress(
-            `已上传 ${completedChunks}/${chunks}（${percent}%）· ${formatTransferRate(speedBytesPerSecond)} · 剩余约 ${formatRemainingTime(remainingSeconds)}`,
-          );
-        },
+        onProgress: setUploadProgress,
       });
       setSuccessMsg(`上传成功: ${media.original_name}`);
       return media;
@@ -595,7 +596,7 @@ export const AdminDocumentEditor: React.FC = () => {
       throw err;
     } finally {
       setUploading(false);
-      setUploadProgress('');
+      setUploadProgress(null);
     }
   };
 
@@ -1061,6 +1062,18 @@ export const AdminDocumentEditor: React.FC = () => {
 
           {/* 沉浸式可视化文档画布 */}
           <div className="flex min-h-[650px] flex-1 flex-col">
+            {uploading && (
+              <div role="status" aria-live="polite" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100">
+                <div className="flex items-center justify-between gap-3 font-semibold">
+                  <span>大文件上传中</span>
+                  <span>{uploadProgress ? `${Math.round((uploadProgress.uploadedBytes / uploadProgress.totalBytes) * 100)}%` : '准备中'}</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900">
+                  <div className="h-full rounded-full bg-blue-600 transition-[width] duration-300" style={{ width: `${uploadProgress ? Math.round((uploadProgress.uploadedBytes / uploadProgress.totalBytes) * 100) : 0}%` }} />
+                </div>
+                <p className="mt-2 text-xs font-medium">{uploadProgressLabel(uploadProgress)}</p>
+              </div>
+            )}
             <Suspense fallback={<div className="min-h-[680px] rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-900">加载 TipTap 编辑器...</div>}>
               <TiptapEditor
                 ref={tiptapEditorRef}
@@ -1068,7 +1081,7 @@ export const AdminDocumentEditor: React.FC = () => {
                 onChange={setContent}
                 onUploadFile={handleUploadFile}
                 uploading={uploading}
-                uploadProgress={uploadProgress}
+                uploadProgress={uploadProgressLabel(uploadProgress)}
               />
             </Suspense>
           </div>
