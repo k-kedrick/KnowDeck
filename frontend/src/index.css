@@ -715,6 +715,7 @@
 
 .markdown-body table {
   width: 100%;
+  table-layout: fixed;
   min-width: min(34rem, 100%);
   max-width: 100%;
   border-collapse: collapse;
