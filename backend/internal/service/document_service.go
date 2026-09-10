@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	stdhtml "html"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -22,14 +23,20 @@ var (
 )
 
 type DocumentService struct {
-	docRepo *repository.DocumentRepository
-	catRepo *repository.CategoryRepository
+	docRepo   *repository.DocumentRepository
+	catRepo   *repository.CategoryRepository
+	mediaRepo *repository.MediaRepository
 }
 
-func NewDocumentService(docRepo *repository.DocumentRepository, catRepo *repository.CategoryRepository) *DocumentService {
+func NewDocumentService(docRepo *repository.DocumentRepository, catRepo *repository.CategoryRepository, mediaRepos ...*repository.MediaRepository) *DocumentService {
+	var mediaRepo *repository.MediaRepository
+	if len(mediaRepos) > 0 {
+		mediaRepo = mediaRepos[0]
+	}
 	return &DocumentService{
-		docRepo: docRepo,
-		catRepo: catRepo,
+		docRepo:   docRepo,
+		catRepo:   catRepo,
+		mediaRepo: mediaRepo,
 	}
 }
 
@@ -150,7 +157,34 @@ func (s *DocumentService) Create(authorID int64, req model.DocumentSaveReq) (*mo
 		return nil, err
 	}
 	doc.ID = id
+	if s.mediaRepo != nil {
+		folder, err := s.mediaFolderForDocument(doc.ID)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := s.mediaRepo.ReconcileDocumentLocalMedia(folder, doc.Content, doc.Cover); err != nil {
+			return nil, err
+		}
+		if err := s.mediaRepo.SyncDocumentReferences(doc.ID, doc.Content, doc.Cover); err != nil {
+			return nil, err
+		}
+		if folder > 0 {
+			moved, err := s.mediaRepo.AssignUnorganizedDocumentMedia(doc.ID, folder)
+			if err != nil {
+				return nil, err
+			}
+			log.Printf("[media-folder-bind] document_id=%d folder_id=%d moved_unorganized=%d", doc.ID, folder, moved)
+		}
+	}
 	return doc, nil
+}
+
+func (s *DocumentService) mediaFolderForDocument(documentID int64) (int64, error) {
+	if s.mediaRepo == nil {
+		return 0, nil
+	}
+	// The document repository transaction creates the folder before this point.
+	return s.docRepo.GetMediaFolderID(documentID)
 }
 
 func (s *DocumentService) Update(id int64, req model.DocumentSaveReq) (*model.Document, error) {
@@ -209,11 +243,26 @@ func (s *DocumentService) Update(id int64, req model.DocumentSaveReq) (*model.Do
 	if err := s.docRepo.Update(doc); err != nil {
 		return nil, err
 	}
+	if s.mediaRepo != nil {
+		folder, err := s.mediaFolderForDocument(doc.ID)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := s.mediaRepo.ReconcileDocumentLocalMedia(folder, doc.Content, doc.Cover); err != nil {
+			return nil, err
+		}
+		if err := s.mediaRepo.SyncDocumentReferences(doc.ID, doc.Content, doc.Cover); err != nil {
+			return nil, err
+		}
+	}
 
 	return doc, nil
 }
 
 func (s *DocumentService) Delete(id int64) error {
+	if s.mediaRepo != nil {
+		_ = s.mediaRepo.DeleteDocumentReferences(id)
+	}
 	return s.docRepo.Delete(id)
 }
 

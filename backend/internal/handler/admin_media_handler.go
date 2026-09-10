@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -49,6 +50,7 @@ func (h *AdminMediaHandler) List(c *gin.Context) {
 	filter := repository.MediaFilter{
 		MediaType: mediaType,
 		Keyword:   keyword,
+		SortBy:    c.Query("sort_by"),
 		Page:      page,
 		PageSize:  pageSize,
 	}
@@ -58,6 +60,17 @@ func (h *AdminMediaHandler) List(c *gin.Context) {
 		if err == nil && fid >= 0 {
 			filter.FolderID = &fid
 		}
+	}
+
+	if docIDStr := c.Query("document_id"); docIDStr != "" {
+		if docID, err := strconv.ParseInt(docIDStr, 10, 64); err == nil && docID > 0 {
+			filter.DocumentID = &docID
+		}
+	}
+
+	if unusedStr := c.Query("unused"); unusedStr == "true" || unusedStr == "1" {
+		isUnused := true
+		filter.Unused = &isUnused
 	}
 
 	list, total, err := h.mediaService.List(filter)
@@ -77,11 +90,70 @@ func (h *AdminMediaHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.mediaService.Delete(id); err != nil {
-		response.ServerError(c, "删除媒体失败: "+err.Error())
+		response.BadRequest(c, err.Error())
 		return
 	}
 
 	response.SuccessMsg(c, "删除媒体成功", nil)
+}
+
+func (h *AdminMediaHandler) References(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的媒体ID")
+		return
+	}
+	docs, err := h.mediaService.References(id)
+	if err != nil {
+		response.ServerError(c, "获取引用关系失败")
+		return
+	}
+	response.Success(c, gin.H{"documents": docs, "count": len(docs)})
+}
+
+type BatchMoveMediaReq struct {
+	IDs      []int64 `json:"ids" binding:"required"`
+	FolderID int64   `json:"folder_id"`
+}
+
+func (h *AdminMediaHandler) BatchMove(c *gin.Context) {
+	var req BatchMoveMediaReq
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.IDs) == 0 {
+		response.BadRequest(c, "请选择媒体资源")
+		return
+	}
+	if err := h.mediaService.BatchMove(req.IDs, req.FolderID); err != nil {
+		response.ServerError(c, "批量移动失败")
+		return
+	}
+	response.Success(c, gin.H{"moved": len(req.IDs)})
+}
+
+type BatchDeleteMediaReq struct {
+	IDs []int64 `json:"ids" binding:"required"`
+}
+
+func (h *AdminMediaHandler) BatchDelete(c *gin.Context) {
+	var req BatchDeleteMediaReq
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.IDs) == 0 {
+		response.BadRequest(c, "请选择需要删除的媒体资源")
+		return
+	}
+	result, err := h.mediaService.BatchDelete(req.IDs)
+	if err != nil {
+		response.ServerError(c, "批量删除媒体失败: "+err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
+func (h *AdminMediaHandler) RebuildReferences(c *gin.Context) {
+	count, err := h.mediaService.RebuildReferences()
+	if err != nil {
+		response.ServerError(c, "重新扫描媒体引用失败: "+err.Error())
+		return
+	}
+	response.SuccessMsg(c, fmt.Sprintf("媒体引用关系扫描完成，已同步 %d 篇文档的引用关系", count), gin.H{"documents_scanned": count})
 }
 
 // 文件夹相关控制器
@@ -93,17 +165,21 @@ func (h *AdminMediaHandler) ListFolders(c *gin.Context) {
 		return
 	}
 
-	totalMedia, unclassified, _ := h.mediaService.GetFolderStats()
+	totalMedia, unclassified, usedMedia, unusedMedia, docRefs, _ := h.mediaService.GetFolderStats()
 
 	response.Success(c, gin.H{
 		"folders":            folders,
 		"total_media":        totalMedia,
 		"unclassified_media": unclassified,
+		"used_media":         usedMedia,
+		"unused_media":       unusedMedia,
+		"document_refs":      docRefs,
 	})
 }
 
 type CreateFolderReq struct {
 	Name       string `json:"name" binding:"required"`
+	ParentID   int64  `json:"parent_id"`
 	DocumentID int64  `json:"document_id"`
 }
 
@@ -114,7 +190,7 @@ func (h *AdminMediaHandler) CreateFolder(c *gin.Context) {
 		return
 	}
 
-	folder, err := h.mediaService.CreateFolder(req.Name, req.DocumentID)
+	folder, err := h.mediaService.CreateFolder(req.Name, req.ParentID, req.DocumentID)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -190,7 +266,6 @@ func (h *AdminMediaHandler) MoveMedia(c *gin.Context) {
 
 	response.SuccessMsg(c, "移动成功", nil)
 }
-
 
 type SaveExternalReq struct {
 	URL        string `json:"url" binding:"required"`

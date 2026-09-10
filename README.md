@@ -8,7 +8,7 @@
 - GFM Markdown 与受控 HTML 混合内容渲染，支持 KaTeX、表格、任务列表、代码块复制、图片、视频、iframe 和 Callout。
 - SQLite FTS5 全文搜索，公开接口只返回已发布内容。
 - JWT 管理后台：文档状态、分类树、标签、媒体文件夹、站点设置、管理员资料，以及 `/wang/users` 用户与邀请码管理。
-- 文档编辑器支持两套引擎：默认 `DocumentVisualEditor`，设置 `VITE_EDITOR_ENGINE=tiptap` 可启用 Tiptap 实现。
+- 文档编辑器使用 `TiptapEditor`。
 - 本地草稿恢复、图片上传与外链图片本地化。
 - 首页/文章 SEO HTML 外壳、`robots.txt` 与 `sitemap.xml`。
 

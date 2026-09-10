@@ -18,7 +18,6 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
-  RemoveFormatting,
 } from 'lucide-react';
 import {
   FONT_FAMILIES,
@@ -131,8 +130,6 @@ export const TiptapBubbleMenu: React.FC<TiptapBubbleMenuProps> = ({ editor }) =>
     'absolute left-0 top-full mt-1.5 rounded-xl border border-slate-200 bg-white p-1 shadow-2xl dark:border-slate-700 dark:bg-slate-900 z-50 animate-in fade-in zoom-in-95 duration-100';
 
   const currentBlock = getBlockTypeInfo();
-  const CurrentBlockIcon = currentBlock.icon;
-
   return (
     <BubbleMenu
       editor={editor}
@@ -154,7 +151,6 @@ export const TiptapBubbleMenu: React.FC<TiptapBubbleMenuProps> = ({ editor }) =>
           title="切换段落与标题"
           data-testid="bubble-block-selector"
         >
-          <CurrentBlockIcon size={14} />
           <span>{currentBlock.label}</span>
           <ChevronDown size={12} className={`transition-transform ${activeMenu === 'block' ? 'rotate-180' : ''}`} />
         </button>
@@ -588,28 +584,6 @@ export const TiptapBubbleMenu: React.FC<TiptapBubbleMenuProps> = ({ editor }) =>
         )}
       </div>
 
-      {/* 8. Clear Formatting */}
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
-          editor
-            .chain()
-            .focus()
-            .unsetAllMarks()
-            .unsetFontFamily()
-            .unsetFontSize()
-            .unsetColor()
-            .unsetHighlight()
-            .run();
-          setActiveMenu(null);
-        }}
-        className={`${buttonBase} ${buttonInactive}`}
-        title="清除格式"
-        data-testid="bubble-btn-clear-formatting"
-      >
-        <RemoveFormatting size={14} />
-      </button>
     </BubbleMenu>
   );
 };

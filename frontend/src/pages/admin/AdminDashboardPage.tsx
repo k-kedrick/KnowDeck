@@ -106,7 +106,7 @@ export const AdminDashboardPage: React.FC = () => {
   const totalDocs = publishedCount + draftCount;
 
   return (
-    <div className="space-y-8 py-2">
+    <div className="space-y-5 py-1">
       {/* Top Welcome Banner */}
       <section className="relative overflow-hidden rounded-3xl border border-border-subtle/80 bg-gradient-to-br from-surface-elevated/95 via-surface-elevated/90 to-brand/5 p-6 backdrop-blur-xl shadow-xs sm:p-8">
         {/* Ambient Decorative Glow */}
@@ -484,4 +484,3 @@ export const AdminDashboardPage: React.FC = () => {
     </div>
   );
 };
-

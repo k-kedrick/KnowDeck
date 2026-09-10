@@ -470,18 +470,6 @@ export function sanitizeDocumentHtml(html: string): string {
     }
   });
 
-  doc.body.querySelectorAll<HTMLElement>('h1, h2, h3, h4').forEach((heading) => {
-    [heading, ...heading.querySelectorAll<HTMLElement>('[style]')].forEach((el) => {
-      const style = (el.getAttribute('style') || '')
-        .split(';')
-        .map((rule) => rule.trim())
-        .filter((rule) => rule && !/^(font-size|line-height)\s*:/i.test(rule))
-        .join('; ');
-      if (style) el.setAttribute('style', style);
-      else el.removeAttribute('style');
-    });
-  });
-
   doc.body.querySelectorAll<HTMLAnchorElement>('a').forEach((el) => {
     if (!isSafeDocumentUrl('a', el.getAttribute('href') || '')) el.removeAttribute('href');
     el.setAttribute('target', '_blank');

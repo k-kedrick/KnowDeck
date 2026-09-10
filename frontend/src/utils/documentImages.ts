@@ -17,6 +17,12 @@ export interface HistoricalDocumentImageOptions {
   lazyLoad?: boolean;
 }
 
+const LOCALIZABLE_IMAGE_RE = /(?:<img\b[^>]*\bsrc\s*=\s*["']|!\[[^\]]*\]\()\s*(?:https?:\/\/|data:image\/)/i;
+
+export function hasLocalizableDocumentImages(content: string): boolean {
+  return LOCALIZABLE_IMAGE_RE.test(content);
+}
+
 /**
  * Directly rewrites historical images on a DOM node and optionally applies
  * lazy loading attributes.

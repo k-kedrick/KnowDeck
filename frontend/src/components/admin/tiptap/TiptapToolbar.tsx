@@ -8,16 +8,11 @@ import {
   Code as CodeIcon,
   Undo2,
   Redo2,
-  Heading1,
-  Heading2,
-  Heading3,
-  Pilcrow,
   Palette,
   AlignLeft,
   AlignCenter,
   AlignRight,
   AlignJustify,
-  RemoveFormatting,
   ChevronDown,
   Image as ImageIcon,
   Table as TableIcon,
@@ -191,12 +186,6 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
       className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-2 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/50"
       data-testid="tiptap-toolbar"
     >
-      <div className="flex items-center gap-1 rounded-md bg-indigo-100/80 px-2 py-1 text-[11px] font-semibold text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80">
-        <span>TipTap E5</span>
-      </div>
-
-      <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
-
       {/* Block Types */}
       <button
         type="button"
@@ -206,7 +195,6 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
         title="正文段落"
         data-testid="toolbar-btn-paragraph"
       >
-        <Pilcrow size={13} />
         <span>正文</span>
       </button>
 
@@ -218,7 +206,6 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
         title="标题 1 (H1)"
         data-testid="toolbar-btn-h1"
       >
-        <Heading1 size={13} />
         <span>H1</span>
       </button>
 
@@ -230,7 +217,6 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
         title="标题 2 (H2)"
         data-testid="toolbar-btn-h2"
       >
-        <Heading2 size={13} />
         <span>H2</span>
       </button>
 
@@ -242,7 +228,6 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
         title="标题 3 (H3)"
         data-testid="toolbar-btn-h3"
       >
-        <Heading3 size={13} />
         <span>H3</span>
       </button>
 
@@ -569,33 +554,10 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
         )}
       </div>
 
-      {/* Clear Formatting */}
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
-          editor
-            .chain()
-            .focus()
-            .unsetAllMarks()
-            .unsetFontFamily()
-            .unsetFontSize()
-            .unsetColor()
-            .unsetHighlight()
-            .run();
-          setActiveMenu(null);
-        }}
-        className={`${buttonBase} ${buttonInactive}`}
-        title="清除格式"
-        data-testid="toolbar-btn-clear-formatting"
-      >
-        <RemoveFormatting size={13} />
-      </button>
-
       <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />
 
       {/* Table 8x8 Insertion Selector Button */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}

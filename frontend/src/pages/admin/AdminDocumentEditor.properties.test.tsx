@@ -1,3 +1,4 @@
+import { forwardRef, useImperativeHandle } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -33,13 +34,16 @@ vi.mock('../../api', async (importOriginal) => {
   return { ...original, api: { ...original.api, ...apiMocks } };
 });
 
-vi.mock('../../components/admin/DocumentVisualEditor', () => ({
-  DocumentVisualEditor: ({ markdownContent, onChange }: { markdownContent: string; onChange: (value: string) => void }) => (
+vi.mock('../../components/admin/tiptap/TiptapEditor', () => ({
+  TiptapEditor: forwardRef(({ content, onChange }: { content: string; onChange: (value: string) => void }, ref) => {
+    useImperativeHandle(ref, () => ({ getContentForSave: () => content, markSaved: () => undefined }));
+    return (
     <div data-testid="editor-content">
-      {markdownContent}
-      <button type="button" onClick={() => onChange(`${markdownContent}\n正文修改`)}>模拟正文编辑</button>
+      {content}
+      <button type="button" onClick={() => onChange(`${content}\n正文修改`)}>模拟正文编辑</button>
     </div>
-  ),
+    );
+  }),
 }));
 
 vi.mock('../../components/admin/AdminDocTreeSidebar', () => ({
@@ -52,8 +56,10 @@ describe('AdminDocumentEditor compact properties', () => {
   beforeEach(() => {
     localStorage.clear();
     apiMocks.getAdminCategories.mockReset().mockResolvedValue([
-      { id: 1, name: '指南', slug: 'guide', description: '', icon: '', parent_id: 0, sort_order: 0, created_at: '', updated_at: '' },
-      { id: 2, name: '参考', slug: 'reference', description: '', icon: '', parent_id: 0, sort_order: 1, created_at: '', updated_at: '' },
+      {
+        id: 1, name: '指南', slug: 'guide', description: '', icon: '', parent_id: 0, sort_order: 0, created_at: '', updated_at: '',
+        children: [{ id: 2, name: '参考', slug: 'reference', description: '', icon: '', parent_id: 1, sort_order: 1, created_at: '', updated_at: '' }],
+      },
     ]);
     apiMocks.getAdminTags.mockReset().mockResolvedValue([
       { id: 1, name: 'GPT', slug: 'gpt', doc_count: 1 },
@@ -82,6 +88,7 @@ describe('AdminDocumentEditor compact properties', () => {
     fireEvent.click(trigger);
     const slug = screen.getByRole('textbox', { name: 'URL Slug' });
     fireEvent.change(slug, { target: { value: 'updated-slug' } });
+    expect(screen.getByRole('option', { name: /参考/ })).toBeTruthy();
     fireEvent.change(screen.getByRole('combobox', { name: '所属分类' }), { target: { value: '2' } });
     fireEvent.focus(screen.getByRole('combobox', { name: '' }));
     fireEvent.click(await screen.findByRole('option', { name: /#React/ }));

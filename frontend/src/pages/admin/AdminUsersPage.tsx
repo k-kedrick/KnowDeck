@@ -557,7 +557,7 @@ export function AdminUsersPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="mx-auto w-full max-w-[1140px] space-y-4">
+    <div className="w-full space-y-5 py-1">
       {/* Top Header */}
       <AdminPageHeader
         icon={Users}
@@ -656,9 +656,9 @@ export function AdminUsersPage() {
 
       {/* Users Tab Content */}
       {activeTab === 'users' && (
-        <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+        <section className="admin-table-shell">
           {/* Filters */}
-          <div className="grid gap-3 border-b border-border-subtle p-4 sm:grid-cols-[minmax(0,1fr)_150px_150px]">
+          <div className="admin-toolbar grid gap-3 px-4 sm:grid-cols-[minmax(0,1fr)_150px_150px]">
             <label className="relative block">
               <span className="sr-only">搜索用户名</span>
               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-text-tertiary" />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   FolderTree,
   Edit,
@@ -16,13 +17,13 @@ import {
   Search,
   Copy,
   Check,
-  Sparkles,
 } from 'lucide-react';
 import { api } from '../../api';
 import type { Category, CategorySaveReq } from '../../api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 import { ModalPortal } from '../../components/ModalPortal';
 import { Button } from '../../components/ui/Button';
+import { categoryPath, flattenCategoryTree } from '../../utils/categoryTree';
 
 interface CategoryTreeItemProps {
   category: Category;
@@ -51,119 +52,32 @@ const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({
   const isExpanded = expandedIds.has(category.id);
 
   return (
-    <div className="relative select-none border-b border-border-subtle/80 last:border-b-0">
-      {depth > 0 && (
-        <div
-          style={{ left: `${(depth - 1) * 20 + 18}px` }}
-          className="pointer-events-none absolute top-0 bottom-0 w-px bg-border-subtle/70"
-          aria-hidden="true"
-        />
-      )}
-
-      <div
-        style={{ marginLeft: `${depth * 20}px` }}
-        className="group relative px-4 py-2.5 transition-colors hover:bg-surface-subtle/65"
-      >
-        <div className="grid min-w-0 grid-cols-[1.5rem_1.5rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 sm:grid-cols-[1.5rem_1.5rem_minmax(0,1fr)_auto]">
+    <div className="select-none border-b border-border-subtle/80 last:border-b-0">
+      <div className="group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3.5 py-2.5 transition-colors hover:bg-brand/5 xl:min-h-14 xl:grid-cols-[minmax(12rem,1.2fr)_minmax(9rem,1fr)_7.25rem_5.75rem_8rem]">
+        <div style={{ paddingLeft: `${depth * 20}px` }} className="flex min-w-0 items-center gap-1.5">
           {hasChildren ? (
-            <button
-              type="button"
-              onClick={() => onToggleExpand(category.id)}
-              className="row-span-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-tertiary transition hover:bg-surface hover:text-text-primary"
-              aria-label={`${isExpanded ? '折叠' : '展开'}分类 ${category.name}`}
-            >
+            <button type="button" onClick={() => onToggleExpand(category.id)} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-tertiary transition hover:bg-surface hover:text-text-primary" aria-label={`${isExpanded ? '折叠' : '展开'}分类 ${category.name}`}>
               {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </button>
-          ) : (
-            <div className="row-span-2 flex h-6 w-6 shrink-0 items-center justify-center">
-              <span className="h-1.5 w-1.5 rounded-full bg-border-default/80" />
-            </div>
-          )}
-
-          <div className="row-span-2 flex h-6 w-6 shrink-0 items-center justify-center text-amber-600 dark:text-amber-400">
+          ) : <span className="flex h-6 w-6 shrink-0 items-center justify-center"><i className="h-1.5 w-1.5 rounded-full bg-border-default/80" /></span>}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center text-amber-600 dark:text-amber-400">
             {isExpanded && hasChildren ? <FolderOpen className="h-[18px] w-[18px]" /> : <Folder className="h-[18px] w-[18px]" />}
-          </div>
-
-          <span className="min-w-0 break-words pt-0.5 text-sm font-semibold leading-5 text-text-primary">
-            {category.name}
           </span>
+          <span className="min-w-0 break-words text-sm font-semibold leading-5 text-text-primary">{category.name}</span>
+        </div>
 
-          <div className="col-span-3 flex flex-wrap items-center gap-1.5 pt-0.5 sm:col-span-1 sm:justify-end sm:pt-0">
-            <span className="inline-flex h-6 whitespace-nowrap items-center gap-1 rounded-md bg-brand/10 px-2 text-xs font-medium text-brand">
-              <BookOpen className="h-3 w-3" />
-              <span>{category.doc_count ?? 0} 文档</span>
-            </span>
+        <div className="flex shrink-0 items-center gap-1 xl:col-start-5 xl:row-start-1 xl:justify-self-end">
+          <button type="button" onClick={() => onAddChild(category)} className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition hover:bg-brand/10 hover:text-brand" title="在此分类下添加子分类" aria-label={`为 ${category.name} 添加子分类`}><FolderPlus className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={() => onEdit(category)} className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition hover:bg-brand/10 hover:text-brand" title="编辑分类" aria-label={`编辑分类 ${category.name}`}><Edit className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={() => onDeleteRequest(category)} className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition hover:bg-red-500/10 hover:text-red-600" title="删除分类" aria-label={`删除分类 ${category.name}`}><Trash2 className="h-3.5 w-3.5" /></button>
+        </div>
 
-            {hasChildren && (
-              <span className="inline-flex h-6 whitespace-nowrap items-center gap-1 rounded-md bg-purple-500/10 px-2 text-xs font-medium text-purple-700 dark:text-purple-300">
-                <Layers className="h-3 w-3" />
-                <span>{category.children!.length} 子类</span>
-              </span>
-            )}
-
-            <div className="flex items-center gap-1 pl-1">
-              <button
-                type="button"
-                onClick={() => onAddChild(category)}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition hover:bg-brand/10 hover:text-brand"
-                title="在此分类下添加子分类"
-                aria-label={`为 ${category.name} 添加子分类`}
-              >
-                <FolderPlus className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onEdit(category)}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition hover:bg-brand/10 hover:text-brand"
-                title="编辑分类"
-                aria-label={`编辑分类 ${category.name}`}
-              >
-                <Edit className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteRequest(category)}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition hover:bg-red-500/10 hover:text-red-600"
-                title="删除分类"
-                aria-label={`删除分类 ${category.name}`}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="col-span-3 flex min-w-0 items-center gap-x-2 gap-y-1 pl-[3rem] text-xs leading-5 text-text-secondary sm:col-span-2 sm:col-start-3 sm:pl-0">
-            <button
-              type="button"
-              onClick={() => onCopySlug(category.id, category.slug)}
-              className="inline-flex min-w-0 max-w-full items-center gap-1 text-left text-xs text-text-secondary transition hover:text-brand"
-              title="点击复制 URL Slug"
-            >
-              <span className="break-all">/{category.slug}</span>
-              {copiedSlugId === category.id ? (
-                <Check className="h-3 w-3 shrink-0 text-emerald-500" />
-              ) : (
-                <Copy className="h-3 w-3 shrink-0 opacity-50 group-hover:opacity-100" />
-              )}
-            </button>
-
-            <span className="shrink-0 whitespace-nowrap text-xs text-text-secondary before:mr-2 before:text-border-default before:content-['·']">
-              排序: {category.sort_order ?? 1}
-            </span>
-
-            {category.created_at && (
-              <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs text-text-secondary before:mr-1 before:text-border-default before:content-['·']">
-                <Calendar className="h-3 w-3 text-emerald-500" />
-                {new Date(category.created_at).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
-              </span>
-            )}
-
-            {category.description && (
-              <p title={category.description} className="min-w-0 flex-1 truncate before:mr-2 before:text-border-default before:content-['·']">
-                {category.description}
-              </p>
-            )}
-          </div>
+        <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary xl:contents">
+          <button type="button" onClick={() => onCopySlug(category.id, category.slug)} className="inline-flex max-w-full items-center gap-1 rounded-md border border-border-subtle/80 bg-surface-subtle px-2 py-1 font-mono text-[10px] leading-4 text-text-tertiary transition hover:border-brand/30 hover:bg-surface hover:text-brand xl:col-start-2 xl:row-start-1 xl:w-full xl:justify-between" title="复制 Slug">
+            <span className="min-w-0 break-all">/{category.slug}</span>{copiedSlugId === category.id ? <Check className="h-2.5 w-2.5 shrink-0 text-emerald-500" /> : <Copy className="h-2.5 w-2.5 shrink-0 opacity-60" />}
+          </button>
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono text-[11px] text-text-tertiary xl:col-start-3 xl:row-start-1"><Calendar className="h-3.5 w-3.5 text-emerald-500" />{category.created_at ? new Date(category.created_at).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '最近'}</span>
+          <Link to={`/wang/documents?category=${category.id}`} className="inline-flex items-center gap-1 rounded-lg bg-brand/10 px-2 py-1 text-xs font-semibold text-brand transition hover:bg-brand/20 xl:col-start-4 xl:row-start-1 xl:justify-self-center"><BookOpen className="h-3 w-3" />{category.doc_count ?? 0} 篇</Link>
         </div>
       </div>
 
@@ -188,17 +102,6 @@ const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({
       )}
     </div>
   );
-};
-
-const flattenCategoryTree = (nodes: Category[]): Category[] => {
-  let result: Category[] = [];
-  nodes.forEach((node) => {
-    result.push(node);
-    if (node.children && node.children.length > 0) {
-      result = result.concat(flattenCategoryTree(node.children));
-    }
-  });
-  return result;
 };
 
 export const AdminCategoryManager: React.FC = () => {
@@ -476,7 +379,7 @@ export const AdminCategoryManager: React.FC = () => {
       {/* Main Dual-Column Layout */}
       <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(19rem,21.25rem)_minmax(0,1fr)]">
         {/* Left Form Panel */}
-        <section className="h-fit rounded-xl border border-border-subtle bg-surface-elevated p-5 shadow-xs space-y-4">
+        <section className="admin-surface h-fit space-y-4 p-5">
           <div className="flex items-center justify-between border-b border-border-subtle/80 pb-3">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand font-bold text-xs">
@@ -551,8 +454,7 @@ export const AdminCategoryManager: React.FC = () => {
                   .filter((c) => c.id !== editingId)
                   .map((c) => (
                     <option key={`opt-${c.id}`} value={c.id}>
-                      {c.parent_id ? '  └ ' : ''}
-                      {c.name} (/{c.slug})
+                      {categoryPath(c, flatCategories)} (/{c.slug})
                     </option>
                   ))}
               </select>
@@ -604,7 +506,7 @@ export const AdminCategoryManager: React.FC = () => {
         </section>
 
         {/* Right Category Tree List Panel */}
-        <section className="flex min-w-0 self-start flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-elevated shadow-xs">
+        <section className="admin-surface flex min-w-0 self-start flex-col overflow-hidden">
           {/* Header Toolbar */}
           <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3.5 lg:flex-row lg:items-center">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -655,6 +557,14 @@ export const AdminCategoryManager: React.FC = () => {
           </div>
 
           {/* Tree Node List Container */}
+          <div className="overflow-hidden rounded-b-xl">
+            <div className="hidden min-h-9 grid-cols-[minmax(12rem,1.2fr)_minmax(9rem,1fr)_7.25rem_5.75rem_8rem] items-center gap-x-3 border-b border-border-subtle/80 bg-surface-subtle/70 px-3.5 py-2 text-[11px] font-semibold leading-4 text-text-tertiary xl:grid">
+              <span>分类名称</span>
+              <span>URL Slug</span>
+              <span>创建时间</span>
+              <span className="text-center">关联文档</span>
+              <span className="text-right">操作</span>
+            </div>
           <div className="max-h-[min(56vh,34rem)] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
             {loading ? (
               <div className="text-center py-20 text-xs text-text-tertiary animate-pulse">
@@ -688,19 +598,8 @@ export const AdminCategoryManager: React.FC = () => {
               ))
             )}
           </div>
-
-          {/* Bottom Helpful Architecture Guide Card */}
-          <div className="m-3 mt-0 rounded-lg border border-border-subtle bg-surface-subtle/50 p-3 text-xs text-text-secondary space-y-1.5">
-            <div className="flex items-center gap-2 font-bold text-text-primary">
-              <Sparkles className="h-4 w-4 text-brand" />
-              <span>知识库分类架构设计建议</span>
-            </div>
-            <ul className="space-y-1 text-text-tertiary list-disc list-inside leading-relaxed text-xs">
-              <li>建议保持分类层级在 1~3 层以内，过深的层级会增加访客的查找成本；</li>
-              <li>分类侧重于**宏观知识体系划分**（如「使用教程」、「API规范」），具体细分内容可结合**标签**进行多维归类；</li>
-              <li>点击分类卡片上的 Slug 标签可一键复制路径，便于在前台链接中引用。</li>
-            </ul>
           </div>
+
         </section>
       </div>
 

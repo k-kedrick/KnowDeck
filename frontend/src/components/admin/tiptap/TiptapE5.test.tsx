@@ -1,10 +1,12 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it, afterEach, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { Editor } from '@tiptap/core';
 import { createEditorExtensions } from './extensions';
 import {
   prepareContentForEditor,
   serializeEditorContent,
 } from './editorContentAdapter';
+import { TiptapTableInsertMenu } from './TiptapTableInsertMenu';
 
 describe('TipTap E5 Full Table Interactive Suite', () => {
   const editors: Editor[] = [];
@@ -23,6 +25,19 @@ describe('TipTap E5 Full Table Interactive Suite', () => {
   });
 
   describe('1. Table Insertion & Dimensions', () => {
+    it('inserts the selected grid dimensions from the toolbar menu', () => {
+      const editor = createTestEditor();
+      const onClose = vi.fn();
+      render(<TiptapTableInsertMenu editor={editor} isOpen onClose={onClose} />);
+
+      fireEvent.click(screen.getByTestId('grid-cell-2-3'));
+
+      const table = editor.getJSON().content?.find((node: any) => node.type === 'table') as any;
+      expect(table?.content).toHaveLength(2);
+      expect(table?.content?.[0].content).toHaveLength(3);
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
     it('inserts a 3 rows × 4 columns table with header row', () => {
       const editor = createTestEditor('<p>Before table</p>');
       editor.commands.insertTable({ rows: 3, cols: 4, withHeaderRow: true });

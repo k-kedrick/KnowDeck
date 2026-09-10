@@ -26,6 +26,7 @@ import type { LocalDraftEntry } from '../../hooks/useDocumentDraft';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 import { ModalPortal } from '../../components/ModalPortal';
 import { Button } from '../../components/ui/Button';
+import { categoryPath, categorySubtreeIds, flattenCategoryTree } from '../../utils/categoryTree';
 
 export const AdminDocumentList: React.FC = () => {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ export const AdminDocumentList: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('');
   const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<number>(0);
+  const [categoryFilter, setCategoryFilter] = useState<number>(() => Number(searchParams.get('category')) || 0);
   const tagFilter = searchParams.get('tag') || '';
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -68,25 +69,30 @@ export const AdminDocumentList: React.FC = () => {
     };
   }, [refreshLocalDrafts]);
 
+  const categoryFilterIds = useMemo(
+    () => categoryFilter > 0 ? categorySubtreeIds(categories, categoryFilter) : null,
+    [categories, categoryFilter],
+  );
+
   const visibleLocalDrafts = useMemo(() => {
     if (statusFilter && statusFilter !== 'draft') return [];
     const normalizedKeyword = debouncedKeyword.trim().toLocaleLowerCase();
     return localDrafts.filter((entry) => {
       const draft = entry.draft;
       if (normalizedKeyword && !`${draft.title} ${draft.excerpt} ${draft.content}`.toLocaleLowerCase().includes(normalizedKeyword)) return false;
-      if (categoryFilter > 0 && draft.categoryId !== categoryFilter) return false;
+      if (categoryFilterIds && !categoryFilterIds.has(draft.categoryId)) return false;
       if (tagFilter) {
         const selectedTag = tags.find((tag) => tag.slug === tagFilter);
         if (!selectedTag || !draft.tags.some((tag) => tag.toLocaleLowerCase() === selectedTag.name.toLocaleLowerCase())) return false;
       }
       return true;
     });
-  }, [categoryFilter, debouncedKeyword, localDrafts, statusFilter, tagFilter, tags]);
+  }, [categoryFilterIds, debouncedKeyword, localDrafts, statusFilter, tagFilter, tags]);
 
   const loadCategories = useCallback(async () => {
     try {
       const cats = await api.getAdminCategories();
-      setCategories(cats || []);
+      setCategories(flattenCategoryTree(cats || []));
     } catch (err) {
       console.error('Failed to load categories:', err);
     }
@@ -177,7 +183,7 @@ export const AdminDocumentList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 py-2">
+    <div className="w-full max-w-[1440px] space-y-4 py-1">
       <AdminPageHeader
         icon={FileText}
         title="文档管理"
@@ -198,7 +204,7 @@ export const AdminDocumentList: React.FC = () => {
       )}
 
       {/* Filters Toolbar */}
-      <section aria-label="文档筛选" className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/80 p-4 shadow-xs backdrop-blur-md grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(15rem,1.5fr)_repeat(3,minmax(10rem,1fr))_auto]">
+      <section aria-label="文档筛选" className="admin-toolbar grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(18rem,1.5fr)_repeat(3,minmax(11rem,1fr))_auto]">
         {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-3 text-text-tertiary" />
@@ -211,7 +217,7 @@ export const AdminDocumentList: React.FC = () => {
             }}
             placeholder="搜索文档标题或摘要..."
             aria-label="搜索文档"
-            className="min-h-10 w-full rounded-xl border border-border-default/80 bg-surface pl-9 pr-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+            className="h-9 w-full rounded-lg border border-border-default/80 bg-surface pl-9 pr-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
         </div>
 
@@ -223,7 +229,7 @@ export const AdminDocumentList: React.FC = () => {
             setPage(1);
           }}
           aria-label="按状态筛选"
-          className="min-h-10 rounded-xl border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+          className="h-9 rounded-lg border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
         >
           <option value="">所有状态 (草稿 + 已发布)</option>
           <option value="published">已发布 (Published)</option>
@@ -235,16 +241,21 @@ export const AdminDocumentList: React.FC = () => {
         <select
           value={categoryFilter}
           onChange={(e) => {
-            setCategoryFilter(Number(e.target.value));
+            const categoryID = Number(e.target.value);
+            const nextParams = new URLSearchParams(searchParams);
+            if (categoryID) nextParams.set('category', String(categoryID));
+            else nextParams.delete('category');
+            setCategoryFilter(categoryID);
+            setSearchParams(nextParams, { replace: true });
             setPage(1);
           }}
           aria-label="按分类筛选"
-          className="min-h-10 rounded-xl border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+          className="h-9 rounded-lg border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
         >
           <option value={0}>所有分类</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {categoryPath(c, categories)}
             </option>
           ))}
         </select>
@@ -262,7 +273,7 @@ export const AdminDocumentList: React.FC = () => {
             setSearchParams(nextParams, { replace: true });
             setPage(1);
           }}
-          className="min-h-10 rounded-xl border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+          className="h-9 rounded-lg border border-border-default/80 bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
           aria-label="按标签筛选"
         >
           <option value="">所有标签</option>
@@ -280,7 +291,7 @@ export const AdminDocumentList: React.FC = () => {
       </section>
 
       {/* Documents Table */}
-      <div className="overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 backdrop-blur-md shadow-xs" tabIndex={0} aria-label="文档列表，可横向滚动">
+      <div className="admin-table-shell" tabIndex={0} aria-label="文档列表，可横向滚动">
         <div className="overflow-x-auto">
           <table className="min-w-[70rem] w-full text-left border-collapse">
             <thead>

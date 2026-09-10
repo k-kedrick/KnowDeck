@@ -46,6 +46,8 @@
     --width-list: 84rem;
     --width-reading: 54rem;
     --width-workspace: 106rem;
+    --width-admin: 90rem;
+    --admin-sidebar-width: 14.5rem;
   }
 
   .dark {
@@ -106,6 +108,11 @@
   .layout-list { max-width: var(--width-list); }
   .layout-reading { max-width: var(--width-reading); }
   .layout-workspace { max-width: var(--width-workspace); }
+
+  .admin-page-shell { width: 100%; max-width: var(--width-admin); margin-inline: auto; display: flex; flex-direction: column; gap: 1.25rem; }
+  .admin-surface { border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface-elevated); }
+  .admin-toolbar { display: flex; min-height: 3.25rem; align-items: center; gap: .5rem; border-block: 1px solid var(--color-border-subtle); padding-block: .5rem; }
+  .admin-table-shell { overflow: hidden; border: 1px solid var(--color-border-subtle); background: var(--color-surface-elevated); }
 
   .page-gutter {
     padding-inline: 1rem;
@@ -207,17 +214,6 @@
   .admin-workspace-standard {
     font-size: 0.875rem;
     line-height: 1.5rem;
-  }
-
-  .admin-workspace-standard .text-xs {
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-  }
-
-  .admin-workspace-standard .text-\[10px\],
-  .admin-workspace-standard .text-\[11px\] {
-    font-size: 0.75rem;
-    line-height: 1rem;
   }
 
   /* Editor-only viewport and panel skeleton. Keep public and standard admin layouts isolated. */

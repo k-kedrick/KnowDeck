@@ -95,8 +95,7 @@ SQLite DSN 启用 `foreign_keys(1)`、WAL、`busy_timeout(5000)` 和 `synchronou
 
 数据库的 `documents.content` 保存 Markdown 或受控 HTML；两者均可包含安全允许的富文本结构。权威格式约束见 [编辑器内容格式](docs/specs/EDITOR_FORMAT.md)。
 
-- 默认编辑器：`DocumentVisualEditor`，基于 contentEditable，使用 `htmlToMarkdown.ts` 完成标准化和安全清洗。
-- 可选编辑器：`TiptapEditor`，通过 `VITE_EDITOR_ENGINE=tiptap` 启用，复用相同的持久化和阅读兼容边界。
+- 编辑器：`TiptapEditor`，复用既有持久化和阅读兼容边界。
 - 阅读器：Markdown 内容经 remark/rehype 管道处理；HTML 内容先清洗再呈现。数学插件按需加载。
 - 本地草稿：`useDocumentDraft` 保存编辑器引擎、内容格式和文档元数据，正式保存成功后按快照一致性清理。
 

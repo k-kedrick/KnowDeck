@@ -92,7 +92,7 @@ export const AdminSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1080px] space-y-8 py-2">
+    <div className="w-full space-y-5 py-1">
       <AdminPageHeader icon={Settings} title="系统配置" description="管理站点信息、前台展示与管理员账户。" />
 
       {errorMsg && (
@@ -109,7 +109,7 @@ export const AdminSettingsPage: React.FC = () => {
       )}
 
       {/* 1. Site Info Section */}
-      <form onSubmit={handleSave} className="overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 backdrop-blur-md shadow-xs">
+      <form onSubmit={handleSave} className="admin-surface overflow-hidden">
         <div className="border-b border-border-subtle/80 px-6 py-4 sm:px-8 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-brand">
             <Globe className="h-4 w-4" />
@@ -163,7 +163,7 @@ export const AdminSettingsPage: React.FC = () => {
       </form>
 
       {/* 2. Frontend Display Controls */}
-      <section className="overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 backdrop-blur-md shadow-xs">
+      <section className="admin-surface overflow-hidden">
         <div className="border-b border-border-subtle/80 px-6 py-4 sm:px-8 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <Sliders className="h-4 w-4" />
@@ -208,7 +208,7 @@ export const AdminSettingsPage: React.FC = () => {
       </section>
 
       {/* 3. Admin Account Security */}
-      <form onSubmit={handleAccountSave} className="overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 backdrop-blur-md shadow-xs">
+      <form onSubmit={handleAccountSave} className="admin-surface overflow-hidden">
         <div className="border-b border-border-subtle/80 px-6 py-4 sm:px-8 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
             <ShieldCheck className="h-4 w-4" />

@@ -204,16 +204,40 @@ export interface Tag {
 export interface MediaFolder {
   id: number;
   name: string;
+  parent_id?: number;
   document_id: number;
   media_count: number;
   created_at: string;
   updated_at: string;
 }
 
+export interface DocumentMediaRef {
+  document_id: number;
+  title: string;
+  slug: string;
+  media_count: number;
+}
+
 export interface MediaFolderListResponse {
   folders: MediaFolder[];
   total_media: number;
   unclassified_media: number;
+  used_media?: number;
+  unused_media?: number;
+  document_refs?: DocumentMediaRef[];
+}
+
+export interface BlockedMedia {
+  id: number;
+  original_name: string;
+  filename: string;
+  references: DocumentSummary[];
+}
+
+export interface BatchDeleteResult {
+  deleted_count: number;
+  blocked_count: number;
+  blocked: BlockedMedia[];
 }
 
 export interface Media {
@@ -228,6 +252,9 @@ export interface Media {
   size: number;
   duration: number;
   thumbnail: string;
+  source?: string;
+  reference_count?: number;
+  references?: DocumentSummary[];
   created_at: string;
 }
 
@@ -470,14 +497,29 @@ export const api = {
     }),
 
   // Admin Media API
-  getAdminMedia: (params: { folder_id?: number; media_type?: string; keyword?: string; page?: number; page_size?: number }) => {
+  getAdminMedia: (
+    params: {
+      folder_id?: number;
+      document_id?: number;
+      unused?: boolean;
+      media_type?: string;
+      keyword?: string;
+      sort_by?: string;
+      page?: number;
+      page_size?: number;
+    },
+    signal?: AbortSignal
+  ) => {
     const query = new URLSearchParams();
     if (params.folder_id !== undefined && params.folder_id >= 0) query.set('folder_id', String(params.folder_id));
+    if (params.document_id !== undefined && params.document_id > 0) query.set('document_id', String(params.document_id));
+    if (params.unused) query.set('unused', 'true');
     if (params.media_type) query.set('media_type', params.media_type);
     if (params.keyword) query.set('keyword', params.keyword);
+    if (params.sort_by) query.set('sort_by', params.sort_by);
     if (params.page) query.set('page', String(params.page));
     if (params.page_size) query.set('page_size', String(params.page_size));
-    return fetchJson<PageResponse<Media>>(`/admin/media?${query.toString()}`);
+    return fetchJson<PageResponse<Media>>(`/admin/media?${query.toString()}`, { signal });
   },
   uploadMedia: async (
     file: File,
@@ -526,13 +568,29 @@ export const api = {
     fetchJson<null>(`/admin/media/${id}`, {
       method: 'DELETE',
     }),
+  batchMoveMedia: (ids: number[], folder_id: number) =>
+    fetchJson<{ moved: number }>('/admin/media/batch-move', {
+      method: 'POST',
+      body: JSON.stringify({ ids, folder_id }),
+    }),
+  batchDeleteMedia: (ids: number[]) =>
+    fetchJson<BatchDeleteResult>('/admin/media/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+  getMediaReferences: (id: number) =>
+    fetchJson<{ documents: DocumentSummary[]; count: number }>(`/admin/media/${id}/references`),
+  rebuildMediaReferences: () =>
+    fetchJson<{ documents_scanned: number }>('/admin/media/rebuild-references', {
+      method: 'POST',
+    }),
 
   // Admin Media Folders API
-  getMediaFolders: () => fetchJson<MediaFolderListResponse>('/admin/media/folders'),
-  createMediaFolder: (name: string, document_id?: number) =>
+  getMediaFolders: (signal?: AbortSignal) => fetchJson<MediaFolderListResponse>('/admin/media/folders', { signal }),
+  createMediaFolder: (name: string, parent_id = 0, document_id?: number) =>
     fetchJson<MediaFolder>('/admin/media/folders', {
       method: 'POST',
-      body: JSON.stringify({ name, document_id: document_id || 0 }),
+      body: JSON.stringify({ name, parent_id, document_id: document_id || 0 }),
     }),
   updateMediaFolder: (id: number, name: string) =>
     fetchJson<null>(`/admin/media/folders/${id}`, {

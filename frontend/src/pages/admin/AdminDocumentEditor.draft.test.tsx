@@ -1,3 +1,4 @@
+import { forwardRef, useImperativeHandle } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -33,8 +34,11 @@ vi.mock('../../api', async (importOriginal) => {
   return { ...original, api: { ...original.api, ...apiMocks } };
 });
 
-vi.mock('../../components/admin/DocumentVisualEditor', () => ({
-  DocumentVisualEditor: ({ markdownContent, onChange }: { markdownContent: string; onChange: (value: string) => void }) => <div data-testid="editor-content">{markdownContent}<button type="button" onClick={() => onChange(`${markdownContent}\n本地修改`)}>模拟编辑</button></div>,
+vi.mock('../../components/admin/tiptap/TiptapEditor', () => ({
+  TiptapEditor: forwardRef(({ content, onChange }: { content: string; onChange: (value: string) => void }, ref) => {
+    useImperativeHandle(ref, () => ({ getContentForSave: () => content, markSaved: () => undefined }));
+    return <div data-testid="editor-content">{content}<button type="button" onClick={() => onChange(`${content}\n本地修改`)}>模拟编辑</button></div>;
+  }),
 }));
 
 vi.mock('../../components/admin/AdminDocTreeSidebar', () => ({
@@ -69,7 +73,7 @@ describe('AdminDocumentEditor published draft behavior', () => {
     );
 
     const storeButton = await screen.findByRole('button', { name: '暂存本地' });
-    fireEvent.click(screen.getByRole('button', { name: '模拟编辑' }));
+    fireEvent.click(await screen.findByRole('button', { name: '模拟编辑' }));
     fireEvent.click(storeButton);
 
     await waitFor(() => expect(readLocalDraft(getDraftKey(9))?.status).toBe('published'));
@@ -97,7 +101,7 @@ describe('AdminDocumentEditor published draft behavior', () => {
     );
 
     await screen.findByRole('button', { name: '暂存本地' });
-    fireEvent.click(screen.getByRole('button', { name: '模拟编辑' }));
+    fireEvent.click(await screen.findByRole('button', { name: '模拟编辑' }));
     fireEvent.click(screen.getByRole('button', { name: '暂存本地' }));
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
 
@@ -116,7 +120,7 @@ describe('AdminDocumentEditor published draft behavior', () => {
     );
 
     const storeButton = await screen.findByRole('button', { name: '暂存本地' });
-    fireEvent.click(screen.getByRole('button', { name: '模拟编辑' }));
+    fireEvent.click(await screen.findByRole('button', { name: '模拟编辑' }));
     const originalSetItem = Storage.prototype.setItem;
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function setItem(this: Storage, key, value) {
       if (key === getDraftKey(9)) throw new DOMException('quota exceeded', 'QuotaExceededError');

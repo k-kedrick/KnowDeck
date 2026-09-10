@@ -100,6 +100,7 @@ type CategoryTreeNode struct {
 type MediaFolder struct {
 	ID         int64     `json:"id" db:"id"`
 	Name       string    `json:"name" db:"name"`
+	ParentID   int64     `json:"parent_id" db:"parent_id"`
 	DocumentID int64     `json:"document_id" db:"document_id"`
 	MediaCount int       `json:"media_count" db:"media_count"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
@@ -108,18 +109,41 @@ type MediaFolder struct {
 
 // Media 媒体文件模型
 type Media struct {
-	ID           int64     `json:"id" db:"id"`
-	FolderID     int64     `json:"folder_id" db:"folder_id"`
-	OriginalName string    `json:"original_name" db:"original_name"`
-	Filename     string    `json:"filename" db:"filename"`
-	Path         string    `json:"path" db:"path"`
-	URL          string    `json:"url" db:"url"`
-	MediaType    string    `json:"media_type" db:"media_type"` // image, video, file
-	MimeType     string    `json:"mime_type" db:"mime_type"`
-	Size         int64     `json:"size" db:"size"`
-	Duration     int       `json:"duration" db:"duration"` // 视频时长(秒)
-	Thumbnail    string    `json:"thumbnail" db:"thumbnail"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	ID             int64              `json:"id" db:"id"`
+	FolderID       int64              `json:"folder_id" db:"folder_id"`
+	OriginalName   string             `json:"original_name" db:"original_name"`
+	Filename       string             `json:"filename" db:"filename"`
+	Path           string             `json:"path" db:"path"`
+	URL            string             `json:"url" db:"url"`
+	MediaType      string             `json:"media_type" db:"media_type"` // image, video, file
+	MimeType       string             `json:"mime_type" db:"mime_type"`
+	Size           int64              `json:"size" db:"size"`
+	Duration       int                `json:"duration" db:"duration"` // 视频时长(秒)
+	Thumbnail      string             `json:"thumbnail" db:"thumbnail"`
+	Source         string             `json:"source" db:"source"`
+	ReferenceCount int                `json:"reference_count"`
+	References     []*DocumentSummary `json:"references,omitempty"`
+	CreatedAt      time.Time          `json:"created_at" db:"created_at"`
+}
+
+type BlockedMedia struct {
+	ID           int64              `json:"id"`
+	OriginalName string             `json:"original_name"`
+	Filename     string             `json:"filename"`
+	References   []*DocumentSummary `json:"references"`
+}
+
+type BatchDeleteResult struct {
+	DeletedCount int             `json:"deleted_count"`
+	BlockedCount int             `json:"blocked_count"`
+	Blocked      []*BlockedMedia `json:"blocked"`
+}
+
+type DocumentMediaRef struct {
+	DocumentID int64  `json:"document_id"`
+	Title      string `json:"title"`
+	Slug       string `json:"slug"`
+	MediaCount int    `json:"media_count"`
 }
 
 // Setting 系统配置模型
@@ -162,7 +186,6 @@ type UpdateCredentialsReq struct {
 	CurrentPassword string `json:"current_password" binding:"required"`
 	NewPassword     string `json:"new_password"`
 }
-
 
 type DocumentSaveReq struct {
 	Title       string   `json:"title" binding:"required"`

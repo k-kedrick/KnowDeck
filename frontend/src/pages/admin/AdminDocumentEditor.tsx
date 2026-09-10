@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { api } from '../../api';
 import type { DocumentSaveReq, Category, Media, Tag, DocumentDetail, DocumentAccessLevel } from '../../api';
-import { DocumentVisualEditor } from '../../components/admin/DocumentVisualEditor';
 import { TagCombobox } from '../../components/admin/TagCombobox';
 import type { TiptapEditorHandle } from '../../components/admin/tiptap/TiptapEditor';
 import { detectContentFormat } from '../../components/admin/tiptap/editorContentAdapter';
@@ -35,9 +34,10 @@ import {
 } from '../../hooks/useDocumentDraft';
 import type { LocalDraftData } from '../../hooks/useDocumentDraft';
 import { documentSnapshotsEqual } from '../../utils/documentComparison';
+import { hasLocalizableDocumentImages } from '../../utils/documentImages';
 import { buildDocumentPayload } from '../../utils/documentPayload';
+import { categoryPath, flattenCategoryTree } from '../../utils/categoryTree';
 
-const EDITOR_ENGINE: 'legacy' | 'tiptap' = import.meta.env.VITE_EDITOR_ENGINE === 'tiptap' ? 'tiptap' : 'legacy';
 const TiptapEditor = lazy(() => import('../../components/admin/tiptap/TiptapEditor').then((module) => ({ default: module.TiptapEditor })));
 
 const localDraftMatchesSnapshot = (draft: LocalDraftData, snapshot: LocalDraftData) => documentSnapshotsEqual(draft, snapshot);
@@ -303,7 +303,7 @@ export const AdminDocumentEditor: React.FC = () => {
         api.getAdminCategories(),
         api.getAdminTags(),
       ]);
-      if (categoryResult.status === 'fulfilled') setCategories(categoryResult.value || []);
+      if (categoryResult.status === 'fulfilled') setCategories(flattenCategoryTree(categoryResult.value || []));
       else console.error('Failed to load editor categories:', categoryResult.reason);
       if (tagResult.status === 'fulfilled') setAvailableTags(tagResult.value || []);
       else console.error('Failed to load editor tags:', tagResult.reason);
@@ -413,7 +413,7 @@ export const AdminDocumentEditor: React.FC = () => {
         tags,
         updatedAt: Date.now(),
         serverUpdatedAt: serverUpdatedAtRef.current,
-        editorEngine: EDITOR_ENGINE,
+        editorEngine: 'tiptap',
         contentFormat: detectContentFormat(content),
       };
       if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) {
@@ -459,7 +459,7 @@ export const AdminDocumentEditor: React.FC = () => {
         tags: tagsRef.current,
         updatedAt: Date.now(),
         serverUpdatedAt: serverUpdatedAtRef.current,
-        editorEngine: EDITOR_ENGINE,
+        editorEngine: 'tiptap',
         contentFormat: detectContentFormat(contentRef.current),
       };
       if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) return;
@@ -490,7 +490,7 @@ export const AdminDocumentEditor: React.FC = () => {
       tags: tagsRef.current,
       updatedAt: Date.now(),
       serverUpdatedAt: serverUpdatedAtRef.current,
-      editorEngine: EDITOR_ENGINE,
+      editorEngine: 'tiptap',
       contentFormat: detectContentFormat(contentRef.current),
     };
     if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) return;
@@ -498,9 +498,7 @@ export const AdminDocumentEditor: React.FC = () => {
   }, [currentDraftKey, id, isEdit, localDraftId, writeDraft]);
 
   const flushLocalDraft = useCallback((showConfirmation = false): boolean => {
-    const contentToStore = EDITOR_ENGINE === 'tiptap'
-      ? tiptapEditorRef.current?.getContentForSave() ?? content
-      : content;
+    const contentToStore = tiptapEditorRef.current?.getContentForSave() ?? content;
     if (!isEdit && !title.trim() && !contentToStore.trim()) return true;
 
     const draftData: LocalDraftData = {
@@ -518,7 +516,7 @@ export const AdminDocumentEditor: React.FC = () => {
       tags,
       updatedAt: Date.now(),
       serverUpdatedAt: serverUpdatedAtRef.current,
-      editorEngine: EDITOR_ENGINE,
+      editorEngine: 'tiptap',
       contentFormat: detectContentFormat(contentToStore),
     };
     if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) {
@@ -599,9 +597,7 @@ export const AdminDocumentEditor: React.FC = () => {
 
     const docStatus = targetStatus || status;
 
-    let contentToSave = EDITOR_ENGINE === 'tiptap'
-      ? tiptapEditorRef.current?.getContentForSave() ?? content
-      : content;
+    let contentToSave = tiptapEditorRef.current?.getContentForSave() ?? content;
 
     if (isEdit && status === 'published' && docStatus === 'draft') {
       flushLocalDraft(true);
@@ -610,16 +606,20 @@ export const AdminDocumentEditor: React.FC = () => {
 
     setSaving(true);
 
-    // 🌟 自动转存文章中的所有外链/临时图片至本地媒体库专属文件夹
-    try {
-      const locRes = await api.localizeDocumentImages(contentToSave, id ? Number(id) : 0, title.trim());
-      if (locRes && locRes.content) {
-        contentToSave = locRes.content;
-        setContent(locRes.content);
+    // Only send the potentially large document body when it contains an image
+    // that can actually be localized. Local uploads need no round trip.
+    if (hasLocalizableDocumentImages(contentToSave)) {
+      try {
+        const locRes = await api.localizeDocumentImages(contentToSave, id ? Number(id) : 0, title.trim());
+        if (locRes && locRes.content) {
+          contentToSave = locRes.content;
+          setContent(locRes.content);
+        }
+      } catch (locErr) {
+        console.warn('转存文档外链图片失败，继续保存:', locErr);
       }
-    } catch (locErr) {
-      console.warn('转存文档外链图片失败，继续保存:', locErr);
     }
+    // The editor serializer is the established sanitizer; no second sanitize pass occurs here.
 
     const payload: DocumentSaveReq = buildDocumentPayload({
       title,
@@ -1002,8 +1002,7 @@ export const AdminDocumentEditor: React.FC = () => {
                     <option value={0}>未分类 (顶级目录)</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
-                        {category.parent_id ? '  └ ' : ''}
-                        {category.name}
+                        {categoryPath(category, categories)}
                       </option>
                     ))}
                   </select>
@@ -1048,26 +1047,15 @@ export const AdminDocumentEditor: React.FC = () => {
 
           {/* 沉浸式可视化文档画布 */}
           <div className="flex min-h-[650px] flex-1 flex-col">
-            {EDITOR_ENGINE === 'tiptap' ? (
-              <Suspense fallback={<div className="min-h-[680px] rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-900">加载隐藏 TipTap PoC...</div>}>
-                <TiptapEditor
-                  ref={tiptapEditorRef}
-                  content={content}
-                  onChange={setContent}
-                  onUploadFile={handleUploadFile}
-                  uploading={uploading}
-                />
-              </Suspense>
-            ) : (
-              <DocumentVisualEditor
-                markdownContent={content}
-                onChange={(newMd) => setContent(newMd)}
+            <Suspense fallback={<div className="min-h-[680px] rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-900">加载 TipTap 编辑器...</div>}>
+              <TiptapEditor
+                ref={tiptapEditorRef}
+                content={content}
+                onChange={setContent}
                 onUploadFile={handleUploadFile}
                 uploading={uploading}
-                documentId={id ? Number(id) : undefined}
-                docTitle={title}
               />
-            )}
+            </Suspense>
           </div>
         </div>
 

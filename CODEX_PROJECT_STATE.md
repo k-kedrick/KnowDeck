@@ -31,7 +31,7 @@
 - Invites: plaintext codes are generated with `crypto/rand`, stored only as SHA-256 hashes, and consumed with a conditional SQLite update in the member-creation transaction.
 - User System: **COMPLETED** through U2. Admin user management and admin invite management are **COMPLETED**; `/wang/users` provides Users and Invites tabs backed by `/api/admin/users*` and `/api/admin/invites*`.
 - Document Access Control: **COMPLETED**. Backend enforces `access_level` on `/api/public/documents/:slug` (returning `locked: true` without body) and `/api/public/documents` (clearing `excerpt` for unauthenticated visitors). Frontend `ArticleCard` and `DocViewer` display dedicated locked badges and login/registration prompt cards.
-- Editor: `AdminDocumentEditor` defaults to the legacy `DocumentVisualEditor`; the Tiptap implementation is selected only when `VITE_EDITOR_ENGINE=tiptap`. Drafts are stored locally through `useDocumentDraft`.
+- Editor: `AdminDocumentEditor` defaults to `TiptapEditor`; set `VITE_EDITOR_ENGINE=legacy` only for the retained rollback path to `DocumentVisualEditor`. Both engines reuse drafts from `useDocumentDraft` and the same persistence/reader content contract.
 - Critical paths: database/schema (`repository/db.go`), auth (`middleware/auth.go`, `service/auth_service.go`), file storage/media, document persistence, and the `DocViewer` sanitization/rendering pipeline.
 
 ## Current Fingerprints
@@ -171,3 +171,27 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 
 - **COMPLETED**: authenticated users can open `/account/security` from the user menu, verify their current password, and set a new password of at least 12 characters. The backend increments `auth_version`, invalidates every old session, and returns a fresh JWT so the current device remains signed in.
 - Verification on 2026-09-08: backend `go test ./...` and `go vet ./...` PASS; focused frontend tests 45/45 PASS; frontend build and lint PASS (warnings only). The full frontend run passed 241 tests and skipped 1, with the already-recorded intermittent `App.test.tsx` document lazy-route timeout; an immediate focused rerun of `App.test.tsx` passed 6/6.
+
+## U8 Unified Media Asset Management Center & Reference System
+
+- **COMPLETED**:
+  1. **Schema & N:M Relations**: Created `media_document_refs` table (`media_id`, `document_id`) with foreign keys, composite primary key, and indexed queries; added `media.source` column (`document/editor`, `manual upload`, `legacy/import`).
+  2. **Storage Stability & Zero Disk Mutation**: Maintained absolute physical storage paths without renaming or moving files on disk. Classification, folder organization, and document associations are managed purely through database logic.
+  3. **Editor & Document Lifecycle Integration**: TipTap and Legacy editor uploads carry `document_id` and register references immediately; `DocumentService.Create` and `Update` automatically sync references by parsing Markdown / HTML media URLs (`img src`, `video src`, `source src`, Markdown links); `DocumentService.Delete` cascades reference deletion without affecting media assets.
+  4. **Strict Delete Protection**: Single deletion is blocked if `reference_count > 0`, displaying a modal with referencing documents; batch deletion (`POST /api/admin/media/batch-delete`) checks references, deletes only unreferenced items, and preserves referenced files with detailed reporting.
+  5. **Smart Reconcile**: Added `POST /api/admin/media/rebuild-references` to safely and idempotently rescan all document contents and rebuild media references without modifying document text or disk files.
+  6. **UI & Navigation Overhaul**: Redesigned `/wang/media` with clear information hierarchy:
+     - Left Sidebar: Smart views (`全部资源`, `未分类资源`, `未使用资源`), Document Association tree (`文档关联` with document search and count badges), Custom Logical Folders (`自定义文件夹` with inline create/rename/delete), Bottom Resource Stats (总计 / 已使用 / 未使用) and Reconcile button.
+     - Right Area: Responsive four-column desktop grid, standardized cards with uniform aspect ratio, original filename priority, video play overlay & badge, instant Markdown copy, batch selection mode with floating batch toolbar (`批量移动`, `批量删除`, `全选当前页`).
+  7. **Media Grid Follow-up**: `/wang/media` uses the wider workspace shell and a fixed four-column desktop grid (`lg:grid-cols-4`); below that it steps down to three, two, then one column. The default page size is 40 and can be entered directly without changing the column count.
+- Verification refreshed on 2026-09-10:
+  - Backend: `backend/internal/repository/media_repository_test.go` and `backend/internal/service/media_service_test.go` unit tests PASS; full backend `go test ./...` and `go vet ./...` PASS.
+  - Frontend: `frontend/src/pages/admin/AdminMediaManager.test.tsx` 5/5 PASS; full test suite `npm run test -- --run` (46 test files, 266 passed, 1 skipped) PASS; `npm run build` (`tsc -b && vite build`) PASS with 0 errors.
+
+## Admin Unified Layout & Navigation System
+
+- **COMPLETED**: ordinary admin pages share one visual shell. `AdminLayout` owns the fixed `232px` desktop sidebar and route-aware workspace selection; `AdminPageShell` provides the standard `1440px` content width and vertical rhythm; `AdminPageHeader` standardizes the icon/title/description/action baseline.
+- Shared surfaces: `admin-surface` is the standard panel, `admin-toolbar` is the compact search/filter/action row, and `admin-table-shell` is the bordered scrolling list/table container. Standard pages use these primitives rather than page-specific content widths and outer-card styling.
+- Intentional layout variants: document management and media library use the wider workspace; the document editor remains an immersive workspace; the dashboard welcome banner remains a deliberate content-specific visual distinction.
+- Visual acceptance completed at `1920px`, `1440px`, `1280px`, and `1024px` for dashboard, documents, categories, tags, media, settings, and users. At constrained widths, toolbars and two-column panels reflow while data tables retain controlled horizontal scrolling.
+- Verification on 2026-09-10: frontend TypeScript/build, lint (warnings only), full tests (`226 passed`, `1 skipped`), and `git diff --check` PASS. The Tiptap lazy chunk remains above Vite's advisory 500 kB threshold.

@@ -51,7 +51,8 @@ describe('htmlToMarkdown', () => {
     `);
 
     expect(html).toContain('text-align: center');
-    expect(html).not.toContain('font-size');
+    expect(html).toContain('font-size: 12px');
+    expect(html).toContain('font-size: 48px');
     expect(html).toContain('text-align: center');
     expect(html).toContain('color: #ef4444');
     expect(html).toContain('color: #0f172a');

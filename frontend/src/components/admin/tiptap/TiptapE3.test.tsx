@@ -277,7 +277,7 @@ describe('TipTap E3 Typography & Advanced Formatting Parity', () => {
   });
 
   describe('9. UI Components (Toolbar & Bubble Menu) Triggering E3 Commands', () => {
-    it('triggers font family, size, line-height, alignment, and clear formatting from Toolbar', () => {
+    it('triggers font family, size, line-height, and alignment from Toolbar', () => {
       const editor = createTestEditor('<p>Toolbar Typography Test</p>');
       editor.commands.focus('start');
 
@@ -288,7 +288,6 @@ describe('TipTap E3 Typography & Advanced Formatting Parity', () => {
       expect(screen.getByTestId('toolbar-line-height-btn')).toBeInTheDocument();
       expect(screen.getByTestId('toolbar-btn-align-center')).toBeInTheDocument();
       expect(screen.getByTestId('toolbar-btn-color-palette')).toBeInTheDocument();
-      expect(screen.getByTestId('toolbar-btn-clear-formatting')).toBeInTheDocument();
 
       // Click Align Center
       act(() => {
@@ -306,11 +305,6 @@ describe('TipTap E3 Typography & Advanced Formatting Parity', () => {
       });
       expect(editor.getAttributes('textStyle').fontSize).toBe('24px');
 
-      // Click Clear Formatting
-      act(() => {
-        fireEvent.click(screen.getByTestId('toolbar-btn-clear-formatting'));
-      });
-      expect(editor.getAttributes('textStyle').fontSize).toBeFalsy();
     });
 
     it('mounts TiptapBubbleMenu with all typography popovers', () => {

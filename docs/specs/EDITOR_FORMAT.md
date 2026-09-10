@@ -1,9 +1,8 @@
 # 编辑器内容格式
 
-本文定义 `documents.content` 在默认编辑器、Tiptap 编辑器、数据库和公开阅读器之间的兼容边界。实现事实以以下文件为准：
+本文定义 `documents.content` 在 Tiptap 编辑器、数据库和公开阅读器之间的兼容边界。实现事实以以下文件为准：
 
 - `frontend/src/utils/htmlToMarkdown.ts`
-- `frontend/src/components/admin/DocumentVisualEditor.tsx`
 - `frontend/src/components/admin/tiptap/editorContentAdapter.ts`
 - `frontend/src/components/DocViewer.tsx`
 - `frontend/src/pages/admin/AdminDocumentEditor.tsx`
@@ -20,23 +19,9 @@
 
 ## 数据流
 
-### 默认 DocumentVisualEditor
-
-```text
-stored Markdown/HTML
-  -> markdownToEditorHtml / sanitizeDocumentHtml
-  -> contentEditable DOM
-  -> htmlToMarkdown on document change
-  -> document state
-  -> optional image localization
-  -> API -> documents.content
-```
-
-默认编辑器基于 contentEditable。粘贴的网页/富文本先由 `normalizePastedDocumentHtml` 规范化；上传媒体后插入受支持的 HTML。
-
 ### TiptapEditor
 
-通过 `VITE_EDITOR_ENGINE=tiptap` 启用。
+唯一编辑器。
 
 ```text
 stored content

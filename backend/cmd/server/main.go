@@ -57,8 +57,13 @@ func main() {
 	// 4. 初始化服务层
 	authService := service.NewAuthService(userRepo, cfg)
 	catService := service.NewCategoryService(catRepo, docRepo)
-	docService := service.NewDocumentService(docRepo, catRepo)
+	docService := service.NewDocumentService(docRepo, catRepo, mediaRepo)
 	mediaService := service.NewMediaService(mediaRepo, mediaFolderRepo, docRepo, localStorage, cfg)
+	if count, err := mediaService.RebuildReferences(); err != nil {
+		log.Printf("[WARN] 启动时媒体引用修复失败: %v", err)
+	} else {
+		log.Printf("[media-reconcile] documents=%d", count)
+	}
 	settingService := service.NewSettingService(settingRepo, docRepo, catRepo, tagRepo)
 
 	// 5. 初始化控制器
@@ -177,6 +182,10 @@ func main() {
 		// 媒体与文件夹管理
 		apiAdmin.POST("/media/upload", adminMediaHandler.Upload)
 		apiAdmin.GET("/media", adminMediaHandler.List)
+		apiAdmin.POST("/media/rebuild-references", adminMediaHandler.RebuildReferences)
+		apiAdmin.POST("/media/batch-move", adminMediaHandler.BatchMove)
+		apiAdmin.POST("/media/batch-delete", adminMediaHandler.BatchDelete)
+		apiAdmin.GET("/media/:id/references", adminMediaHandler.References)
 		apiAdmin.DELETE("/media/:id", adminMediaHandler.Delete)
 		apiAdmin.PUT("/media/:id/move", adminMediaHandler.MoveMedia)
 		apiAdmin.GET("/media/folders", adminMediaHandler.ListFolders)

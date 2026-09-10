@@ -96,7 +96,6 @@ func (h *AdminDocumentHandler) Update(c *gin.Context) {
 		response.BadRequest(c, "参数校验失败: "+err.Error())
 		return
 	}
-
 	doc, err := h.docService.Update(id, req)
 	if err != nil {
 		response.BadRequest(c, err.Error())

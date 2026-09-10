@@ -148,7 +148,7 @@ export const AdminTagManager: React.FC = () => {
   }, [tags, searchQuery]);
 
   return (
-    <div className="space-y-6 py-2">
+    <div className="space-y-5 py-1">
       <AdminPageHeader
         icon={TagIcon}
         title="标签管理"
@@ -157,7 +157,7 @@ export const AdminTagManager: React.FC = () => {
 
       {/* Top Metric Stats */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 p-4 shadow-xs backdrop-blur-md">
+        <div className="admin-surface p-4">
           <div className="flex items-center justify-between text-xs text-text-tertiary">
             <span className="font-semibold">标签总数</span>
             <TagIcon className="h-4 w-4 text-brand" />
@@ -167,7 +167,7 @@ export const AdminTagManager: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 p-4 shadow-xs backdrop-blur-md">
+        <div className="admin-surface p-4">
           <div className="flex items-center justify-between text-xs text-text-tertiary">
             <span className="font-semibold">活跃使用中</span>
             <Sparkles className="h-4 w-4 text-emerald-500" />
@@ -177,7 +177,7 @@ export const AdminTagManager: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 p-4 shadow-xs backdrop-blur-md">
+        <div className="admin-surface p-4">
           <div className="flex items-center justify-between text-xs text-text-tertiary">
             <span className="font-semibold">未关联标签</span>
             <Layers className="h-4 w-4 text-amber-500" />
@@ -187,7 +187,7 @@ export const AdminTagManager: React.FC = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border-subtle/80 bg-surface-elevated/90 p-4 shadow-xs backdrop-blur-md">
+        <div className="admin-surface p-4">
           <div className="flex items-center justify-between text-xs text-text-tertiary">
             <span className="font-semibold">累计引用次数</span>
             <BookOpen className="h-4 w-4 text-purple-500" />
@@ -215,7 +215,7 @@ export const AdminTagManager: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         {/* Left Form Panel */}
-        <section className="h-fit rounded-3xl border border-border-subtle/80 bg-surface-elevated/90 p-6 backdrop-blur-xl shadow-xs space-y-5">
+        <section className="admin-surface h-fit space-y-5 p-5">
           <div className="flex items-center justify-between border-b border-border-subtle/80 pb-3.5">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand font-bold text-xs">
@@ -289,7 +289,7 @@ export const AdminTagManager: React.FC = () => {
         </section>
 
         {/* Right Tag List Panel */}
-        <section className="flex min-w-0 self-start flex-col space-y-5 rounded-3xl border border-border-subtle/80 bg-surface-elevated/90 p-6 shadow-xs backdrop-blur-xl">
+        <section className="admin-surface flex min-w-0 self-start flex-col space-y-5 p-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle/80 pb-4">
             <div className="flex items-center space-x-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand/10 text-brand">
@@ -334,7 +334,7 @@ export const AdminTagManager: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-border-subtle/80 bg-surface/70">
+            <div className="admin-table-shell">
               <div className="hidden min-h-9 grid-cols-[minmax(7.5rem,1fr)_minmax(9rem,1.35fr)_7.25rem_5.75rem_7.5rem] items-center gap-x-3 border-b border-border-subtle/80 bg-surface-subtle/70 px-3.5 py-2 text-[11px] font-semibold leading-4 text-text-tertiary xl:grid">
                 <span>标签名称</span>
                 <span>URL Slug</span>
@@ -419,16 +419,6 @@ export const AdminTagManager: React.FC = () => {
             </div>
           )}
 
-          {/* Bottom Helpful Tips */}
-          <div className="rounded-2xl border border-border-subtle/80 bg-gradient-to-br from-brand/5 via-surface to-indigo-500/5 p-4 text-xs text-text-secondary space-y-1.5">
-            <div className="flex items-center gap-2 font-bold text-text-primary">
-              <Sparkles className="h-4 w-4 text-brand" />
-              <span>标签使用小技巧</span>
-            </div>
-            <p className="text-text-tertiary leading-relaxed text-[11px]">
-              标签适合用来做多维关联（例如：一篇文章可以同时拥有 <code>#Go语言</code>、<code>#并发编程</code>、<code>#性能优化</code> 多个标签），在前台阅读页面访客可点击标签一键检索所有同类文章。
-            </p>
-          </div>
         </section>
       </div>
 

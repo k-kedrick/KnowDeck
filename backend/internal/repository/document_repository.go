@@ -15,6 +15,12 @@ type DocumentRepository struct {
 	db *DB
 }
 
+func (r *DocumentRepository) GetMediaFolderID(documentID int64) (int64, error) {
+	var folderID int64
+	err := r.db.QueryRow(`SELECT id FROM media_folders WHERE document_id = ?`, documentID).Scan(&folderID)
+	return folderID, err
+}
+
 type sqlExecutor interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
@@ -57,8 +63,15 @@ func (r *DocumentRepository) List(filter DocumentFilter) ([]*model.Document, int
 	}
 
 	if filter.CategoryID > 0 {
-		whereClauses = append(whereClauses, "(d.category_id = ? OR d.category_id IN (SELECT id FROM categories WHERE parent_id = ?))")
-		args = append(args, filter.CategoryID, filter.CategoryID)
+		whereClauses = append(whereClauses, `d.category_id IN (
+			WITH RECURSIVE descendants(id) AS (
+				VALUES (?)
+				UNION
+				SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+			)
+			SELECT id FROM descendants
+		)`)
+		args = append(args, filter.CategoryID)
 	}
 
 	tags := make([]string, 0, len(filter.Tags)+1)
@@ -362,6 +375,9 @@ func (r *DocumentRepository) Create(doc *model.Document) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	if _, err := tx.Exec(`INSERT INTO media_folders (name, parent_id, document_id, created_at, updated_at) VALUES (?, 0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`, doc.Title, id); err != nil {
+		return 0, err
+	}
 
 	if err := r.syncTags(tx, id, doc.Tags); err != nil {
 		return 0, err
@@ -404,6 +420,9 @@ func (r *DocumentRepository) Update(doc *model.Document) error {
 	}
 
 	if err := r.syncTags(tx, doc.ID, doc.Tags); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE media_folders SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE document_id = ?`, doc.Title, doc.ID); err != nil {
 		return err
 	}
 	return tx.Commit()

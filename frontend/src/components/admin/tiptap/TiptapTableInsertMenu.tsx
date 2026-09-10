@@ -32,7 +32,7 @@ export const TiptapTableInsertMenu: React.FC<TiptapTableInsertMenuProps> = ({
 
   return (
     <div
-      className="absolute left-0 top-full mt-1.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900 z-50 animate-in fade-in zoom-in-95 duration-100"
+      className="absolute left-0 top-full z-50 mt-1.5 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-slate-700 dark:bg-slate-900 animate-in fade-in zoom-in-95 duration-100"
       onMouseDown={(e) => e.preventDefault()}
       data-testid="tiptap-table-insert-menu"
     >
@@ -48,7 +48,7 @@ export const TiptapTableInsertMenu: React.FC<TiptapTableInsertMenuProps> = ({
 
       {/* 8x8 Grid */}
       <div
-        className="grid grid-cols-8 gap-1.5 p-1 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
+        className="grid grid-cols-8 gap-1 p-1.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800"
         onMouseLeave={() => {
           setHoverRows(0);
           setHoverCols(0);
@@ -70,7 +70,7 @@ export const TiptapTableInsertMenu: React.FC<TiptapTableInsertMenuProps> = ({
                   setHoverCols(colNum);
                 }}
                 onClick={() => handleCellClick(rowNum, colNum)}
-                className={`w-4 h-4 rounded transition-all duration-75 ${
+                className={`h-6 w-6 rounded transition-all duration-75 ${
                   isHighlighted
                     ? 'scale-105 border border-blue-600 bg-blue-500'
                     : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-blue-400'

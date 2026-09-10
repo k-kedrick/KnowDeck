@@ -102,6 +102,39 @@ func TestListMatchesAllRequestedTagsAndKeepsSingleTagCompatibility(t *testing.T)
 	}
 }
 
+func TestListCategoryFilterIncludesAllDescendants(t *testing.T) {
+	db := newTestDB(t)
+	if _, err := db.Exec("DELETE FROM documents; DELETE FROM categories"); err != nil {
+		t.Fatalf("clear seeded data: %v", err)
+	}
+	parent, err := db.Exec("INSERT INTO categories (name, slug) VALUES ('Parent', 'parent')")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parentID, _ := parent.LastInsertId()
+	child, err := db.Exec("INSERT INTO categories (name, slug, parent_id) VALUES ('Child', 'child', ?)", parentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	childID, _ := child.LastInsertId()
+	grandchild, err := db.Exec("INSERT INTO categories (name, slug, parent_id) VALUES ('Grandchild', 'grandchild', ?)", childID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	grandchildID, _ := grandchild.LastInsertId()
+	if _, err := NewDocumentRepository(db).Create(&model.Document{Title: "Nested", Slug: "nested", Status: "published", AuthorID: 1, CategoryID: grandchildID}); err != nil {
+		t.Fatal(err)
+	}
+
+	documents, total, err := NewDocumentRepository(db).List(DocumentFilter{CategoryID: parentID, Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(documents) != 1 || documents[0].CategoryID != grandchildID {
+		t.Fatalf("root category filter = total %d, documents %#v; want nested document", total, documents)
+	}
+}
+
 func TestListPublishedForTreeDoesNotSilentlyTruncateAtOneThousand(t *testing.T) {
 	db := newTestDB(t)
 	if _, err := db.Exec("DELETE FROM document_tags; DELETE FROM documents"); err != nil {

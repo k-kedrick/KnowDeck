@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { proxyHistoricalDocumentImages } from './documentImages';
+import { hasLocalizableDocumentImages, proxyHistoricalDocumentImages } from './documentImages';
 
 const parse = (html: string) => new DOMParser().parseFromString(html, 'text/html');
 
@@ -26,5 +26,14 @@ describe('proxyHistoricalDocumentImages', () => {
       <img src="https://scnyv437r6d7.feishu.cn/other/path?code=x" />
     `));
     expect(Array.from(doc.querySelectorAll('img')).every((image) => !image.src.includes('/api/public/external-image'))).toBe(true);
+  });
+});
+
+describe('hasLocalizableDocumentImages', () => {
+  it('only selects external or data images for save-time localization', () => {
+    expect(hasLocalizableDocumentImages('<p><img src="/uploads/local.png"></p>')).toBe(false);
+    expect(hasLocalizableDocumentImages('![local](/uploads/local.png)')).toBe(false);
+    expect(hasLocalizableDocumentImages('<img src="https://images.example.com/remote.png">')).toBe(true);
+    expect(hasLocalizableDocumentImages('![paste](data:image/png;base64,AAAA)')).toBe(true);
   });
 });

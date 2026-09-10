@@ -40,26 +40,26 @@ export const BlockLineHeight = Extension.create({
     return {
       setLineHeight:
         (lineHeight: string) =>
-        ({ commands }) => {
+        ({ commands, state }) => {
           if (!lineHeight || lineHeight === 'default') {
-            return (
-              commands.resetAttributes('paragraph', 'lineHeight') ||
-              commands.resetAttributes('heading', 'lineHeight')
-            );
+            const type = state.selection.$from.parent.type.name;
+            return type === 'heading' || type === 'paragraph'
+              ? commands.resetAttributes(type, 'lineHeight')
+              : false;
           }
           if (!SAFE_LINE_HEIGHT_RE.test(lineHeight)) return false;
-          return (
-            commands.updateAttributes('paragraph', { lineHeight }) ||
-            commands.updateAttributes('heading', { lineHeight })
-          );
+          const type = state.selection.$from.parent.type.name;
+          return type === 'heading' || type === 'paragraph'
+            ? commands.updateAttributes(type, { lineHeight })
+            : false;
         },
       unsetLineHeight:
         () =>
-        ({ commands }) => {
-          return (
-            commands.resetAttributes('paragraph', 'lineHeight') ||
-            commands.resetAttributes('heading', 'lineHeight')
-          );
+        ({ commands, state }) => {
+          const type = state.selection.$from.parent.type.name;
+          return type === 'heading' || type === 'paragraph'
+            ? commands.resetAttributes(type, 'lineHeight')
+            : false;
         },
     };
   },

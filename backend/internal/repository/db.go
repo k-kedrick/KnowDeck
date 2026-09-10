@@ -124,8 +124,18 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 		size INTEGER NOT NULL,
 		duration INTEGER DEFAULT 0,
 		thumbnail TEXT DEFAULT '',
+		source TEXT NOT NULL DEFAULT 'legacy/import',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
+
+	CREATE TABLE IF NOT EXISTS media_document_refs (
+		media_id INTEGER NOT NULL,
+		document_id INTEGER NOT NULL,
+		PRIMARY KEY (media_id, document_id),
+		FOREIGN KEY (media_id) REFERENCES media (id) ON DELETE CASCADE,
+		FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE CASCADE
+	);
+	CREATE INDEX IF NOT EXISTS idx_media_document_refs_document ON media_document_refs (document_id);
 
 	-- 7. Settings
 	CREATE TABLE IF NOT EXISTS settings (
@@ -146,11 +156,13 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 	CREATE TABLE IF NOT EXISTS media_folders (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
+		parent_id INTEGER NOT NULL DEFAULT 0,
 		document_id INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_media_folders_doc ON media_folders (document_id);
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_media_folders_document_unique ON media_folders (document_id) WHERE document_id > 0;
 
 	CREATE TABLE IF NOT EXISTS invite_codes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -206,6 +218,22 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 		}
 	}
 
+	var mediaSourceColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('media') WHERE name='source'").Scan(&mediaSourceColCount)
+	if mediaSourceColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE media ADD COLUMN source TEXT NOT NULL DEFAULT 'legacy/import'"); err != nil {
+			return fmt.Errorf("添加 media.source 列失败: %w", err)
+		}
+	}
+	var mediaFolderParentColCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('media_folders') WHERE name='parent_id'").Scan(&mediaFolderParentColCount)
+	if mediaFolderParentColCount == 0 {
+		if _, err := db.Exec("ALTER TABLE media_folders ADD COLUMN parent_id INTEGER NOT NULL DEFAULT 0"); err != nil {
+			return fmt.Errorf("添加 media_folders.parent_id 列失败: %w", err)
+		}
+	}
+	_, _ = db.Exec("CREATE INDEX IF NOT EXISTS idx_media_folders_parent ON media_folders (parent_id)")
+
 	var inviteCodeColCount int
 	_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('invite_codes') WHERE name='code'").Scan(&inviteCodeColCount)
 	if inviteCodeColCount == 0 {
@@ -258,6 +286,22 @@ func (db *DB) AutoMigrate(cfg *config.Config) error {
 	`
 	if _, err := db.Exec(ftsSchema); err != nil {
 		log.Printf("[WARN] 初始化 FTS5 表告警 (将使用 LIKE 降级搜索): %v", err)
+	}
+
+	// Safely place historical editor uploads only when they have exactly one stable document reference.
+	if _, err := db.Exec(`INSERT OR IGNORE INTO media_folders (name, parent_id, document_id, created_at, updated_at)
+		SELECT d.title, 0, d.id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM documents d
+		WHERE EXISTS (SELECT 1 FROM media_document_refs r WHERE r.document_id = d.id)`); err != nil {
+		return err
+	}
+	result, err := db.Exec(`UPDATE media SET folder_id = (SELECT f.id FROM media_folders f JOIN media_document_refs r ON r.document_id = f.document_id WHERE r.media_id = media.id)
+		WHERE (folder_id = 0 OR folder_id IS NULL)
+		AND 1 = (SELECT COUNT(*) FROM media_document_refs r WHERE r.media_id = media.id)`)
+	if err != nil {
+		return err
+	}
+	if moved, err := result.RowsAffected(); err == nil && moved > 0 {
+		log.Printf("[media-folder-migrate] moved_unorganized=%d", moved)
 	}
 
 	// 初始默认数据播种

@@ -18,10 +18,41 @@ import {
 import { api } from '../../api';
 import type { User } from '../../api';
 import { AuthContext } from '../../auth/useAuth';
+import { AdminPageShell } from './AdminPageShell';
 
 interface AdminOutletContext {
   user?: User | null;
 }
+
+interface AdminNavItemData {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  end?: boolean;
+  trailing?: React.ReactNode;
+}
+
+const AdminNavItem = ({ item, onNavigate }: { item: AdminNavItemData; onNavigate: () => void }) => {
+  const Icon = item.icon;
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        `flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors ${
+          isActive
+            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+        }`
+      }
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{item.label}</span>
+      <span className="ml-auto flex min-w-4 justify-end">{item.trailing}</span>
+    </NavLink>
+  );
+};
 
 export const AdminLayout: React.FC = () => {
   const outletContext = useOutletContext<AdminOutletContext | null>();
@@ -43,14 +74,7 @@ export const AdminLayout: React.FC = () => {
     }
   };
 
-  interface NavItem {
-    to: string;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    end?: boolean;
-  }
-
-  const navItems: NavItem[] = [
+  const navItems: AdminNavItemData[] = [
     { to: '/wang/dashboard', label: '控制台概览', icon: LayoutDashboard },
     { to: '/wang/documents', label: '文档管理', icon: FileText },
     { to: '/wang/categories', label: '分类管理', icon: FolderTree },
@@ -60,6 +84,8 @@ export const AdminLayout: React.FC = () => {
     { to: '/wang/users', label: '用户管理', icon: Users },
   ];
   const isEditorWorkspace = /^\/wang\/documents\/(?:new|\d+)$/.test(location.pathname);
+  const isMediaWorkspace = location.pathname === '/wang/media';
+  const isWideWorkspace = isEditorWorkspace || isMediaWorkspace || location.pathname === '/wang/documents';
   const currentPage = isEditorWorkspace
     ? '文档编辑'
     : navItems.find((item) => location.pathname.startsWith(item.to))?.label || '管理控制台';
@@ -80,7 +106,7 @@ export const AdminLayout: React.FC = () => {
 
       {/* Admin Header */}
       <header className="sticky top-0 z-30 h-16 border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-xl transition-colors dark:border-slate-800/80 dark:bg-slate-900/85 sm:px-6">
-        <div className={`${isEditorWorkspace ? 'layout-workspace' : 'layout-shell'} flex h-full items-center justify-between gap-3`}>
+        <div className={`${isWideWorkspace ? 'layout-workspace' : 'layout-shell'} flex h-full items-center justify-between gap-3`}>
           <div className="flex min-w-0 items-center space-x-3">
             {isEditorWorkspace && (
               <button
@@ -137,7 +163,7 @@ export const AdminLayout: React.FC = () => {
       </header>
 
       {/* Main Container */}
-      <div className={`${isEditorWorkspace ? 'layout-workspace admin-editor-route-layout' : 'layout-shell'} flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 md:py-8 lg:flex-row lg:gap-8`}>
+      <div className={`${isWideWorkspace ? 'layout-workspace' : 'layout-shell'} ${isEditorWorkspace ? 'admin-editor-route-layout' : ''} flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 md:py-8 lg:flex-row lg:gap-6`}>
         {isEditorWorkspace && isEditorAdminNavOpen && (
           <button
             type="button"
@@ -149,33 +175,13 @@ export const AdminLayout: React.FC = () => {
         {/* Left Admin Sidebar */}
         <aside
           data-drawer-open={isEditorAdminNavOpen ? 'true' : 'false'}
-          className={`static flex h-auto w-full flex-shrink-0 flex-col border-b border-slate-200/80 pb-4 lg:sticky lg:top-[5.25rem] lg:h-[calc(100vh-6.75rem)] lg:border-b-0 lg:border-r lg:pr-5 dark:border-slate-800/80 ${isEditorWorkspace ? 'admin-editor-global-nav lg:w-56' : 'lg:w-60'}`}
+          className={`static flex h-auto w-full flex-shrink-0 flex-col border-b border-slate-200/80 pb-4 lg:sticky lg:top-[5.25rem] lg:h-[calc(100vh-6.75rem)] lg:border-b-0 lg:border-r lg:pr-4 dark:border-slate-800/80 ${isEditorWorkspace ? 'admin-editor-global-nav lg:w-56' : 'lg:w-[var(--admin-sidebar-width)]'}`}
         >
           <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:block lg:space-y-1.5">
             <div className="col-span-2 px-3.5 pb-2.5 pt-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:col-span-3 lg:block">
               内容工作台
             </div>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  onClick={() => setIsEditorAdminNavOpen(false)}
-                  className={({ isActive }) =>
-                    `flex min-h-10 items-center space-x-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 shadow-xs dark:bg-blue-950/60 dark:text-blue-300 font-bold'
-                        : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white'
-                    }`
-                  }
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
+            {navItems.map((item) => <AdminNavItem key={item.to} item={item} onNavigate={() => setIsEditorAdminNavOpen(false)} />)}
           </nav>
         </aside>
 
@@ -184,7 +190,7 @@ export const AdminLayout: React.FC = () => {
           data-workspace={isEditorWorkspace ? 'wide' : 'standard'}
           className={`flex min-w-0 flex-1 flex-col ${isEditorWorkspace ? 'admin-workspace-wide min-h-0 overflow-hidden p-3 sm:p-4' : 'admin-workspace-standard'}`}
         >
-          <Outlet />
+          {isWideWorkspace ? <div className="w-full"><Outlet /></div> : <AdminPageShell><Outlet /></AdminPageShell>}
         </main>
       </div>
     </div>

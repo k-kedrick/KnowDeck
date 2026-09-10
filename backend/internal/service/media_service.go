@@ -126,6 +126,7 @@ func (s *MediaService) Upload(file *multipart.FileHeader, folderID int64, docume
 		Size:         size,
 		Duration:     0,
 		Thumbnail:    "",
+		Source:       uploadSource(documentID, docTitle),
 	}
 
 	id, err := s.mediaRepo.Create(media)
@@ -135,6 +136,10 @@ func (s *MediaService) Upload(file *multipart.FileHeader, folderID int64, docume
 	}
 
 	media.ID = id
+	if documentID > 0 {
+		_ = s.mediaRepo.AddDocumentRef(id, documentID)
+		media.ReferenceCount = 1
+	}
 	return media, nil
 }
 
@@ -235,9 +240,12 @@ func (s *MediaService) Delete(id int64) error {
 		return errors.New("媒体文件不存在")
 	}
 
-	referenced, docTitle, err := s.mediaRepo.IsReferencedInDocuments(m.Filename, m.URL)
-	if err == nil && referenced {
-		return fmt.Errorf("该媒体文件仍被文档《%s》引用，暂无法物理删除", docTitle)
+	references, err := s.mediaRepo.ReferenceDocuments(id)
+	if err != nil {
+		return err
+	}
+	if len(references) > 0 {
+		return fmt.Errorf("该媒体文件仍被 %d 篇文档引用（例如《%s》），暂无法物理删除", len(references), references[0].Title)
 	}
 
 	if err := s.mediaRepo.Delete(id); err != nil {
@@ -249,6 +257,37 @@ func (s *MediaService) Delete(id int64) error {
 	return nil
 }
 
+func (s *MediaService) BatchDelete(ids []int64) (*model.BatchDeleteResult, error) {
+	result := &model.BatchDeleteResult{
+		Blocked: make([]*model.BlockedMedia, 0),
+	}
+	for _, id := range ids {
+		m, err := s.mediaRepo.GetByID(id)
+		if err != nil || m == nil {
+			continue
+		}
+		refs, err := s.mediaRepo.ReferenceDocuments(id)
+		if err != nil {
+			return nil, err
+		}
+		if len(refs) > 0 {
+			result.BlockedCount++
+			result.Blocked = append(result.Blocked, &model.BlockedMedia{
+				ID:           m.ID,
+				OriginalName: m.OriginalName,
+				Filename:     m.Filename,
+				References:   refs,
+			})
+			continue
+		}
+		if err := s.mediaRepo.Delete(id); err == nil {
+			_ = s.storage.Delete(m.Path)
+			result.DeletedCount++
+		}
+	}
+	return result, nil
+}
+
 func (s *MediaService) GetAbsolutePath(relPath string) (string, error) {
 	return s.storage.GetAbsolutePath(relPath)
 }
@@ -257,13 +296,31 @@ func (s *MediaService) ListFolders() ([]*model.MediaFolder, error) {
 	return s.folderRepo.List()
 }
 
-func (s *MediaService) CreateFolder(name string, documentID int64) (*model.MediaFolder, error) {
+func (s *MediaService) CreateFolder(name string, parentID int64, documentID int64) (*model.MediaFolder, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, errors.New("文件夹名称不能为空")
 	}
+	if parentID > 0 {
+		parent, err := s.folderRepo.GetByID(parentID)
+		if err != nil || parent == nil {
+			return nil, errors.New("父文件夹不存在")
+		}
+		depth := 1
+		for parent.ParentID > 0 {
+			depth++
+			if depth >= 8 {
+				return nil, errors.New("文件夹最多支持 8 层")
+			}
+			parent, err = s.folderRepo.GetByID(parent.ParentID)
+			if err != nil || parent == nil {
+				return nil, errors.New("父文件夹层级无效")
+			}
+		}
+	}
 	folder := &model.MediaFolder{
 		Name:       name,
+		ParentID:   parentID,
 		DocumentID: documentID,
 	}
 	id, err := s.folderRepo.Create(folder)
@@ -293,8 +350,25 @@ func (s *MediaService) MoveMedia(id int64, folderID int64) error {
 	return s.mediaRepo.MoveToFolder(id, folderID)
 }
 
-func (s *MediaService) GetFolderStats() (int64, int64, error) {
-	return s.folderRepo.GetStats()
+func (s *MediaService) BatchMove(ids []int64, folderID int64) error {
+	return s.mediaRepo.BatchMove(ids, folderID)
+}
+
+func (s *MediaService) References(id int64) ([]*model.DocumentSummary, error) {
+	return s.mediaRepo.ReferenceDocuments(id)
+}
+
+func (s *MediaService) RebuildReferences() (int, error) {
+	return s.mediaRepo.RebuildReferences()
+}
+
+func (s *MediaService) GetFolderStats() (totalMedia int64, unclassifiedMedia int64, usedMedia int64, unusedMedia int64, docRefs []*model.DocumentMediaRef, err error) {
+	totalMedia, unclassifiedMedia, usedMedia, unusedMedia, err = s.folderRepo.GetStats()
+	if err != nil {
+		return 0, 0, 0, 0, nil, err
+	}
+	docRefs, _ = s.folderRepo.ListDocumentReferences()
+	return totalMedia, unclassifiedMedia, usedMedia, unusedMedia, docRefs, nil
 }
 
 func (s *MediaService) ResolveFolderID(folderID int64, documentID int64, docTitle string) int64 {
@@ -302,44 +376,24 @@ func (s *MediaService) ResolveFolderID(folderID int64, documentID int64, docTitl
 		return folderID
 	}
 	if documentID > 0 {
-		folder, err := s.folderRepo.GetByDocumentID(documentID)
-		if err == nil && folder != nil {
+		if folder, err := s.folderRepo.GetByDocumentID(documentID); err == nil && folder != nil {
+			return folder.ID
+		}
+		if created, err := s.CreateFolder(docTitle, 0, documentID); err == nil {
+			return created.ID
+		}
+		if folder, err := s.folderRepo.GetByDocumentID(documentID); err == nil && folder != nil {
 			return folder.ID
 		}
 	}
-	folderName := strings.TrimSpace(docTitle)
-	if folderName == "" && documentID > 0 && s.docRepo != nil {
-		doc, err := s.docRepo.GetByID(documentID)
-		if err == nil && doc != nil && doc.Title != "" {
-			folderName = doc.Title
-		}
-	}
-	if folderName == "" && documentID > 0 {
-		folderName = fmt.Sprintf("文档 #%d", documentID)
-	}
-	if folderName == "" {
-		folderName = "未分类"
-		return 0
-	}
-
-	// 查找是否已有同名文件夹
-	folders, _ := s.folderRepo.List()
-	for _, f := range folders {
-		if (documentID > 0 && f.DocumentID == documentID) || f.Name == folderName {
-			return f.ID
-		}
-	}
-
-	// 创建新专属文件夹
-	newFolder := &model.MediaFolder{
-		Name:       folderName,
-		DocumentID: documentID,
-	}
-	newID, err := s.folderRepo.Create(newFolder)
-	if err == nil && newID > 0 {
-		return newID
-	}
 	return 0
+}
+
+func uploadSource(documentID int64, docTitle string) string {
+	if documentID > 0 || strings.TrimSpace(docTitle) != "" {
+		return "document/editor"
+	}
+	return "manual upload"
 }
 
 func (s *MediaService) SaveExternalImage(rawURL string, folderID int64, documentID int64, docTitle string) (*model.Media, error) {
@@ -441,6 +495,7 @@ func (s *MediaService) SaveExternalImage(rawURL string, folderID int64, document
 		Size:         size,
 		Duration:     0,
 		Thumbnail:    "",
+		Source:       "document/editor",
 	}
 
 	id, err := s.mediaRepo.Create(media)
@@ -450,6 +505,10 @@ func (s *MediaService) SaveExternalImage(rawURL string, folderID int64, document
 	}
 
 	media.ID = id
+	if documentID > 0 {
+		_ = s.mediaRepo.AddDocumentRef(id, documentID)
+		media.ReferenceCount = 1
+	}
 	return media, nil
 }
 
