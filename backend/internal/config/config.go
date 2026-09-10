@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	developmentJWTSecret = "feishu-kb-secret-key-change-in-production-2026"
-	developmentAdminPass = "change-me"
+	developmentJWTSecret  = "feishu-kb-secret-key-change-in-production-2026"
+	developmentAdminPass  = "change-me"
+	productionPlaceholder = "change-me"
 )
 
 type Config struct {
@@ -126,10 +127,10 @@ func (c *Config) Validate() error {
 	if strings.EqualFold(parsedSiteURL.Hostname(), "localhost") || parsedSiteURL.Hostname() == "127.0.0.1" {
 		return errors.New("production 环境的 SITE_URL 不能使用 localhost")
 	}
-	if c.JWTSecret == developmentJWTSecret || len(c.JWTSecret) < 32 {
+	if isProductionPlaceholder(c.JWTSecret) || len(c.JWTSecret) < 32 {
 		return errors.New("production 环境必须配置至少 32 字符的非默认 JWT_SECRET")
 	}
-	if c.AdminPass == developmentAdminPass || len(c.AdminPass) < 12 {
+	if isProductionPlaceholder(c.AdminPass) || len(c.AdminPass) < 12 {
 		return errors.New("production 环境必须配置至少 12 字符的非默认 ADMIN_PASSWORD")
 	}
 	for _, origin := range c.CORSOrigins {
@@ -143,6 +144,17 @@ func (c *Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+func isProductionPlaceholder(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	normalized := strings.ReplaceAll(value, "_", "-")
+	return value == "" ||
+		value == developmentJWTSecret ||
+		value == developmentAdminPass ||
+		strings.Contains(normalized, productionPlaceholder) ||
+		strings.Contains(value, "development-only") ||
+		strings.Contains(normalized, "generate-a-random-secret")
 }
 
 func loadDotEnv(path string) {

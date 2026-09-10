@@ -1,7 +1,7 @@
 services:
   backend:
     build:
-      context: ../..
+      context: .
       dockerfile: deploy/docker/backend.Dockerfile
     environment:
       APP_ENV: production
@@ -11,18 +11,18 @@ services:
       DB_PATH: /data/app.db
       UPLOAD_DIR: /uploads
       SITE_NAME: ${SITE_NAME:-知识库}
-      SITE_URL: ${SITE_URL:?Set SITE_URL to the public HTTPS origin in .env.production}
+      SITE_URL: ${SITE_URL:?Set SITE_URL to the public HTTPS origin in .env}
       FRONTEND_INDEX_PATH: ""
       FRONTEND_INDEX_URL: http://frontend/index.html
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-1024}
       MAX_IMAGE_MB: ${MAX_IMAGE_MB:-20}
       MAX_VIDEO_MB: ${MAX_VIDEO_MB:-1024}
       MAX_FILE_MB: ${MAX_FILE_MB:-100}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-72}
-      ADMIN_USER: ${ADMIN_USER:?Set ADMIN_USER in .env.production}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env.production}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS in .env.production}
+      ADMIN_USER: ${ADMIN_USER:?Set ADMIN_USER in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS in .env}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
     volumes:
       - kb-data:/data
@@ -44,7 +44,7 @@ services:
 
   frontend:
     build:
-      context: ../..
+      context: .
       dockerfile: deploy/docker/frontend.Dockerfile
     depends_on:
       backend:

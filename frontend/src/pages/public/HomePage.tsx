@@ -19,15 +19,6 @@ const getCachedTags = (): Tag[] => {
   }
 };
 
-const getCachedRecentDocuments = (): DocumentListItem[] => {
-  try {
-    const raw = localStorage.getItem('cached_recent_docs');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-
 const countCategoryDocuments = (category: CategoryTreeNode): number =>
   (category.documents?.length || 0)
   + (category.children || []).reduce((total, child) => total + countCategoryDocuments(child), 0);
@@ -37,9 +28,8 @@ export const HomePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [cachedDocuments] = useState(getCachedRecentDocuments);
-  const [recentDocuments, setRecentDocuments] = useState<DocumentListItem[]>(cachedDocuments);
-  const [recentLoading, setRecentLoading] = useState(cachedDocuments.length === 0);
+  const [recentDocuments, setRecentDocuments] = useState<DocumentListItem[]>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
   const [tags, setTags] = useState<Tag[]>(() => getCachedTags());
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -66,9 +56,6 @@ export const HomePage = () => {
     api.getDocuments({ page: 1, page_size: 8 }, controller.signal).then((data) => {
       if (!controller.signal.aborted && data?.list) {
         setRecentDocuments(data.list);
-        try {
-          localStorage.setItem('cached_recent_docs', JSON.stringify(data.list));
-        } catch {}
       }
     }).catch(() => undefined).finally(() => {
       if (!controller.signal.aborted) setRecentLoading(false);

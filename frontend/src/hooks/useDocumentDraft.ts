@@ -15,7 +15,6 @@ export interface LocalDraftData {
   tags: string[];
   updatedAt: number;
   serverUpdatedAt?: string;
-  editorEngine?: 'legacy' | 'tiptap';
   contentFormat?: 'empty' | 'markdown' | 'html' | 'mixed';
 }
 
@@ -123,7 +122,6 @@ const normalizeDraft = (value: unknown, key: string): LocalDraftData | null => {
     tags: Array.isArray(parsed.tags) ? parsed.tags.filter((tag): tag is string => typeof tag === 'string') : [],
     updatedAt: parsed.updatedAt,
     serverUpdatedAt: typeof parsed.serverUpdatedAt === 'string' ? parsed.serverUpdatedAt : undefined,
-    editorEngine: parsed.editorEngine,
     contentFormat: parsed.contentFormat,
   };
 };

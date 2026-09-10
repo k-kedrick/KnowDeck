@@ -68,6 +68,53 @@ func TestListLoadsTagsInBatchAndPreservesDocumentOrder(t *testing.T) {
 	}
 }
 
+func TestDeleteRemovesPublishedDocumentFromPublicListAndSearch(t *testing.T) {
+	db := newTestDB(t)
+	if _, err := db.Exec("DELETE FROM document_tags; DELETE FROM documents"); err != nil {
+		t.Fatalf("clear seed documents: %v", err)
+	}
+
+	repo := NewDocumentRepository(db)
+	doc := &model.Document{
+		Title:    "Delete visibility marker",
+		Slug:     "delete-visibility-marker",
+		Content:  "delete-visibility-unique-token",
+		Excerpt:  "delete-visibility-unique-token",
+		Status:   "published",
+		AuthorID: 1,
+	}
+	id, err := repo.Create(doc)
+	if err != nil {
+		t.Fatalf("create published document: %v", err)
+	}
+
+	publicList, total, err := repo.List(DocumentFilter{Status: "published", Page: 1, PageSize: 10})
+	if err != nil || total != 1 || len(publicList) != 1 || publicList[0].ID != id {
+		t.Fatalf("published list before delete = %#v, total=%d, err=%v", publicList, total, err)
+	}
+	search := NewSearchRepository(db)
+	beforeSearch, err := search.Search("delete-visibility-unique-token", 10, true)
+	if err != nil || len(beforeSearch) != 1 || beforeSearch[0].ID != id {
+		t.Fatalf("public search before delete = %#v, err=%v", beforeSearch, err)
+	}
+
+	if err := repo.Delete(id); err != nil {
+		t.Fatalf("delete document: %v", err)
+	}
+	publicList, total, err = repo.List(DocumentFilter{Status: "published", Page: 1, PageSize: 10})
+	if err != nil || total != 0 || len(publicList) != 0 {
+		t.Fatalf("published list after delete = %#v, total=%d, err=%v", publicList, total, err)
+	}
+	afterSearch, err := search.Search("delete-visibility-unique-token", 10, true)
+	if err != nil || len(afterSearch) != 0 {
+		t.Fatalf("public search after delete = %#v, err=%v", afterSearch, err)
+	}
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM documents WHERE id = ?", id).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("deleted document count=%d, err=%v", count, err)
+	}
+}
+
 func TestListMatchesAllRequestedTagsAndKeepsSingleTagCompatibility(t *testing.T) {
 	db := newTestDB(t)
 	if _, err := db.Exec("DELETE FROM document_tags; DELETE FROM documents; DELETE FROM tags"); err != nil {

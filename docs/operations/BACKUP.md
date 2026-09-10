@@ -49,8 +49,8 @@ docker run --rm \
 
 # 使用镜像内的 app 账号修正卷权限；不会改写文件内容。
 docker compose --project-name knowledge-base \
-  --env-file .env.production \
-  -f deploy/docker/docker-compose.yml \
+  --env-file .env \
+  -f docker-compose.yml \
   run --rm --no-deps --user root backend \
   sh -c 'chown -R app:app /data /uploads'
 ```
@@ -67,8 +67,8 @@ BACKUP_DIR="/srv/backups/boke_$(date +%Y%m%d_%H%M%S)"
 install -d -m 700 "$BACKUP_DIR"
 
 docker compose --project-name knowledge-base \
-  --env-file .env.production \
-  -f deploy/docker/docker-compose.yml stop backend
+  --env-file .env \
+  -f docker-compose.yml stop backend
 
 docker run --rm \
   -v docker_kb-data:/data:ro \
@@ -81,11 +81,11 @@ docker run --rm \
     sha256sum /backup/data.tar.gz /backup/uploads.tar.gz > /backup/SHA256SUMS
   '
 
-install -m 600 .env.production "$BACKUP_DIR/env.production"
+install -m 600 .env "$BACKUP_DIR/env"
 
 docker compose --project-name knowledge-base \
-  --env-file .env.production \
-  -f deploy/docker/docker-compose.yml start backend
+  --env-file .env \
+  -f docker-compose.yml start backend
 
 cd "$BACKUP_DIR" && sha256sum -c SHA256SUMS
 ```
@@ -103,8 +103,8 @@ cd "$RESTORE_DIR" && sha256sum -c SHA256SUMS
 cd /srv/boke
 
 docker compose --project-name knowledge-base \
-  --env-file .env.production \
-  -f deploy/docker/docker-compose.yml down
+  --env-file .env \
+  -f docker-compose.yml down
 
 docker run --rm \
   -v docker_kb-data:/data \
@@ -118,14 +118,14 @@ docker run --rm \
   '
 
 docker compose --project-name knowledge-base \
-  --env-file .env.production \
-  -f deploy/docker/docker-compose.yml \
+  --env-file .env \
+  -f docker-compose.yml \
   run --rm --no-deps --user root backend \
   sh -c 'chown -R app:app /data /uploads'
 
 docker compose --project-name knowledge-base \
-  --env-file .env.production \
-  -f deploy/docker/docker-compose.yml up -d
+  --env-file .env \
+  -f docker-compose.yml up -d
 curl --fail http://127.0.0.1:5185/api/health
 ```
 

@@ -97,7 +97,7 @@ SQLite DSN 启用 `foreign_keys(1)`、WAL、`busy_timeout(5000)` 和 `synchronou
 
 - 编辑器：`TiptapEditor`，复用既有持久化和阅读兼容边界。
 - 阅读器：Markdown 内容经 remark/rehype 管道处理；HTML 内容先清洗再呈现。数学插件按需加载。
-- 本地草稿：`useDocumentDraft` 保存编辑器引擎、内容格式和文档元数据，正式保存成功后按快照一致性清理。
+- 本地草稿：`useDocumentDraft` 保存内容格式和文档元数据，正式保存成功后按快照一致性清理。
 
 ## 文件存储
 
@@ -107,7 +107,7 @@ SQLite DSN 启用 `foreign_keys(1)`、WAL、`busy_timeout(5000)` 和 `synchronou
 
 ## 部署
 
-`deploy/docker/docker-compose.yml` 定义：
+`docker-compose.yml` 定义：
 
 - backend：非 root 运行，挂载 `docker_kb-data` 和 `docker_kb-uploads`。
 - frontend：Nginx 静态服务，仅绑定宿主回环地址，上传卷只读挂载。

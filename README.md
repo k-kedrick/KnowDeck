@@ -1,4 +1,4 @@
-# 个人博客与知识库
+# KnowDeck
 
 面向个人发布与知识沉淀的轻量系统：访客通过公开页面阅读、搜索文章，管理员通过受保护的后台管理文档、分类、标签、媒体与站点设置。
 
@@ -43,7 +43,7 @@ boke/
 ├── uploads/                          # 根目录预留上传目录
 ├── .dockerignore
 ├── .env.example
-├── .env.production.example
+├── docker-compose.yml                 # Docker production deployment
 ├── .gitignore
 ├── README.md
 ├── ARCHITECTURE.md
@@ -103,12 +103,9 @@ npm run build
 ## Docker 部署
 
 ```bash
-cp .env.production.example .env.production
-
-docker compose --project-name knowledge-base \
-  --env-file .env.production \
-  -f deploy/docker/docker-compose.yml \
-  up -d --build
+cp .env.example .env
+# Edit .env: replace every CHANGE_ME value and set your public HTTPS domain.
+docker compose up -d --build
 ```
 
 前端只映射到宿主机 `127.0.0.1:5185`，后端仅暴露在 Compose 网络的 `8090`。
@@ -122,6 +119,26 @@ docker compose --project-name knowledge-base \
 - 至少 12 字符的非默认 `ADMIN_PASSWORD`。
 
 生产部署、数据迁移、备份和恢复的权威流程见 `docs/operations/BACKUP.md`。
+
+### 配置与持久化
+
+`.env` 是部署唯一的环境文件；不要提交它。`JWT_SECRET`、`ADMIN_USER`、`ADMIN_PASSWORD`、`SITE_URL` 和 `CORS_ALLOWED_ORIGINS` 必须替换示例值。`ADMIN_PASSWORD` 仅用于首次创建管理员，之后修改环境变量不会重置已有账号。
+
+Docker 使用两个命名卷：`docker_kb-data` 保存 SQLite 数据库，`docker_kb-uploads` 保存所有上传文件。升级时不要使用 `docker compose down -v`。
+
+### 升级与备份
+
+```bash
+git pull
+docker compose build
+docker compose up -d
+```
+
+升级前按 [备份、迁移与恢复](docs/operations/BACKUP.md) 同时备份数据库卷和上传卷；两者是同一个业务数据单元。
+
+### 生产反向代理
+
+将 HTTPS 反向代理指向 `127.0.0.1:5185`，并使用 `deploy/nginx/host-site.example.conf` 作为宿主 Nginx 站点配置参考。不要直接公开 SQLite、上传卷或后端端口。
 
 ## Codex 项目维护
 
@@ -164,3 +181,7 @@ Codex 应按照仓库默认工作流自动处理。
 - [编辑器内容格式](docs/specs/EDITOR_FORMAT.md)
 - [功能验收矩阵](docs/testing/FEATURE_TEST_MATRIX.md)
 - [Codex 当前状态与验证缓存](CODEX_PROJECT_STATE.md)
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

@@ -30,8 +30,11 @@ func TestProductionRejectsUnsafeSecretsAndOrigins(t *testing.T) {
 		mutate func(*Config)
 	}{
 		{"default jwt secret", func(c *Config) { c.JWTSecret = developmentJWTSecret }},
+		{"documented development jwt secret", func(c *Config) { c.JWTSecret = "development-only-secret-change-me-1234567890" }},
+		{"documented jwt placeholder", func(c *Config) { c.JWTSecret = "CHANGE_ME_generate-a-random-secret" }},
 		{"short jwt secret", func(c *Config) { c.JWTSecret = "too-short" }},
 		{"default admin password", func(c *Config) { c.AdminPass = developmentAdminPass }},
+		{"documented admin placeholder", func(c *Config) { c.AdminPass = "CHANGE_ME_admin-password" }},
 		{"short admin password", func(c *Config) { c.AdminPass = "short" }},
 		{"wildcard cors", func(c *Config) { c.CORSOrigins = []string{"*"} }},
 		{"trust all proxies", func(c *Config) { c.TrustedProxies = []string{"0.0.0.0/0"} }},

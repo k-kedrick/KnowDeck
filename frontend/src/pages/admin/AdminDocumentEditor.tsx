@@ -413,7 +413,6 @@ export const AdminDocumentEditor: React.FC = () => {
         tags,
         updatedAt: Date.now(),
         serverUpdatedAt: serverUpdatedAtRef.current,
-        editorEngine: 'tiptap',
         contentFormat: detectContentFormat(content),
       };
       if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) {
@@ -459,7 +458,6 @@ export const AdminDocumentEditor: React.FC = () => {
         tags: tagsRef.current,
         updatedAt: Date.now(),
         serverUpdatedAt: serverUpdatedAtRef.current,
-        editorEngine: 'tiptap',
         contentFormat: detectContentFormat(contentRef.current),
       };
       if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) return;
@@ -490,7 +488,6 @@ export const AdminDocumentEditor: React.FC = () => {
       tags: tagsRef.current,
       updatedAt: Date.now(),
       serverUpdatedAt: serverUpdatedAtRef.current,
-      editorEngine: 'tiptap',
       contentFormat: detectContentFormat(contentRef.current),
     };
     if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) return;
@@ -516,7 +513,6 @@ export const AdminDocumentEditor: React.FC = () => {
       tags,
       updatedAt: Date.now(),
       serverUpdatedAt: serverUpdatedAtRef.current,
-      editorEngine: 'tiptap',
       contentFormat: detectContentFormat(contentToStore),
     };
     if (isEdit && serverSnapshotRef.current && localDraftMatchesSnapshot(draftData, serverSnapshotRef.current)) {

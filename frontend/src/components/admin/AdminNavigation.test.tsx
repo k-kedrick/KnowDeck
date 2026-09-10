@@ -64,6 +64,23 @@ describe('admin document navigation', () => {
     expect(screen.queryByRole('link', { name: '新建文档' })).toBeNull();
   });
 
+  it('keeps the editor outlet in the constrained workspace flex chain', () => {
+    render(
+      <MemoryRouter initialEntries={['/wang/documents/42']}>
+        <Routes>
+          <Route element={<AuthOutlet />}>
+            <Route path="/wang" element={<AdminLayout />}>
+              <Route path="documents/:id" element={<div>编辑器内容</div>} />
+            </Route>
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const workspace = document.querySelector('main[data-workspace="wide"]');
+    expect(workspace?.firstElementChild?.className).toBe('flex min-h-0 flex-1 flex-col');
+  });
+
   it('keeps create and edit actions in document management', async () => {
     render(
       <MemoryRouter initialEntries={['/wang/documents']}>

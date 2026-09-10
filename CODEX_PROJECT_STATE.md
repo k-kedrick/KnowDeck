@@ -7,7 +7,7 @@
 - Lightweight personal blog and read-only knowledge base with an authenticated administration SPA.
 - Backend: Go 1.26.4, Gin, pure-Go SQLite (`modernc.org/sqlite`), local media storage.
 - Frontend: React 19, TypeScript 6, Vite 8, Tailwind CSS; Markdown/HTML rendering with DOMPurify and rehype sanitization.
-- Deployment: two Docker services. Frontend Nginx binds `127.0.0.1:5185`; backend is internal on `8090`; named volumes hold SQLite data and uploads. Local development uses frontend `3788` and backend `3799`.
+- Deployment: root `docker-compose.yml` defines two Docker services. Frontend Nginx binds `127.0.0.1:5185`; backend is internal on `8090`; named volumes hold SQLite data and uploads. Local development uses frontend `3788` and backend `3799`.
 - Local Git is initialized on branch `main`; initial project baseline: `1a48894`.
 - Repository-wide Codex behavior is defined by `AGENTS.md`.
 - `.agents/skills/project-owner/SKILL.md` is the default repository maintenance workflow.
@@ -31,7 +31,7 @@
 - Invites: plaintext codes are generated with `crypto/rand`, stored only as SHA-256 hashes, and consumed with a conditional SQLite update in the member-creation transaction.
 - User System: **COMPLETED** through U2. Admin user management and admin invite management are **COMPLETED**; `/wang/users` provides Users and Invites tabs backed by `/api/admin/users*` and `/api/admin/invites*`.
 - Document Access Control: **COMPLETED**. Backend enforces `access_level` on `/api/public/documents/:slug` (returning `locked: true` without body) and `/api/public/documents` (clearing `excerpt` for unauthenticated visitors). Frontend `ArticleCard` and `DocViewer` display dedicated locked badges and login/registration prompt cards.
-- Editor: `AdminDocumentEditor` defaults to `TiptapEditor`; set `VITE_EDITOR_ENGINE=legacy` only for the retained rollback path to `DocumentVisualEditor`. Both engines reuse drafts from `useDocumentDraft` and the same persistence/reader content contract.
+- Editor: `AdminDocumentEditor` uses `TiptapEditor` exclusively. It reuses drafts from `useDocumentDraft` and the existing persistence/reader content contract.
 - Critical paths: database/schema (`repository/db.go`), auth (`middleware/auth.go`, `service/auth_service.go`), file storage/media, document persistence, and the `DocViewer` sanitization/rendering pipeline.
 
 ## Current Fingerprints
@@ -40,14 +40,14 @@ Aggregate SHA-256 over sorted relevant inputs. The maintained-documentation fing
 
 | Scope | Fingerprint |
 | --- | --- |
-| Backend Go source + modules | `dc0d0dbb7145685c62dbcf0eaa328d79bd3d5bf119204c8e7177724f95f7aba3` |
-| Frontend source/config | `3762ad5d2b22440c8991214e52f81b445cbbf363705f7fb53cd3294ed970cb81` |
-| Deployment config | `80e147f0b82e2f40ec518eb83a42c15a71e0a8131a2c81ffe4a7f28df965ff6f` |
-| Maintained Markdown except this state file | `4678ec9641749f161437dc742703457639c2ef2d26efe5dfdc83c76cfe8f8d03` |
+| Backend Go source + modules | `069cab7f88cb686d5fbdd371f25779693947b295ec381df07388e7e62a089acf` |
+| Frontend source/config | `8d08d63cfbcfcf4c75f3cc6b62db1817d2e2317d79d154977843ee7ad1466f1c` |
+| Deployment config | `f066d94ca9bf9b31fadb4032bfa9097d33d4ee249ed97357f85c269fdd67aafd` |
+| Maintained Markdown except this state file | `2256c3e4fe2449f5ac563a41be4f459f929a44f990433afd8b1f2baa08a9d9bd` |
 
 The backend, frontend, and deployment fingerprints above remain valid only while their recorded input scopes remain unchanged.
 
-All four fingerprints were recomputed on 2026-09-08 from sorted tracked and nonignored pending-addition scope paths plus raw contents, with NUL separators between path/content records; the Markdown scope excludes this state file.
+All four fingerprints were recomputed on 2026-09-10 from sorted tracked and nonignored pending-addition scope paths plus raw contents, with NUL separators between path/content records; the Markdown scope excludes this state file.
 
 ## Documentation Map
 
@@ -68,14 +68,14 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 ### backend-tests
 
 - Full-suite command: `go test ./...`
-- Result: **PASS** on 2026-09-08 after U2 user/invite administration and security regression coverage.
+- Result: **PASS** on 2026-09-10 after production-placeholder validation was added.
 - Valid for the backend fingerprint above.
 - Invalidate when relevant backend Go source, modules, shared schema behavior, or affected callers change.
 
 ### backend-vet
 
 - Command: `go vet ./...`
-- Result: **PASS** on 2026-09-08 after U2 completion.
+- Result: **PASS** on 2026-09-10 after production-placeholder validation was added.
 - Invalidate when relevant backend Go source or modules change.
 
 ### frontend-build
@@ -83,14 +83,15 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - Command: `npm.cmd run build`
 - Result: **PASS** on 2026-09-08 after frontend UI modern aesthetic upgrade (`tsc -b && vite build`).
 - Note: Vite reports the lazy Tiptap chunk at 544.26 kB minified, above its 500 kB advisory threshold.
+- Result refreshed: **PASS** on 2026-09-10 after removing obsolete legacy-editor metadata and compatibility-path wording.
 - Valid for the frontend fingerprint above.
 - Invalidate when relevant frontend source, build configuration, TypeScript configuration, or dependencies change.
 
 ### frontend-lint
 
 - Command: `npm.cmd run lint`
-- Result: **PASS** on 2026-09-08 with 12 pre-existing warnings and no U2 page warning.
-- Warnings: 10 `react(set-state-in-effect)`, one `react(refs)` in `TiptapEditor.tsx`, and one `react(only-export-components)` in `DocumentVisualEditor.tsx`.
+- Result: **PASS** on 2026-09-10 with 20 warnings and no errors.
+- Warnings: React effect/dependency/manual-memoization diagnostics in existing UI modules, plus `react(refs)` in `TiptapEditor.tsx`; none were introduced by the release cleanup.
 - Valid for the frontend fingerprint above.
 - Invalidate when affected frontend source or lint configuration changes.
 
@@ -99,20 +100,32 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - U2 focused command: `npm.cmd test -- src/pages/admin/AdminUsersPage.test.tsx src/api/index.test.ts --reporter=dot`
 - U2 focused result: **15/15 PASS** on 2026-09-08.
 - Full-suite command: `npm.cmd test -- --reporter=dot`
-- Full-suite result: **239/239 PASS** on 2026-09-08 (39 test files passed, 1 skipped). All test files including `App.test.tsx`, `AdminDashboardPage.test.tsx`, and `AdminUsersPage.test.tsx` passed.
+- Full-suite result: **226/226 PASS**, 1 skipped (46 test files) on 2026-09-10.
 
 ### deployment-compose-config
 
-- Command: `docker compose --env-file .env.production.example -f deploy/docker/docker-compose.yml config`
-- Result: **PASS** on 2026-09-07 with required production placeholders supplied; frontend publishes `127.0.0.1:5185:80` and backend remains Compose-internal on `8090`.
+- Command: `docker compose --env-file .env.example config --quiet`
+- Result: **PASS** on 2026-09-10. The root Compose entry point publishes frontend at `127.0.0.1:5185:80` and keeps backend Compose-internal on `8090`.
 - Valid for the deployment fingerprint above.
+
+### deployment-runtime-rc
+
+- Isolated project: `boke-rc-validation` with disposable named volumes, a fresh production configuration, and a first-boot administrator.
+- Result: **PASS** on 2026-09-10. `docker compose build --no-cache` built backend (85 MB) and frontend (97.3 MB); both services became healthy. Public/admin HTTP smoke, document create/edit/publish/read/delete, image upload/public access/article reference, restart, `down`/`up`, non-root execution, placeholder-secret rejection, and disposable-volume backup all passed.
+- Cleanup: the disposable containers, network, volumes, test document, and test image were removed after validation.
+
+### browser-runtime-acceptance
+
+- Browser: Chrome headless via Playwright against the Docker production build; viewports `1440x900` and `1024x900`.
+- Result: **PASS** on 2026-09-10. Real login/session refresh, all admin surfaces, Tiptap initialization, Chinese paste input, headings, bold, draft/reload/second-save/publish, image insertion, public rendering, deep-route refresh, back/forward navigation, responsive smoke, lazy Tiptap chunk loading, and UI deletion of test data passed with no console errors, page errors, failed resource requests, or HTTP 5xx responses.
+- Native IME composition was not simulated; Chinese text was inserted through browser paste input.
 
 ### Not Verified
 
 - Browser interaction/E2E behavior. HTTP runtime checks returned 200 for `/`, `/wang`, `/wang/users`, and backend `/api/health` on 2026-09-08.
-- Real Docker image/runtime behavior.
 - Production Nginx/domain/TLS integration.
-- Backup/restore.
+- Restore from a backup archive.
+- Native IME composition behavior.
 - Real-server resource usage.
 - Local production-data migration.
 - Race detector: unavailable in the current environment because `go test -race` requires CGO.
@@ -120,9 +133,9 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 ## Known Risks / TODO
 
 1. **P2 - Frontend test reliability:** one async/lazy document-route test in `App.test.tsx` failed in the full suite while U2 focused tests passed; stabilize its synchronization and rerun the full suite.
-2. **P3 - Frontend quality debt:** resolve the 12 lint warnings incrementally in affected modules.
+2. **P3 - Frontend quality debt:** resolve the 20 lint warnings incrementally in affected modules.
 3. **P3 - Tiptap bundle size:** assess the lazy Tiptap chunk size before making Tiptap the default editor.
-4. **Operational:** production deployment, persistent-volume migration, backup/restore, and browser acceptance remain unverified.
+4. **Operational:** production Nginx/domain/TLS integration, persistent-volume migration, backup restore, and native IME composition remain unverified.
 5. **Operational:** manual browser acceptance remains available at `http://127.0.0.1:3788`, with the protected management entry at `/wang`.
 6. **Planned U3+:** article/search/SEO access controls and member login/register frontend UI are not implemented.
 
@@ -177,7 +190,7 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - **COMPLETED**:
   1. **Schema & N:M Relations**: Created `media_document_refs` table (`media_id`, `document_id`) with foreign keys, composite primary key, and indexed queries; added `media.source` column (`document/editor`, `manual upload`, `legacy/import`).
   2. **Storage Stability & Zero Disk Mutation**: Maintained absolute physical storage paths without renaming or moving files on disk. Classification, folder organization, and document associations are managed purely through database logic.
-  3. **Editor & Document Lifecycle Integration**: TipTap and Legacy editor uploads carry `document_id` and register references immediately; `DocumentService.Create` and `Update` automatically sync references by parsing Markdown / HTML media URLs (`img src`, `video src`, `source src`, Markdown links); `DocumentService.Delete` cascades reference deletion without affecting media assets.
+  3. **Editor & Document Lifecycle Integration**: Editor uploads carry `document_id` and register references immediately; `DocumentService.Create` and `Update` automatically sync references by parsing Markdown / HTML media URLs (`img src`, `video src`, `source src`, Markdown links); `DocumentService.Delete` cascades reference deletion without affecting media assets.
   4. **Strict Delete Protection**: Single deletion is blocked if `reference_count > 0`, displaying a modal with referencing documents; batch deletion (`POST /api/admin/media/batch-delete`) checks references, deletes only unreferenced items, and preserves referenced files with detailed reporting.
   5. **Smart Reconcile**: Added `POST /api/admin/media/rebuild-references` to safely and idempotently rescan all document contents and rebuild media references without modifying document text or disk files.
   6. **UI & Navigation Overhaul**: Redesigned `/wang/media` with clear information hierarchy:

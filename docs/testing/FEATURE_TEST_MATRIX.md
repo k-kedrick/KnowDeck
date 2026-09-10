@@ -33,8 +33,7 @@
 | 文档列表/状态 | `AdminDocumentList.tsx`、document handler/service/repository | `document_repository_test.go`、service/API tests | 筛选、分页、快速状态切换 |
 | 文档属性与保存 | `AdminDocumentEditor.tsx`、payload/comparison utilities | properties/payload/comparison tests | 新建、更新、发布、降为草稿 |
 | 本地草稿 | `useDocumentDraft.ts`、`AdminDocumentEditor.tsx` | hook 与 draft tests | 刷新恢复、冲突提示、存储满 |
-| 默认编辑器 | `DocumentVisualEditor.tsx`、`htmlToMarkdown.ts` | 对应组件与转换测试 | 选区工具栏、粘贴、图片/视频调整 |
-| Tiptap 编辑器 | `components/admin/tiptap/**` | Tiptap E2–E7、adapter、compatibility、benchmark tests | 开启环境变量后的真实编辑、焦点、表格和上传 |
+| 文档编辑器 | `components/admin/tiptap/**`、`htmlToMarkdown.ts` | Tiptap E2–E7、adapter、compatibility、benchmark tests | 真实编辑、焦点、表格和上传 |
 | 分类与标签 | manager pages、handlers/repositories | category/tag handler/repository tests | 层级循环防护、引用计数与删除 |
 | 媒体与文件夹 | `AdminMediaManager.tsx`、media handler/service/storage | media service/storage tests | 拖拽上传、移动、批量操作、引用防删 |
 | 设置与资料 | settings page/handler/service、auth profile | config/auth tests | 修改后即时呈现、密码变更 |

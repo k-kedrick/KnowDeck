@@ -190,7 +190,11 @@ export const AdminLayout: React.FC = () => {
           data-workspace={isEditorWorkspace ? 'wide' : 'standard'}
           className={`flex min-w-0 flex-1 flex-col ${isEditorWorkspace ? 'admin-workspace-wide min-h-0 overflow-hidden p-3 sm:p-4' : 'admin-workspace-standard'}`}
         >
-          {isWideWorkspace ? <div className="w-full"><Outlet /></div> : <AdminPageShell><Outlet /></AdminPageShell>}
+          {isWideWorkspace ? (
+            <div className={isEditorWorkspace ? 'flex min-h-0 flex-1 flex-col' : 'w-full'}>
+              <Outlet />
+            </div>
+          ) : <AdminPageShell><Outlet /></AdminPageShell>}
         </main>
       </div>
     </div>

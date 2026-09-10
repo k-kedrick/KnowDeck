@@ -183,7 +183,7 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
   return (
     <div
       ref={toolbarContainerRef}
-      className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-2 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/50"
+      className="relative z-50 flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-2 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/50"
       data-testid="tiptap-toolbar"
     >
       {/* Block Types */}

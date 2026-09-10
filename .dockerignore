@@ -6,7 +6,6 @@
 .env
 .env.*
 !.env.example
-!.env.production.example
 
 # Frontend dependencies and generated output
 frontend/node_modules
@@ -29,6 +28,17 @@ backend/*.db-wal
 backend/*.exe
 backend/kb-server
 *.log
+logs
+backup
+backups
+*.bak
+*.backup
+*.dump
+*.tar
+*.tar.gz
+*.zip
+tmp
+temp
 *.tmp
 *.temp
 coverage
@@ -38,4 +48,3 @@ coverage
 Thumbs.db
 .idea
 .vscode
-

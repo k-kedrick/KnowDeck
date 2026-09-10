@@ -8,7 +8,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-!.env.production.example
 
 # Backend Binaries & Data
 backend/server.exe
@@ -30,6 +29,17 @@ backend/uploads/*
 
 # Logs and local caches
 *.log
+logs/
+backup/
+backups/
+*.bak
+*.backup
+*.dump
+*.tar
+*.tar.gz
+*.zip
+tmp/
+temp/
 .cache/
 coverage/
 

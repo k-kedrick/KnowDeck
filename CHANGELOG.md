@@ -6,6 +6,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [v1.0.0] - 2026-09-10
+
+### Added
+
+- 首个稳定公开版本：个人博客与知识库、管理后台、分类标签、媒体资源、SQLite FTS5 搜索与 Docker Compose 部署。
+- 统一使用 TiptapEditor 的文档编辑体验，包含长文档编辑与文章大纲。
+
+### Fixed
+
+- 删除已发布文档后，公开最近更新与搜索结果保持一致。
+- 长富文本导入后，编辑器工作区保持受约束的独立滚动区域。
+
+### Changed
+
+- 生产部署统一使用根目录 `docker-compose.yml`、`.env.example` 与 `backend/.env.example`。
+
 ### Added
 
 - member 邀请码注册、登录与 `/api/auth/me`，以及管理员邀请码创建、列表和禁用 API。
