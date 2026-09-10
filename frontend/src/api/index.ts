@@ -269,6 +269,7 @@ export class ApiError extends Error {
 }
 
 const API_BASE = '/api';
+const CHUNKED_UPLOAD_THRESHOLD = 20 * 1024 * 1024;
 
 const httpErrorMessage = (status: number) => {
   const messages: Record<number, string> = {
@@ -313,6 +314,23 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> 
   }
 
   return json.data;
+}
+
+async function uploadChunk(url: string, body: Blob): Promise<void> {
+  const token = localStorage.getItem('kb_token');
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${url}`, { method: 'PUT', headers, body });
+  if (!res.ok) {
+    const errorText = await res.text();
+    let message = httpErrorMessage(res.status);
+    try {
+      message = JSON.parse(errorText).message || message;
+    } catch {
+      // The Cloudflare and Nginx error pages are intentionally surfaced by status.
+    }
+    throw new ApiError(message, res.status);
+  }
 }
 
 export const api = {
@@ -525,6 +543,21 @@ export const api = {
     file: File,
     options?: { folder_id?: number; document_id?: number; doc_title?: string }
   ): Promise<Media> => {
+    if (file.size > CHUNKED_UPLOAD_THRESHOLD) {
+      const session = await fetchJson<{ upload_id: string; chunk_size: number; chunks: number }>('/admin/media/upload-sessions', {
+        method: 'POST',
+        body: JSON.stringify({ filename: file.name, size: file.size, ...options }),
+      });
+      for (let index = 0; index < session.chunks; index += 1) {
+        const start = index * session.chunk_size;
+        await uploadChunk(
+          `/admin/media/upload-sessions/${session.upload_id}/chunks/${index}`,
+          file.slice(start, Math.min(start + session.chunk_size, file.size)),
+        );
+      }
+      return fetchJson<Media>(`/admin/media/upload-sessions/${session.upload_id}/complete`, { method: 'POST' });
+    }
+
     const token = localStorage.getItem('kb_token');
     const formData = new FormData();
     formData.append('file', file);

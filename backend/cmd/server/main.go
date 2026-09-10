@@ -181,6 +181,9 @@ func main() {
 
 		// 媒体与文件夹管理
 		apiAdmin.POST("/media/upload", adminMediaHandler.Upload)
+		apiAdmin.POST("/media/upload-sessions", adminMediaHandler.StartChunkUpload)
+		apiAdmin.PUT("/media/upload-sessions/:id/chunks/:index", adminMediaHandler.UploadChunk)
+		apiAdmin.POST("/media/upload-sessions/:id/complete", adminMediaHandler.CompleteChunkUpload)
 		apiAdmin.GET("/media", adminMediaHandler.List)
 		apiAdmin.POST("/media/rebuild-references", adminMediaHandler.RebuildReferences)
 		apiAdmin.POST("/media/batch-move", adminMediaHandler.BatchMove)

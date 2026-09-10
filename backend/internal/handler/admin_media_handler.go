@@ -41,6 +41,43 @@ func (h *AdminMediaHandler) Upload(c *gin.Context) {
 	response.SuccessMsg(c, "上传成功", media)
 }
 
+func (h *AdminMediaHandler) StartChunkUpload(c *gin.Context) {
+	var req service.ChunkUploadRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "分片上传参数无效")
+		return
+	}
+	id, chunks, err := h.mediaService.StartChunkUpload(req)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"upload_id": id, "chunk_size": h.mediaService.ChunkUploadSize(), "chunks": chunks})
+}
+
+func (h *AdminMediaHandler) UploadChunk(c *gin.Context) {
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil {
+		response.BadRequest(c, "分片序号无效")
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.mediaService.ChunkUploadSize()+1)
+	if err := h.mediaService.SaveChunk(c.Param("id"), index, c.Request.Body); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, nil)
+}
+
+func (h *AdminMediaHandler) CompleteChunkUpload(c *gin.Context) {
+	media, err := h.mediaService.CompleteChunkUpload(c.Param("id"))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.SuccessMsg(c, "上传成功", media)
+}
+
 func (h *AdminMediaHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))

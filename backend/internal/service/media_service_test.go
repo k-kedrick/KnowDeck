@@ -3,6 +3,8 @@ package service
 import (
 	"bytes"
 	"mime/multipart"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -36,6 +38,44 @@ func TestMimeForVerifiedContent(t *testing.T) {
 				t.Fatalf("verification result = %v, want %v", ok, tt.wantOK)
 			}
 		})
+	}
+}
+
+func TestChunkUploadCompletesVideoWithoutLoadingWholeFile(t *testing.T) {
+	db := newTestDB(t)
+	defer db.Close()
+	uploadDir := t.TempDir()
+	svc := NewMediaService(
+		repository.NewMediaRepository(db), repository.NewMediaFolderRepository(db), repository.NewDocumentRepository(db),
+		storage.NewLocalStorage(uploadDir, "/uploads"),
+		&config.Config{UploadDir: uploadDir, MaxImageMB: 20, MaxVideoMB: 1024, MaxFileMB: 100, MaxUploadMB: 1024},
+	)
+
+	data := make([]byte, chunkUploadSize+1)
+	copy(data, []byte{0, 0, 0, 24, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'})
+	id, chunks, err := svc.StartChunkUpload(ChunkUploadRequest{Filename: "large.mp4", Size: int64(len(data))})
+	if err != nil || chunks != 2 {
+		t.Fatalf("StartChunkUpload() id=%q chunks=%d err=%v", id, chunks, err)
+	}
+	for index := 0; index < chunks; index++ {
+		start := int64(index) * chunkUploadSize
+		end := start + chunkUploadSize
+		if end > int64(len(data)) {
+			end = int64(len(data))
+		}
+		if err := svc.SaveChunk(id, index, bytes.NewReader(data[start:end])); err != nil {
+			t.Fatalf("SaveChunk(%d): %v", index, err)
+		}
+	}
+	media, err := svc.CompleteChunkUpload(id)
+	if err != nil {
+		t.Fatalf("CompleteChunkUpload(): %v", err)
+	}
+	if media.MediaType != "video" || media.Size != int64(len(data)) {
+		t.Fatalf("completed media = %#v", media)
+	}
+	if _, err := os.Stat(filepath.Join(uploadDir, ".chunk_uploads", id)); !os.IsNotExist(err) {
+		t.Fatalf("chunk directory should be removed, stat err=%v", err)
 	}
 }
 

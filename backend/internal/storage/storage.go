@@ -14,6 +14,7 @@ import (
 
 type Storage interface {
 	Save(file *multipart.FileHeader, subDir string) (path string, url string, filename string, size int64, err error)
+	SaveReader(reader io.Reader, filename string, subDir string) (path string, url string, savedFilename string, size int64, err error)
 	SaveBytes(data []byte, filename string, subDir string) (path string, url string, savedFilename string, size int64, err error)
 	Delete(relativePath string) error
 	GetAbsolutePath(relativePath string) (string, error)
@@ -37,12 +38,21 @@ func NewLocalStorage(baseDir string, baseURL string) *LocalStorage {
 }
 
 func (s *LocalStorage) Save(file *multipart.FileHeader, subDir string) (string, string, string, int64, error) {
+	src, err := file.Open()
+	if err != nil {
+		return "", "", "", 0, fmt.Errorf("打开上传文件失败: %w", err)
+	}
+	defer src.Close()
+	return s.SaveReader(src, file.Filename, subDir)
+}
+
+func (s *LocalStorage) SaveReader(src io.Reader, filename string, subDir string) (string, string, string, int64, error) {
 	now := time.Now()
 	year := fmt.Sprintf("%d", now.Year())
 	month := fmt.Sprintf("%02d", now.Month())
 
 	// Safe unique filename
-	safeName := utils.SafeFilename(file.Filename)
+	safeName := utils.SafeFilename(filename)
 
 	// Subdir path: e.g., images/2026/08/
 	relFolder := filepath.Join(subDir, year, month)
@@ -55,12 +65,6 @@ func (s *LocalStorage) Save(file *multipart.FileHeader, subDir string) (string, 
 	targetFilePath := filepath.Join(targetFolder, safeName)
 	relFilePath := filepath.Join(relFolder, safeName)
 	relFilePath = filepath.ToSlash(relFilePath)
-
-	src, err := file.Open()
-	if err != nil {
-		return "", "", "", 0, fmt.Errorf("打开上传文件失败: %w", err)
-	}
-	defer src.Close()
 
 	dst, err := os.Create(targetFilePath)
 	if err != nil {

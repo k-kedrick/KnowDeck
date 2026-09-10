@@ -58,72 +58,57 @@ func (s *MediaService) Upload(file *multipart.FileHeader, folderID int64, docume
 	if file == nil {
 		return nil, errors.New("上传文件为空")
 	}
+	src, err := file.Open()
+	if err != nil {
+		return nil, fmt.Errorf("无法读取上传文件: %w", err)
+	}
+	defer src.Close()
+	return s.uploadReader(src, file.Filename, file.Size, folderID, documentID, docTitle)
+}
 
-	maxBytes := s.cfg.MaxUploadMB * 1024 * 1024
-	if file.Size > maxBytes {
-		return nil, fmt.Errorf("文件大小超过上限 (%d MB)", s.cfg.MaxUploadMB)
+func (s *MediaService) uploadReader(src io.Reader, originalName string, size int64, folderID int64, documentID int64, docTitle string) (*model.Media, error) {
+	if size <= 0 {
+		return nil, errors.New("不允许上传空文件")
 	}
 
-	ext := strings.ToLower(filepath.Ext(file.Filename))
-	if ext == "" {
-		return nil, errors.New("文件缺少有效扩展名")
-	}
-	if ext == ".svg" || ext == ".svgz" {
-		return nil, errors.New("出于同源脚本安全考虑，不支持上传 SVG 文件")
-	}
-
-	// 拦截危险文件
-	for _, dang := range DangerousExts {
-		if ext == dang {
-			return nil, fmt.Errorf("禁止上传潜在危险的文件类型: %s", ext)
-		}
-	}
-
-	// 确定媒体类型
-	var mediaType string
-	var subDir string
-
-	if utils.IsAllowedExt(ext, AllowedImageExts) {
-		mediaType = "image"
-		subDir = "images"
-	} else if utils.IsAllowedExt(ext, AllowedVideoExts) {
-		mediaType = "video"
-		subDir = "videos"
-	} else if utils.IsAllowedExt(ext, AllowedFileExts) {
-		mediaType = "file"
-		subDir = "files"
-	} else {
-		return nil, fmt.Errorf("不支持的文件格式: %s", ext)
-	}
-
-	categoryLimitMB := s.maxMBForType(mediaType)
-	if file.Size > categoryLimitMB*1024*1024 {
-		return nil, fmt.Errorf("%s 文件大小超过上限 (%d MB)", mediaType, categoryLimitMB)
-	}
-
-	detectedMime, err := validateFileContent(file, ext)
+	ext, mediaType, subDir, err := s.validateUpload(originalName, size)
 	if err != nil {
 		return nil, err
 	}
+
+	header := make([]byte, 512)
+	n, err := io.ReadFull(src, header)
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return nil, fmt.Errorf("读取上传文件头失败: %w", err)
+	}
+	header = header[:n]
+	if n == 0 {
+		return nil, errors.New("不允许上传空文件")
+	}
+	detectedMime, ok := mimeForVerifiedContent(ext, header)
+	if !ok {
+		return nil, fmt.Errorf("文件内容与扩展名 %s 不匹配或格式不受支持", ext)
+	}
+	reader := io.MultiReader(bytes.NewReader(header), src)
 
 	// 自动或指定关联文件夹
 	folderID = s.ResolveFolderID(folderID, documentID, docTitle)
 
 	// 存储文件
-	relPath, url, filename, size, err := s.storage.Save(file, subDir)
+	relPath, url, filename, savedSize, err := s.storage.SaveReader(reader, originalName, subDir)
 	if err != nil {
 		return nil, err
 	}
 
 	media := &model.Media{
 		FolderID:     folderID,
-		OriginalName: file.Filename,
+		OriginalName: originalName,
 		Filename:     filename,
 		Path:         relPath,
 		URL:          url,
 		MediaType:    mediaType,
 		MimeType:     detectedMime,
-		Size:         size,
+		Size:         savedSize,
 		Duration:     0,
 		Thumbnail:    "",
 		Source:       uploadSource(documentID, docTitle),
@@ -141,6 +126,43 @@ func (s *MediaService) Upload(file *multipart.FileHeader, folderID int64, docume
 		media.ReferenceCount = 1
 	}
 	return media, nil
+}
+
+func (s *MediaService) validateUpload(originalName string, size int64) (ext, mediaType, subDir string, err error) {
+	if size <= 0 {
+		return "", "", "", errors.New("不允许上传空文件")
+	}
+	if size > s.cfg.MaxUploadMB*1024*1024 {
+		return "", "", "", fmt.Errorf("文件大小超过上限 (%d MB)", s.cfg.MaxUploadMB)
+	}
+
+	ext = strings.ToLower(filepath.Ext(originalName))
+	if ext == "" {
+		return "", "", "", errors.New("文件缺少有效扩展名")
+	}
+	if ext == ".svg" || ext == ".svgz" {
+		return "", "", "", errors.New("出于同源脚本安全考虑，不支持上传 SVG 文件")
+	}
+	for _, dang := range DangerousExts {
+		if ext == dang {
+			return "", "", "", fmt.Errorf("禁止上传潜在危险的文件类型: %s", ext)
+		}
+	}
+
+	switch {
+	case utils.IsAllowedExt(ext, AllowedImageExts):
+		mediaType, subDir = "image", "images"
+	case utils.IsAllowedExt(ext, AllowedVideoExts):
+		mediaType, subDir = "video", "videos"
+	case utils.IsAllowedExt(ext, AllowedFileExts):
+		mediaType, subDir = "file", "files"
+	default:
+		return "", "", "", fmt.Errorf("不支持的文件格式: %s", ext)
+	}
+	if size > s.maxMBForType(mediaType)*1024*1024 {
+		return "", "", "", fmt.Errorf("%s 文件大小超过上限 (%d MB)", mediaType, s.maxMBForType(mediaType))
+	}
+	return ext, mediaType, subDir, nil
 }
 
 func (s *MediaService) maxMBForType(mediaType string) int64 {
