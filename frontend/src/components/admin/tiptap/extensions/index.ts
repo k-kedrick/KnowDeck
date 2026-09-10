@@ -1,5 +1,6 @@
 import type { Extensions } from '@tiptap/core';
 import Highlight from '@tiptap/extension-highlight';
+import Heading from '@tiptap/extension-heading';
 import Strike from '@tiptap/extension-strike';
 import TextAlign from '@tiptap/extension-text-align';
 import { TextStyleKit } from '@tiptap/extension-text-style';
@@ -23,10 +24,23 @@ const LegacyStrike = Strike.extend({
   },
 });
 
+const DocumentHeading = Heading.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      id: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('id'),
+        renderHTML: (attributes) => attributes.id ? { id: attributes.id } : {},
+      },
+    };
+  },
+});
+
 export function createEditorExtensions(): Extensions {
   return [
     StarterKit.configure({
-      heading: { levels: [1, 2, 3, 4, 5, 6] },
+      heading: false,
       strike: false,
       link: {
         openOnClick: false,
@@ -34,6 +48,7 @@ export function createEditorExtensions(): Extensions {
         defaultProtocol: 'https',
       },
     }),
+    DocumentHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
     TextStyleKit.configure({ lineHeight: false }),
     Highlight.configure({ multicolor: true }),
     LegacyStrike,

@@ -31,6 +31,7 @@ import {
 import { ReadingProgressBar } from './ReadingProgressBar';
 import { ImageLightbox } from './ImageLightbox';
 import { ModalPortal } from './ModalPortal';
+import { TiptapReadonlyDocument } from './admin/tiptap/TiptapReadonlyDocument';
 
 type MarkdownMathPlugins = typeof import('./markdownMath');
 
@@ -656,7 +657,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
         {/* Document Body */}
         <article ref={articleRef} className="document-body markdown-body [&_img]:cursor-zoom-in" onClick={handleArticleClick}>
           {isHtmlContent ? (
-            <div dangerouslySetInnerHTML={{ __html: processedContent }} />
+            <TiptapReadonlyDocument content={rawContent} />
           ) : needsMath && !markdownReady ? (
             <div className="min-h-96 animate-pulse space-y-3 py-2" aria-label="文章公式渲染加载中">
               <div className="h-4 w-full rounded bg-slate-200 dark:bg-slate-800" />
