@@ -132,4 +132,29 @@ describe('api', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/invites', expect.any(Object));
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/invites', expect.objectContaining({ method: 'POST', body: JSON.stringify({ max_uses: 3 }) }));
   });
+
+  it('reports chunked upload progress without serializing its callback', async () => {
+    const chunkSize = 20 * 1024 * 1024;
+    const media = { id: 1, original_name: 'large.mp4', media_type: 'video' };
+    const fetchMock = vi.fn(async (url: string, _options?: RequestInit) => {
+      if (url.endsWith('/upload-sessions')) {
+        return { ok: true, json: async () => ({ code: 0, data: { upload_id: 'session', chunk_size: chunkSize, chunks: 2 } }) };
+      }
+      if (url.endsWith('/complete')) {
+        return { ok: true, json: async () => ({ code: 0, data: media }) };
+      }
+      return { ok: true, text: async () => '' };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValueOnce(1000).mockReturnValueOnce(2000);
+    const onProgress = vi.fn();
+    const file = new File([new Uint8Array(chunkSize + 1)], 'large.mp4', { type: 'video/mp4' });
+
+    await expect(api.uploadMedia(file, { document_id: 7, onProgress })).resolves.toEqual(media);
+
+    expect(onProgress).toHaveBeenNthCalledWith(1, expect.objectContaining({ completedChunks: 0, chunks: 2, uploadedBytes: 0 }));
+    expect(onProgress).toHaveBeenNthCalledWith(2, expect.objectContaining({ completedChunks: 1, chunks: 2, uploadedBytes: chunkSize }));
+    expect(onProgress).toHaveBeenLastCalledWith(expect.objectContaining({ completedChunks: 2, uploadedBytes: file.size, remainingSeconds: 0 }));
+    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).not.toContain('onProgress');
+  });
 });

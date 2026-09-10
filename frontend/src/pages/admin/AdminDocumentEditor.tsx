@@ -40,6 +40,15 @@ import { categoryPath, flattenCategoryTree } from '../../utils/categoryTree';
 
 const TiptapEditor = lazy(() => import('../../components/admin/tiptap/TiptapEditor').then((module) => ({ default: module.TiptapEditor })));
 
+const formatTransferRate = (bytesPerSecond: number) => `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
+
+const formatRemainingTime = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '计算中';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
+};
+
 const localDraftMatchesSnapshot = (draft: LocalDraftData, snapshot: LocalDraftData) => documentSnapshotsEqual(draft, snapshot);
 
 const documentSnapshot = (document: DocumentDetail): LocalDraftData => ({
@@ -117,6 +126,7 @@ export const AdminDocumentEditor: React.FC = () => {
   const tiptapEditorRef = useRef<TiptapEditorHandle>(null);
 
   const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
 
   useEffect(() => {
     if (!isEdit && localDraftId && requestedDraftId !== localDraftId) {
@@ -563,6 +573,7 @@ export const AdminDocumentEditor: React.FC = () => {
   // Upload Media and return it to the visual editor for cursor-position insertion
   const handleUploadFile = async (file: File): Promise<Media> => {
     setUploading(true);
+    setUploadProgress('正在创建上传任务…');
     setErrorMsg(null);
     try {
       const docId = id ? Number(id) : undefined;
@@ -570,6 +581,12 @@ export const AdminDocumentEditor: React.FC = () => {
       const media = await api.uploadMedia(file, {
         document_id: docId,
         doc_title: docTitle,
+        onProgress: ({ completedChunks, chunks, uploadedBytes, totalBytes, speedBytesPerSecond, remainingSeconds }) => {
+          const percent = Math.round((uploadedBytes / totalBytes) * 100);
+          setUploadProgress(
+            `已上传 ${completedChunks}/${chunks}（${percent}%）· ${formatTransferRate(speedBytesPerSecond)} · 剩余约 ${formatRemainingTime(remainingSeconds)}`,
+          );
+        },
       });
       setSuccessMsg(`上传成功: ${media.original_name}`);
       return media;
@@ -578,6 +595,7 @@ export const AdminDocumentEditor: React.FC = () => {
       throw err;
     } finally {
       setUploading(false);
+      setUploadProgress('');
     }
   };
 
@@ -1050,6 +1068,7 @@ export const AdminDocumentEditor: React.FC = () => {
                 onChange={setContent}
                 onUploadFile={handleUploadFile}
                 uploading={uploading}
+                uploadProgress={uploadProgress}
               />
             </Suspense>
           </div>

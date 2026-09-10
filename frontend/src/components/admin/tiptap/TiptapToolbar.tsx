@@ -38,12 +38,14 @@ interface TiptapToolbarProps {
   editor: Editor;
   onUploadFile?: UploadHandler;
   uploading?: boolean;
+  uploadProgress?: string;
 }
 
 export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
   editor,
   onUploadFile,
   uploading: externalUploading = false,
+  uploadProgress,
 }) => {
   const [activeMenu, setActiveMenu] = useState<
     'font' | 'size' | 'lineHeight' | 'color' | 'table' | null
@@ -601,7 +603,7 @@ export const TiptapToolbar: React.FC<TiptapToolbarProps> = ({
         ) : (
           <ImageIcon size={13} />
         )}
-        <span>{uploadingEffective ? '上传中...' : '插入媒体'}</span>
+        <span>{uploadingEffective ? uploadProgress || '上传中...' : '插入媒体'}</span>
       </button>
 
       <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-0.5" />

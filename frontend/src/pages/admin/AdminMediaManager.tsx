@@ -38,6 +38,7 @@ import type {
   DocumentMediaRef,
   DocumentSummary,
   BatchDeleteResult,
+  UploadMediaOptions,
 } from '../../api';
 import { AdminPageHeader } from '../../components/admin/AdminPageHeader';
 import { ImageLightbox } from '../../components/ImageLightbox';
@@ -54,6 +55,13 @@ const formatSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const formatRemainingTime = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '计算中';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${remainingSeconds}秒`;
 };
 
 const folderDepth = (folder: MediaFolder, folders: MediaFolder[], seen = new Set<number>()): number => {
@@ -365,6 +373,7 @@ export const AdminMediaManager: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('latest');
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
 
   // 消息提示
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -576,11 +585,19 @@ export const AdminMediaManager: React.FC = () => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     setUploading(true);
+    setUploadProgress('正在创建上传任务…');
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      const uploadOptions: { folder_id?: number; document_id?: number; doc_title?: string } = {};
+      const uploadOptions: UploadMediaOptions = {
+        onProgress: ({ completedChunks, chunks, uploadedBytes, totalBytes, speedBytesPerSecond, remainingSeconds }) => {
+          const percent = Math.round((uploadedBytes / totalBytes) * 100);
+          setUploadProgress(
+            `已上传 ${completedChunks}/${chunks}（${percent}%）· ${(speedBytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s · 剩余约 ${formatRemainingTime(remainingSeconds)}`,
+          );
+        },
+      };
       if (viewMode.type === 'folder' && viewMode.folderId > 0) {
         uploadOptions.folder_id = viewMode.folderId;
       } else if (viewMode.type === 'doc' && viewMode.docId > 0) {
@@ -596,6 +613,7 @@ export const AdminMediaManager: React.FC = () => {
       setErrorMsg(err.message || '上传文件失败');
     } finally {
       setUploading(false);
+      setUploadProgress('');
       e.target.value = '';
     }
   };
@@ -884,7 +902,7 @@ export const AdminMediaManager: React.FC = () => {
               <Upload className="w-4 h-4" />
               <span>
                 {uploading
-                  ? '正在上传…'
+                  ? uploadProgress || '正在上传…'
                   : viewMode.type === 'folder'
                   ? `上传至《${viewMode.folderName}》`
                   : viewMode.type === 'doc'

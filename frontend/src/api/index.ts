@@ -316,6 +316,22 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> 
   return json.data;
 }
 
+export interface UploadProgress {
+  completedChunks: number;
+  chunks: number;
+  uploadedBytes: number;
+  totalBytes: number;
+  speedBytesPerSecond: number;
+  remainingSeconds: number;
+}
+
+export interface UploadMediaOptions {
+  folder_id?: number;
+  document_id?: number;
+  doc_title?: string;
+  onProgress?: (progress: UploadProgress) => void;
+}
+
 async function uploadChunk(url: string, body: Blob): Promise<void> {
   const token = localStorage.getItem('kb_token');
   const headers: Record<string, string> = {};
@@ -541,19 +557,47 @@ export const api = {
   },
   uploadMedia: async (
     file: File,
-    options?: { folder_id?: number; document_id?: number; doc_title?: string }
+    options?: UploadMediaOptions,
   ): Promise<Media> => {
     if (file.size > CHUNKED_UPLOAD_THRESHOLD) {
       const session = await fetchJson<{ upload_id: string; chunk_size: number; chunks: number }>('/admin/media/upload-sessions', {
         method: 'POST',
-        body: JSON.stringify({ filename: file.name, size: file.size, ...options }),
+        body: JSON.stringify({
+          filename: file.name,
+          size: file.size,
+          folder_id: options?.folder_id,
+          document_id: options?.document_id,
+          doc_title: options?.doc_title,
+        }),
+      });
+      const startedAt = performance.now();
+      let uploadedBytes = 0;
+      options?.onProgress?.({
+        completedChunks: 0,
+        chunks: session.chunks,
+        uploadedBytes,
+        totalBytes: file.size,
+        speedBytesPerSecond: 0,
+        remainingSeconds: 0,
       });
       for (let index = 0; index < session.chunks; index += 1) {
         const start = index * session.chunk_size;
+        const chunk = file.slice(start, Math.min(start + session.chunk_size, file.size));
         await uploadChunk(
           `/admin/media/upload-sessions/${session.upload_id}/chunks/${index}`,
-          file.slice(start, Math.min(start + session.chunk_size, file.size)),
+          chunk,
         );
+        uploadedBytes += chunk.size;
+        const elapsedSeconds = Math.max((performance.now() - startedAt) / 1000, 0.001);
+        const speedBytesPerSecond = uploadedBytes / elapsedSeconds;
+        options?.onProgress?.({
+          completedChunks: index + 1,
+          chunks: session.chunks,
+          uploadedBytes,
+          totalBytes: file.size,
+          speedBytesPerSecond,
+          remainingSeconds: Math.ceil((file.size - uploadedBytes) / speedBytesPerSecond),
+        });
       }
       return fetchJson<Media>(`/admin/media/upload-sessions/${session.upload_id}/complete`, { method: 'POST' });
     }

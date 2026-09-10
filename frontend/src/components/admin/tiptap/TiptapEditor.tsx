@@ -37,12 +37,13 @@ interface TiptapEditorProps {
   onChange: (content: string) => void;
   onUploadFile?: UploadHandler;
   uploading?: boolean;
+  uploadProgress?: string;
 }
 
 const SNAPSHOT_DEBOUNCE_MS = 320;
 
 export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(function TiptapEditor(
-  { content, onChange, onUploadFile, uploading = false },
+  { content, onChange, onUploadFile, uploading = false, uploadProgress },
   ref,
 ) {
   const sessionRef = useRef(new EditorContentSession(content));
@@ -230,6 +231,7 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
         editor={editor}
         onUploadFile={onUploadFile}
         uploading={uploading}
+        uploadProgress={uploadProgress}
       />
 
       {/* Floating Text Selection Bubble Menu */}
