@@ -317,22 +317,6 @@ function createVideoElement(doc: Document, src: string): HTMLVideoElement {
   return video;
 }
 
-export function mediaUrlToDocumentHtml(url: string, label = ''): string {
-  const cleanUrl = url.trim();
-  if (!cleanUrl) return '';
-
-  const parser = new DOMParser();
-  const doc = parser.parseFromString('', 'text/html');
-  if (VIDEO_URL_RE.test(cleanUrl)) {
-    return sanitizeDocumentHtml(createVideoElement(doc, cleanUrl).outerHTML + '<p><br></p>');
-  }
-  if (IMAGE_URL_RE.test(cleanUrl)) {
-    return sanitizeDocumentHtml(createImageElement(doc, cleanUrl, label).outerHTML + '<p><br></p>');
-  }
-
-  return '';
-}
-
 export function normalizePastedDocumentHtml(html: string): string {
   if (!html || !html.trim()) return '';
 

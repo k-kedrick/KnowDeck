@@ -211,20 +211,12 @@ export interface MediaFolder {
   updated_at: string;
 }
 
-export interface DocumentMediaRef {
-  document_id: number;
-  title: string;
-  slug: string;
-  media_count: number;
-}
-
 export interface MediaFolderListResponse {
   folders: MediaFolder[];
   total_media: number;
   unclassified_media: number;
   used_media?: number;
   unused_media?: number;
-  document_refs?: DocumentMediaRef[];
 }
 
 export interface BlockedMedia {
@@ -372,7 +364,7 @@ export const api = {
 
   memberLogin: (username: string, password: string) => fetchJson<{ token: string; user: User }>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   memberRegister: (username: string, password: string, invite_code: string) => fetchJson<null>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password, invite_code }) }),
-  memberMe: () => fetchJson<User>('/auth/me'),
+  memberMe: (signal?: AbortSignal) => fetchJson<User>('/auth/me', { signal }),
   memberChangePassword: (current_password: string, new_password: string) =>
     fetchJson<{ token: string; user: User }>('/auth/password', {
       method: 'PATCH',
@@ -669,11 +661,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name, parent_id, document_id: document_id || 0 }),
     }),
-  updateMediaFolder: (id: number, name: string) =>
-    fetchJson<null>(`/admin/media/folders/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ name }),
-    }),
   deleteMediaFolder: (id: number, keepMedia = true) =>
     fetchJson<null>(`/admin/media/folders/${id}?keep_media=${keepMedia}`, {
       method: 'DELETE',
@@ -682,11 +669,6 @@ export const api = {
     fetchJson<null>(`/admin/media/${id}/move`, {
       method: 'PUT',
       body: JSON.stringify({ folder_id }),
-    }),
-  saveExternalMedia: (url: string, options?: { folder_id?: number; document_id?: number; doc_title?: string }) =>
-    fetchJson<Media>('/admin/media/save-external', {
-      method: 'POST',
-      body: JSON.stringify({ url, ...options }),
     }),
   localizeDocumentImages: (content: string, document_id?: number, doc_title?: string) =>
     fetchJson<{ content: string; localized_count: number }>('/admin/media/localize-images', {

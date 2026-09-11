@@ -195,6 +195,7 @@ export const VideoLightbox: React.FC<VideoLightboxProps> = ({ src, title, mimeTy
 
   useEffect(() => {
     triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const video = videoRef.current;
     const previousOverflow = document.body.style.overflow;
     const previousPaddingRight = document.body.style.paddingRight;
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -212,7 +213,7 @@ export const VideoLightbox: React.FC<VideoLightboxProps> = ({ src, title, mimeTy
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener('keydown', onKeyDown);
-      videoRef.current?.pause();
+      video?.pause();
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPaddingRight;
       triggerRef.current?.focus();

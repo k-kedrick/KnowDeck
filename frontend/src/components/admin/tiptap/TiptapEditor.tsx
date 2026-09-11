@@ -184,7 +184,9 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
     },
   });
 
-  editorRef.current = editor;
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   useEffect(() => () => {
     if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);

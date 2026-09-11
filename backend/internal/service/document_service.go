@@ -260,9 +260,6 @@ func (s *DocumentService) Update(id int64, req model.DocumentSaveReq) (*model.Do
 }
 
 func (s *DocumentService) Delete(id int64) error {
-	if s.mediaRepo != nil {
-		_ = s.mediaRepo.DeleteDocumentReferences(id)
-	}
 	return s.docRepo.Delete(id)
 }
 

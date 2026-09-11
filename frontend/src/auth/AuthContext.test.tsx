@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '../api';
 
@@ -78,6 +78,30 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(apiMocks.login).toHaveBeenCalledWith('admin', 'admin-pass-123'));
     expect(localStorage.getItem('kb_token')).toBe('admin-jwt-token');
+    expect(screen.getByRole('button', { name: 'admin' })).toBeTruthy();
+  });
+
+  it('is ready immediately when no stored session exists', () => {
+    localStorage.clear();
+    render(<AuthProvider><Harness /></AuthProvider>);
+
+    expect(screen.getByRole('button', { name: '未登录' })).toBeTruthy();
+    expect(apiMocks.memberMe).not.toHaveBeenCalled();
+  });
+
+  it('does not let a stale initial session request overwrite a newer login', async () => {
+    let resolveInitialSession!: (user: User) => void;
+    apiMocks.memberMe.mockReturnValue(new Promise<User>((resolve) => { resolveInitialSession = resolve; }));
+    const LoginHarness = () => {
+      const { user, adminLogin } = useAuth();
+      return <button type="button" onClick={() => adminLogin('admin', 'admin-pass-123')}>{user?.username || '登录'}</button>;
+    };
+
+    render(<AuthProvider><LoginHarness /></AuthProvider>);
+    fireEvent.click(screen.getByRole('button', { name: '登录' }));
+    expect(await screen.findByRole('button', { name: 'admin' })).toBeTruthy();
+
+    await act(async () => resolveInitialSession(member));
     expect(screen.getByRole('button', { name: 'admin' })).toBeTruthy();
   });
 });

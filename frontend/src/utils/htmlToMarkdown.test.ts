@@ -3,7 +3,6 @@ import {
   htmlToMarkdown,
   isHtmlDocumentContent,
   markdownToEditorHtml,
-  mediaUrlToDocumentHtml,
   normalizePastedDocumentHtml,
   sanitizeDocumentHtml,
 } from './htmlToMarkdown';
@@ -116,9 +115,4 @@ describe('htmlToMarkdown', () => {
     expect(html).not.toContain('background-image');
   });
 
-  it('converts plain media URLs into document HTML', () => {
-    expect(mediaUrlToDocumentHtml('https://cdn.example.com/photo.jpg')).toContain('<img');
-    expect(mediaUrlToDocumentHtml('https://cdn.example.com/video.mp4')).toContain('<video');
-    expect(mediaUrlToDocumentHtml('https://cdn.example.com/page')).toBe('');
-  });
 });

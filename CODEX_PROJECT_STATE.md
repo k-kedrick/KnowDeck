@@ -208,3 +208,23 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - Intentional layout variants: document management and media library use the wider workspace; the document editor remains an immersive workspace; the dashboard welcome banner remains a deliberate content-specific visual distinction.
 - Visual acceptance completed at `1920px`, `1440px`, `1280px`, and `1024px` for dashboard, documents, categories, tags, media, settings, and users. At constrained widths, toolbars and two-column panels reflow while data tables retain controlled horizontal scrolling.
 - Verification on 2026-09-10: frontend TypeScript/build, lint (warnings only), full tests (`226 passed`, `1 skipped`), and `git diff --check` PASS. The Tiptap lazy chunk remains above Vite's advisory 500 kB threshold.
+
+## Media Backend Consolidation (PHASE 2C)
+
+- Folder deletion is transactional: every media row in the deleted folder is reassigned to `folder_id = 0` before the folder row is removed. The legacy `keep_media` query remains accepted, but both values preserve media assets and document references.
+- Document deletion is transactional: associated automatic media folders remain with their names and media, but are converted to ordinary folders by setting `document_id = 0`. `media_document_refs` are removed by the existing foreign-key cascade; media assets remain.
+- Folder-stat query errors now propagate from repository through service to the existing handler `500` response. `document_refs`, `PUT /media/folders/:id`, and `POST /media/save-external` remain for API compatibility; `SaveExternalImage` remains the implementation used by content-image localization.
+- Verification on 2026-09-11: focused F1/F2/F3 backend tests PASS; `go test ./...`, `go vet ./...`, frontend lint (existing warnings only), TypeScript check, full frontend tests (231 passed, 1 skipped), frontend build, and `git diff --check` PASS.
+
+## React State and Effect Consolidation (PHASE 3)
+
+- `AuthProvider` initial-session loading is now cancellation-safe and token-scoped: a stale `/auth/me` response cannot overwrite a newer login or logout session.
+- Invite expiry rendering uses a lifecycle-managed one-minute clock state rather than render-time `Date.now()`, so expiration filters and countdowns update predictably without render impurity.
+- Media-list requests now reject stale/aborted results and only clear loading for the currently active request.
+- Verification on 2026-09-11: focused Auth, admin users, media, and search tests PASS; frontend lint has 12 classified existing effect warnings and no purity warnings; TypeScript, full frontend tests (233 passed, 1 skipped), frontend build, backend `go test ./...`, backend `go vet ./...`, and `git diff --check` PASS.
+## Final Consolidation Baseline
+
+- The admin media page remains the sole owner of media state, API calls, request cancellation, upload, selection, and dialog coordination; its sidebar, workspace, and detail UI live under `frontend/src/pages/admin/media/`.
+- `AdminUsersPage` remains the sole owner of users, filters, pagination, current-user protection, invitation state, API calls, and the minute clock; the users table/filter/pagination presentation lives in `frontend/src/pages/admin/users/UsersTab.tsx`.
+- The document editor, reader lifecycle, CSS compatibility selectors, registered API routes, historical content compatibility, and deployment compatibility were re-audited without structural changes because their current tests cover behavior whose ownership crosses those boundaries.
+- Final verification on 2026-09-11: frontend lint has 12 classified effect warnings and no errors; TypeScript, full frontend tests (233 passed, 1 skipped), production build, backend `go test ./...`, backend `go vet ./...`, and `git diff --check` pass.

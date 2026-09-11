@@ -42,15 +42,3 @@ export function applyHistoricalDocumentImages(
     }
   });
 }
-
-/**
- * Rewrites only the known historical Feishu image endpoint to the restricted
- * same-origin backend proxy. Other external and local image URLs stay intact.
- */
-export function proxyHistoricalDocumentImages(sanitizedHtml: string): string {
-  if (!sanitizedHtml.trim() || typeof document === 'undefined') return sanitizedHtml;
-
-  const doc = new DOMParser().parseFromString(sanitizedHtml, 'text/html');
-  applyHistoricalDocumentImages(doc.body);
-  return doc.body.innerHTML;
-}

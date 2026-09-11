@@ -151,16 +151,34 @@ func (r *MediaFolderRepository) Update(id int64, name string) error {
 
 // Delete 删除文件夹
 func (r *MediaFolderRepository) Delete(id int64) error {
-	query := `DELETE FROM media_folders WHERE id = ?`
-	_, err := r.db.Exec(query, id)
-	return err
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`UPDATE media SET folder_id = 0 WHERE folder_id = ?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM media_folders WHERE id = ?`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // GetStats 获取全局媒体总数、未分类、已使用及未使用媒体数
 func (r *MediaFolderRepository) GetStats() (totalMedia int64, unclassifiedMedia int64, usedMedia int64, unusedMedia int64, err error) {
-	_ = r.db.QueryRow(`SELECT COUNT(*) FROM media`).Scan(&totalMedia)
-	_ = r.db.QueryRow(`SELECT COUNT(*) FROM media WHERE folder_id = 0 OR folder_id IS NULL`).Scan(&unclassifiedMedia)
-	_ = r.db.QueryRow(`SELECT COUNT(DISTINCT media_id) FROM media_document_refs`).Scan(&usedMedia)
-	_ = r.db.QueryRow(`SELECT COUNT(*) FROM media WHERE id NOT IN (SELECT media_id FROM media_document_refs)`).Scan(&unusedMedia)
+	if err = r.db.QueryRow(`SELECT COUNT(*) FROM media`).Scan(&totalMedia); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	if err = r.db.QueryRow(`SELECT COUNT(*) FROM media WHERE folder_id = 0 OR folder_id IS NULL`).Scan(&unclassifiedMedia); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	if err = r.db.QueryRow(`SELECT COUNT(DISTINCT media_id) FROM media_document_refs`).Scan(&usedMedia); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	if err = r.db.QueryRow(`SELECT COUNT(*) FROM media WHERE id NOT IN (SELECT media_id FROM media_document_refs)`).Scan(&unusedMedia); err != nil {
+		return 0, 0, 0, 0, err
+	}
 	return totalMedia, unclassifiedMedia, usedMedia, unusedMedia, nil
 }

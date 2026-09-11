@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Media, MediaFolder, DocumentMediaRef } from '../../api';
+import type { Media, MediaFolder } from '../../api';
 
 const apiMocks = vi.hoisted(() => ({
   getMediaFolders: vi.fn(),
@@ -12,7 +12,6 @@ const apiMocks = vi.hoisted(() => ({
   batchMoveMedia: vi.fn(),
   moveMedia: vi.fn(),
   createMediaFolder: vi.fn(),
-  updateMediaFolder: vi.fn(),
   deleteMediaFolder: vi.fn(),
   getMediaReferences: vi.fn(),
   rebuildMediaReferences: vi.fn(),
@@ -27,10 +26,6 @@ import { AdminMediaManager } from './AdminMediaManager';
 
 const mockFolders: MediaFolder[] = [
   { id: 1, name: '产品截图', document_id: 0, media_count: 5, created_at: '2026-09-01', updated_at: '2026-09-01' },
-];
-
-const mockDocRefs: DocumentMediaRef[] = [
-  { document_id: 101, title: 'Gemini 使用教程', slug: 'gemini-tutorial', media_count: 1 },
 ];
 
 const mockMediaList: Media[] = [
@@ -88,7 +83,6 @@ describe('AdminMediaManager', () => {
       unclassified_media: 2,
       used_media: 1,
       unused_media: 1,
-      document_refs: mockDocRefs,
     });
     apiMocks.getAdminMedia.mockResolvedValue({
       list: mockMediaList,
@@ -159,6 +153,25 @@ describe('AdminMediaManager', () => {
         expect.any(AbortSignal),
       );
     });
+  });
+
+  it('does not let an aborted media request overwrite the latest view', async () => {
+    let resolveFirst!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;
+    let resolveSecond!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;
+    apiMocks.getAdminMedia
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
+    renderPage();
+    await waitFor(() => expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getAllByRole('button', { name: /未使用资源/ })[0]);
+    await waitFor(() => expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(2));
+    resolveSecond({ list: [mockMediaList[1]], total: 1, page: 1, page_size: 40 });
+    expect(await screen.findByText('unused_logo.png')).toBeTruthy();
+
+    resolveFirst({ list: [mockMediaList[0]], total: 1, page: 1, page_size: 40 });
+    await Promise.resolve();
+    expect(screen.queryByText('gemini_diagram.png')).toBeNull();
   });
 
   it('blocks direct single deletion of referenced media', async () => {

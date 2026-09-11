@@ -226,11 +226,6 @@ func (r *MediaRepository) BatchMove(ids []int64, folderID int64) error {
 	return err
 }
 
-func (r *MediaRepository) MoveAllFromFolder(fromFolderID int64, toFolderID int64) error {
-	_, err := r.db.Exec(`UPDATE media SET folder_id = ? WHERE folder_id = ?`, toFolderID, fromFolderID)
-	return err
-}
-
 func (r *MediaRepository) IsReferencedInDocuments(filename, url string) (bool, string, error) {
 	if filename == "" && url == "" {
 		return false, "", nil

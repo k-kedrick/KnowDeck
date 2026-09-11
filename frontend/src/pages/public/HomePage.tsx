@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { ArrowRight, BookOpen, CalendarDays, Clock3, Eye, FileText, FolderTree, LoaderCircle, Lock, Search, Tags, X } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { api } from '../../api';
@@ -9,15 +9,7 @@ import type { PublicOutletContext } from '../../components/publicLayoutContext';
 import { formatDateTime } from '../../utils/format';
 import { searchSnippetToText } from '../../utils/searchSnippet';
 import { getSiteUrl } from '../../utils/seo';
-
-const getCachedTags = (): Tag[] => {
-  try {
-    const raw = localStorage.getItem('cached_site_tags');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
+import { cacheSiteTags, getCachedSiteTags } from '../../utils/siteTagCache';
 
 const countCategoryDocuments = (category: CategoryTreeNode): number =>
   (category.documents?.length || 0)
@@ -30,7 +22,7 @@ export const HomePage = () => {
   const { user } = useAuth();
   const [recentDocuments, setRecentDocuments] = useState<DocumentListItem[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
-  const [tags, setTags] = useState<Tag[]>(() => getCachedTags());
+  const [tags, setTags] = useState<Tag[]>(getCachedSiteTags);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -38,18 +30,13 @@ export const HomePage = () => {
   const legacySlug = new URLSearchParams(location.search).get('doc');
 
   // 标签降噪：优先展示有文章的标签并按关联量倒序；隐藏 0 计数字段，避免测试脏数据破坏首页
-  const activeTags = useMemo(() => {
-    const withDocs = tags.filter((tag) => (tag.doc_count || 0) > 0);
-    if (withDocs.length > 0) {
-      return [...withDocs].sort((a, b) => (b.doc_count || 0) - (a.doc_count || 0)).slice(0, 20);
-    }
-    return tags.slice(0, 10);
-  }, [tags]);
+  const tagsWithDocuments = tags.filter((tag) => (tag.doc_count || 0) > 0);
+  const activeTags = tagsWithDocuments.length > 0
+    ? [...tagsWithDocuments].sort((a, b) => (b.doc_count || 0) - (a.doc_count || 0)).slice(0, 20)
+    : tags.slice(0, 10);
 
   // 分类降噪展示
-  const activeCategories = useMemo(() => {
-    return tree.slice(0, 8);
-  }, [tree]);
+  const activeCategories = tree.slice(0, 8);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,9 +51,7 @@ export const HomePage = () => {
     api.getTags(controller.signal).then((data) => {
       if (!controller.signal.aborted && data) {
         setTags(data);
-        try {
-          localStorage.setItem('cached_site_tags', JSON.stringify(data));
-        } catch {}
+        cacheSiteTags(data);
       }
     }).catch(() => undefined);
 

@@ -202,7 +202,11 @@ func (h *AdminMediaHandler) ListFolders(c *gin.Context) {
 		return
 	}
 
-	totalMedia, unclassified, usedMedia, unusedMedia, docRefs, _ := h.mediaService.GetFolderStats()
+	totalMedia, unclassified, usedMedia, unusedMedia, docRefs, err := h.mediaService.GetFolderStats()
+	if err != nil {
+		response.ServerError(c, "获取媒体文件夹统计失败: "+err.Error())
+		return
+	}
 
 	response.Success(c, gin.H{
 		"folders":            folders,
@@ -268,7 +272,7 @@ func (h *AdminMediaHandler) DeleteFolder(c *gin.Context) {
 		return
 	}
 
-	// 默认保留文件夹下的媒体，将其移入未分类 (0)
+	// 保留 legacy query 参数兼容性；删除文件夹始终保留媒体并将其移入未分类 (0)。
 	keepMedia := c.DefaultQuery("keep_media", "true") == "true"
 
 	if err := h.mediaService.DeleteFolder(id, keepMedia); err != nil {

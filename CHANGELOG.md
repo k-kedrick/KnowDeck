@@ -6,6 +6,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [v1.0.2] - 2026-09-11
+
+### Changed
+- 完成媒体资源库与用户管理页面的结构收敛，保持页面状态与 API 的单一 ownership。
+- 移除确认退出生产路径的文档 HTML 旧包装层，并使测试覆盖真实生产实现。
+- 强化认证和媒体请求竞态保护、邀请码过期时钟更新与媒体引用一致性。
+
+### Verification
+- 前端 TypeScript、完整测试、生产构建与后端测试、静态检查均通过。
 ## [v1.0.0] - 2026-09-10
 
 ### Added

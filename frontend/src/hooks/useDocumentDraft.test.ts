@@ -57,6 +57,18 @@ describe('local document drafts', () => {
     expect(readLocalDraft(getDraftKey('new', id))?.localDraftId).toBe(id);
   });
 
+  it('returns the actual destination when the requested draft ID is occupied', () => {
+    localStorage.setItem(LEGACY_NEW_DRAFT_KEY, JSON.stringify(draft()));
+    writeLocalDraft(getDraftKey('new', 'occupied-draft'), draft({ localDraftId: 'occupied-draft', title: '已有草稿' }));
+
+    const id = migrateLegacyNewDraft('occupied-draft');
+
+    expect(id).not.toBe('occupied-draft');
+    expect(readLocalDraft(getDraftKey('new', id))?.title).toBe('标题');
+    expect(readLocalDraft(getDraftKey('new', 'occupied-draft'))?.title).toBe('已有草稿');
+    expect(localStorage.getItem(LEGACY_NEW_DRAFT_KEY)).toBeNull();
+  });
+
   it('retains the legacy record when migration storage fails', () => {
     localStorage.setItem(LEGACY_NEW_DRAFT_KEY, JSON.stringify(draft()));
     vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {

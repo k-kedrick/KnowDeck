@@ -457,6 +457,9 @@ func (r *DocumentRepository) Delete(id int64) error {
 	if _, err := tx.Exec(`DELETE FROM document_tags WHERE document_id = ?`, id); err != nil {
 		return err
 	}
+	if _, err := tx.Exec(`UPDATE media_folders SET document_id = 0, updated_at = CURRENT_TIMESTAMP WHERE document_id = ?`, id); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(`DELETE FROM documents WHERE id = ?`, id); err != nil {
 		return err
 	}

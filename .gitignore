@@ -47,4 +47,3 @@ coverage/
 frontend/node_modules/
 frontend/dist/
 frontend/dist-ssr/
-frontend/src/components/admin/tiptap/historicalRealDocument.json

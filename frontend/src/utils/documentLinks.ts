@@ -77,15 +77,3 @@ export function applyDocumentHtmlLinks(root: ParentNode, doc?: Document): void {
     textNode.replaceWith(fragment);
   });
 }
-
-/**
- * Adds safe links to bare HTTP(S) URLs in sanitized HTML text nodes.
- * It never applies regex replacement to raw markup or attributes.
- */
-export function enhanceDocumentHtmlLinks(sanitizedHtml: string): string {
-  if (!sanitizedHtml.trim() || typeof document === 'undefined') return sanitizedHtml;
-
-  const doc = new DOMParser().parseFromString(sanitizedHtml, 'text/html');
-  applyDocumentHtmlLinks(doc.body, doc);
-  return doc.body.innerHTML;
-}

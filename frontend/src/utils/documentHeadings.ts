@@ -42,16 +42,6 @@ export const applyDocumentHeadingIds = (root: ParentNode): void => {
   });
 };
 
-/** Add stable anchors before historical HTML is mounted by React. */
-export const ensureDocumentHeadingIds = (html: string): string => {
-  if (!html || typeof document === 'undefined') return html;
-
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  applyDocumentHeadingIds(container);
-  return container.innerHTML;
-};
-
 export const findDocumentHeading = (root: ParentNode, id: string): HTMLElement | null => (
   Array.from(root.querySelectorAll<HTMLElement>(HEADING_SELECTOR)).find((heading) => heading.id === id) || null
 );

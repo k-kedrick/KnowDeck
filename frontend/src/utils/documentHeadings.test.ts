@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { decodeHeadingHash, ensureDocumentHeadingIds, findDocumentHeading } from './documentHeadings';
+import { applyDocumentHeadingIds, decodeHeadingHash, findDocumentHeading } from './documentHeadings';
 
 describe('document heading anchors', () => {
   it('keeps usable IDs and gives historical HTML headings stable unique IDs', () => {
-    const html = ensureDocumentHeadingIds(`
+    const container = document.createElement('div');
+    container.innerHTML = `
       <div id="occupied"></div>
       <h2 id="kept">已有 ID</h2>
       <h3>中文 标题</h3>
       <h3>中文 标题</h3>
       <h4 id="kept">重复 ID</h4>
-    `);
-    const container = document.createElement('div');
-    container.innerHTML = html;
+    `;
+    applyDocumentHeadingIds(container);
     const headings = Array.from(container.querySelectorAll<HTMLElement>('h2, h3, h4'));
 
     expect(headings.map((heading) => heading.id)).toEqual([
@@ -20,7 +20,9 @@ describe('document heading anchors', () => {
       'heading-2-中文-标题',
       'heading-3-重复-id',
     ]);
-    expect(ensureDocumentHeadingIds(html)).toBe(html);
+    const serialized = container.innerHTML;
+    applyDocumentHeadingIds(container);
+    expect(container.innerHTML).toBe(serialized);
     expect(findDocumentHeading(container, 'heading-2-中文-标题')?.textContent).toBe('中文 标题');
   });
 

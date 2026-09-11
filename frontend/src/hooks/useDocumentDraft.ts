@@ -166,8 +166,7 @@ export const migrateLegacyNewDraft = (requestedId?: string): string => {
 
   const targetKey = getDraftKey('new', localDraftId);
   if (readLocalDraft(targetKey)) {
-    migrateLegacyNewDraft(createLocalDraftId());
-    return localDraftId;
+    return migrateLegacyNewDraft(createLocalDraftId());
   }
   const migrated = writeLocalDraft(targetKey, { ...legacy, version: 2, id: 'new', localDraftId });
   if (migrated) removeLocalDraft(LEGACY_NEW_DRAFT_KEY);

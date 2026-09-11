@@ -115,6 +115,51 @@ func TestDeleteRemovesPublishedDocumentFromPublicListAndSearch(t *testing.T) {
 	}
 }
 
+func TestDeletePreservesDocumentMediaAndConvertsItsFolderToOrdinary(t *testing.T) {
+	db := newTestDB(t)
+	if _, err := db.Exec("DELETE FROM media_document_refs; DELETE FROM media; DELETE FROM media_folders; DELETE FROM document_tags; DELETE FROM documents"); err != nil {
+		t.Fatalf("clear test data: %v", err)
+	}
+	docRepo := NewDocumentRepository(db)
+	mediaRepo := NewMediaRepository(db)
+
+	docID, err := docRepo.Create(&model.Document{Title: "Deleted document", Slug: "deleted-document", Status: "draft", AuthorID: 1})
+	if err != nil {
+		t.Fatalf("create document: %v", err)
+	}
+	var folderID int64
+	if err := db.QueryRow(`SELECT id FROM media_folders WHERE document_id = ?`, docID).Scan(&folderID); err != nil {
+		t.Fatalf("find auto folder: %v", err)
+	}
+	mediaID, err := mediaRepo.Create(&model.Media{FolderID: folderID, OriginalName: "preserved.png", Filename: "preserved.png", Path: "images/preserved.png", URL: "/uploads/images/preserved.png", MediaType: "image", MimeType: "image/png", Size: 1, Source: "document/editor"})
+	if err != nil {
+		t.Fatalf("create media: %v", err)
+	}
+	if err := mediaRepo.AddDocumentRef(mediaID, docID); err != nil {
+		t.Fatalf("add document reference: %v", err)
+	}
+
+	if err := docRepo.Delete(docID); err != nil {
+		t.Fatalf("delete document: %v", err)
+	}
+	deleted, err := docRepo.GetByID(docID)
+	if err != nil || deleted != nil {
+		t.Fatalf("deleted document = %#v, err=%v", deleted, err)
+	}
+	media, err := mediaRepo.GetByID(mediaID)
+	if err != nil || media == nil || media.FolderID != folderID {
+		t.Fatalf("media after document deletion = %#v, err=%v", media, err)
+	}
+	var folderDocumentID int64
+	if err := db.QueryRow(`SELECT document_id FROM media_folders WHERE id = ?`, folderID).Scan(&folderDocumentID); err != nil || folderDocumentID != 0 {
+		t.Fatalf("folder document_id after deletion = %d, err=%v", folderDocumentID, err)
+	}
+	refs, err := mediaRepo.ReferenceDocuments(mediaID)
+	if err != nil || len(refs) != 0 {
+		t.Fatalf("media references after document deletion = %#v, err=%v", refs, err)
+	}
+}
+
 func TestListMatchesAllRequestedTagsAndKeepsSingleTagCompatibility(t *testing.T) {
 	db := newTestDB(t)
 	if _, err := db.Exec("DELETE FROM document_tags; DELETE FROM documents; DELETE FROM tags"); err != nil {

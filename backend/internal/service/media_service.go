@@ -361,10 +361,7 @@ func (s *MediaService) UpdateFolder(id int64, name string) error {
 	return s.folderRepo.Update(id, name)
 }
 
-func (s *MediaService) DeleteFolder(id int64, keepMedia bool) error {
-	if keepMedia {
-		_ = s.mediaRepo.MoveAllFromFolder(id, 0)
-	}
+func (s *MediaService) DeleteFolder(id int64, _ bool) error {
 	return s.folderRepo.Delete(id)
 }
 
@@ -389,7 +386,10 @@ func (s *MediaService) GetFolderStats() (totalMedia int64, unclassifiedMedia int
 	if err != nil {
 		return 0, 0, 0, 0, nil, err
 	}
-	docRefs, _ = s.folderRepo.ListDocumentReferences()
+	docRefs, err = s.folderRepo.ListDocumentReferences()
+	if err != nil {
+		return 0, 0, 0, 0, nil, err
+	}
 	return totalMedia, unclassifiedMedia, usedMedia, unusedMedia, docRefs, nil
 }
 

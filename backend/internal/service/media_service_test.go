@@ -194,6 +194,64 @@ func TestMediaServiceDeleteAndBatchDelete(t *testing.T) {
 	}
 }
 
+func TestDeleteFolderAlwaysPreservesMediaAndReferences(t *testing.T) {
+	db := newTestDB(t)
+	defer db.Close()
+	mediaRepo := repository.NewMediaRepository(db)
+	folderRepo := repository.NewMediaFolderRepository(db)
+	docRepo := repository.NewDocumentRepository(db)
+	svc := NewMediaService(mediaRepo, folderRepo, docRepo, storage.NewLocalStorage(t.TempDir(), "/uploads"), &config.Config{MaxImageMB: 20, MaxVideoMB: 1024, MaxFileMB: 100, MaxUploadMB: 1024})
+
+	folderID, err := folderRepo.Create(&model.MediaFolder{Name: "Delete target"})
+	if err != nil {
+		t.Fatalf("create folder: %v", err)
+	}
+	docID, err := docRepo.Create(&model.Document{Title: "Referenced media", Slug: "referenced-media", Status: "draft", AuthorID: 1})
+	if err != nil {
+		t.Fatalf("create document: %v", err)
+	}
+	mediaID, err := mediaRepo.Create(&model.Media{FolderID: folderID, OriginalName: "kept.png", Filename: "kept.png", Path: "images/kept.png", URL: "/uploads/images/kept.png", MediaType: "image", MimeType: "image/png", Size: 1, Source: "manual upload"})
+	if err != nil {
+		t.Fatalf("create media: %v", err)
+	}
+	if err := mediaRepo.AddDocumentRef(mediaID, docID); err != nil {
+		t.Fatalf("add document reference: %v", err)
+	}
+	secondMediaID, err := mediaRepo.Create(&model.Media{FolderID: folderID, OriginalName: "also-kept.png", Filename: "also-kept.png", Path: "images/also-kept.png", URL: "/uploads/images/also-kept.png", MediaType: "image", MimeType: "image/png", Size: 1, Source: "manual upload"})
+	if err != nil {
+		t.Fatalf("create second media: %v", err)
+	}
+
+	if err := svc.DeleteFolder(folderID, false); err != nil {
+		t.Fatalf("delete folder with keep_media=false: %v", err)
+	}
+	media, err := mediaRepo.GetByID(mediaID)
+	if err != nil || media == nil || media.FolderID != 0 {
+		t.Fatalf("media after folder deletion = %#v, err=%v; want folder_id=0", media, err)
+	}
+	secondMedia, err := mediaRepo.GetByID(secondMediaID)
+	if err != nil || secondMedia == nil || secondMedia.FolderID != 0 {
+		t.Fatalf("second media after folder deletion = %#v, err=%v; want folder_id=0", secondMedia, err)
+	}
+	refs, err := mediaRepo.ReferenceDocuments(mediaID)
+	if err != nil || len(refs) != 1 || refs[0].ID != docID {
+		t.Fatalf("media references after folder deletion = %#v, err=%v", refs, err)
+	}
+	unclassifiedID := int64(0)
+	unclassified, total, err := mediaRepo.List(repository.MediaFilter{FolderID: &unclassifiedID})
+	if err != nil || total != 2 || len(unclassified) != 2 {
+		t.Fatalf("unclassified media after folder deletion = %#v, total=%d, err=%v", unclassified, total, err)
+	}
+	_, unclassifiedCount, _, _, err := folderRepo.GetStats()
+	if err != nil || unclassifiedCount != 2 {
+		t.Fatalf("unclassified stats after folder deletion = %d, err=%v", unclassifiedCount, err)
+	}
+	var danglingCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM media m LEFT JOIN media_folders f ON f.id = m.folder_id WHERE m.folder_id > 0 AND f.id IS NULL`).Scan(&danglingCount); err != nil || danglingCount != 0 {
+		t.Fatalf("dangling media folder assignments = %d, err=%v", danglingCount, err)
+	}
+}
+
 func TestUploadWritesExistingDocumentFolderID(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()

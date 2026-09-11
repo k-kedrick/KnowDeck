@@ -6,15 +6,7 @@ import type { CategoryTreeNode, DocumentListItem, Tag } from '../../api';
 import { ArticleCard } from '../../components/ArticleCard';
 import { SEOHead } from '../../components/SEOHead';
 import type { PublicOutletContext } from '../../components/publicLayoutContext';
-
-const getCachedTags = (): Tag[] => {
-  try {
-    const raw = localStorage.getItem('cached_site_tags');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
+import { cacheSiteTags, getCachedSiteTags } from '../../utils/siteTagCache';
 
 const findCategoryAncestors = (nodes: CategoryTreeNode[], targetID: number, ancestors: number[] = []): number[] => {
   for (const node of nodes) {
@@ -113,7 +105,7 @@ export const BlogPage = () => {
   const { tree, siteInfo } = useOutletContext<PublicOutletContext>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [documents, setDocuments] = useState<DocumentListItem[]>([]);
-  const [tags, setTags] = useState<Tag[]>(() => getCachedTags());
+  const [tags, setTags] = useState<Tag[]>(getCachedSiteTags);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -147,9 +139,7 @@ export const BlogPage = () => {
     api.getTags(controller.signal).then((data) => {
       if (!controller.signal.aborted && data) {
         setTags(data);
-        try {
-          localStorage.setItem('cached_site_tags', JSON.stringify(data));
-        } catch {}
+        cacheSiteTags(data);
       }
     }).catch(() => undefined);
     return () => controller.abort();
@@ -157,12 +147,13 @@ export const BlogPage = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    const documentTags = tagKey ? tagKey.split('\u0000') : [];
     queueMicrotask(async () => {
       if (controller.signal.aborted) return;
       setLoading(true);
       setError(false);
       try {
-        const data = await api.getDocuments({ page, page_size: pageSize, category_id: category, tags: selectedTags }, controller.signal);
+        const data = await api.getDocuments({ page, page_size: pageSize, category_id: category, tags: documentTags }, controller.signal);
         if (controller.signal.aborted) return;
         setDocuments(data.list || []);
         setTotal(data.total || 0);
