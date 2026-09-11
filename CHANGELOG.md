@@ -6,7 +6,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [v1.0.2] - 2026-09-11
+## [v1.0.3] - 2026-09-12
+
+### Fixed
+- **文档系统链接识别与范围一致性修复**：
+  - 修复 TipTap Link 扩展默认 `inclusive: true` 导致按空格/回车或输入中文时光标继承链接 Mark 的问题，设置 `inclusive: false` 并增加 `linkBoundaryGuard` 清理边界 `storedMarks`。
+  - 修复 `linkifyjs` 将中文字符与全角标点判定为 IRI 路径从而吞食后续中文的问题，引入 `splitUrlAndTrailingText`，使 URL 严格在空白、换行、中文字符集与中英文标点处终止。
+  - 修复历史脏链接与富文本粘贴中粘连中文的问题，实现 `normalizeDocumentAnchors` 在只读展示、编辑器导入及保存管道中自动将多余文字弹出为兄弟节点，同时 100% 严格保护文本与 URL 不同的自定义超链接。
+  - 修复 `.markdown-body strong` 强制深黑色导致 `<a ...><strong>URL</strong></a>` 粗体链接显示为普通黑色文本的问题，增加 `.markdown-body a strong/b/em { color: inherit; }`。
+  - 增加 CASE 1 至 CASE 10 全量单测与端到端回归覆盖，确保 HTML $\rightarrow$ Editor $\rightarrow$ Save $\rightarrow$ Load $\rightarrow$ DocViewer 渲染全链路一致。
+
+### Verification
+- 前端 47 个测试文件、245 项单元与集成测试全部通过；生产构建（`npm run build`）与静态检查（`npm run lint`）零错误；后端 Go 测试全量通过。
+
 
 ### Changed
 - 简化 Docker 生产部署编排：发布端口由 v1.0.0 初始的 `127.0.0.1:5185` 演进升级为可通过环境变量配置的 `${APP_BIND_ADDRESS:-0.0.0.0}:${APP_PORT:-8080}:80`（默认监听 0.0.0.0:8080）。

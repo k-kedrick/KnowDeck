@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import { normalizeDocumentAnchors } from './documentLinks';
 
 const DOCUMENT_ALLOWED_TAGS = [
   'iframe', 'video', 'source', 'div', 'span', 'mark', 'u', 'code', 'pre', 'hr', 'blockquote',
@@ -405,9 +406,8 @@ export function sanitizeDocumentHtml(html: string): string {
 
   doc.body.querySelectorAll<HTMLAnchorElement>('a').forEach((el) => {
     if (!isSafeDocumentUrl('a', el.getAttribute('href') || '')) el.removeAttribute('href');
-    el.setAttribute('target', '_blank');
-    el.setAttribute('rel', 'noopener noreferrer');
   });
+  normalizeDocumentAnchors(doc.body, doc);
 
   doc.body.querySelectorAll<HTMLImageElement>('img').forEach((el) => {
     if (!isSafeDocumentUrl('img', el.getAttribute('src') || '')) {

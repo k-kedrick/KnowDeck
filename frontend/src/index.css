@@ -650,6 +650,12 @@
   text-decoration-color: #79c0ff;
 }
 
+.markdown-body a strong,
+.markdown-body a b,
+.markdown-body a em {
+  color: inherit;
+}
+
 /* Inline Code */
 .markdown-body code:not(pre code) {
   border: 1px solid rgba(226, 232, 240, 0.9);

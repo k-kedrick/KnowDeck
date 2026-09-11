@@ -10,6 +10,7 @@ import { TableKit } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
 import { BlockLineHeight } from './BlockLineHeight';
 import { CalloutNode } from './CalloutNode';
+import { DocumentLink } from './DocumentLink';
 import { ExtendedImage } from './ExtendedImage';
 import { AttachmentNode, IframeNode, VideoNode } from './MediaNodes';
 import { TableCompatibility } from './TableCompatibility';
@@ -42,11 +43,12 @@ export function createEditorExtensions(): Extensions {
     StarterKit.configure({
       heading: false,
       strike: false,
-      link: {
-        openOnClick: false,
-        autolink: true,
-        defaultProtocol: 'https',
-      },
+      link: false,
+    }),
+    DocumentLink.configure({
+      openOnClick: false,
+      autolink: true,
+      defaultProtocol: 'https',
     }),
     DocumentHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
     TextStyleKit.configure({ lineHeight: false }),
