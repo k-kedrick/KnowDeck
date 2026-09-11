@@ -4,20 +4,27 @@
 
 ## 功能
 
-- 首页、文章列表与单篇文档页面，支持响应式布局、主题切换和文章大纲。
-- GFM Markdown 与受控 HTML 混合内容渲染，支持 KaTeX、表格、任务列表、代码块复制、图片、视频、iframe 和 Callout。
-- SQLite FTS5 全文搜索，公开接口只返回已发布内容。
-- JWT 管理后台：文档状态、分类树、标签、媒体文件夹、站点设置、管理员资料，以及 `/wang/users` 用户与邀请码管理。
-- 文档编辑器使用 `TiptapEditor`。
-- 本地草稿恢复、图片上传与外链图片本地化。
-- 首页/文章 SEO HTML 外壳、`robots.txt` 与 `sitemap.xml`。
+- **现代化阅读体验**：首页、文章列表与单篇文档阅读，支持响应式排版、暗色/亮色主题切换、双侧目录树/大纲折叠联动与阅读进度条。
+- **所见即所得排版**：正文使用只读 TipTap 引擎与 DOMPurify 净化呈现，支持 GFM 结构、富文本表格、任务列表、代码高亮复制、图片画廊灯箱、自适应视频播放、iframe 嵌入与 Callout 提示框。
+- **文章访问权限控制**：支持 `public`（公开）与 `authenticated`（会员专享），对未登录访客隐藏受保护文章正文与摘要并提供优雅的登录/注册引导卡片。
+- **全套会员与邀请系统**：前台提供会员登录、8 位无歧义邀请码注册、安全路径回跳与会员自主修改密码（`/account/security`）。
+- **SQLite FTS5 全文搜索**：毫秒级全文检索弹窗（Ctrl/Cmd + K），权限自感知，只对具备权限的用户返回相应摘要匹配。
+- **一体化管理后台 (`/wang`)**：
+  - **总览看板**：实时数据概览、快捷入口与最近编辑。
+  - **文档管理**：文章撰写、权限控制、置顶排序、分类与标签关联。
+  - **分类与标签**：无限层级树状分类、层级防环保护、分类排序与标签管理。
+  - **用户与邀请码**：用户启停/角色分配/重置密码、8 位邀请码生成与复制、使用记录追踪与批量管理。
+  - **媒体资源中心**：支持单文件与分片大文件上传（断点续传与实时进度）、N:M 文档引用追踪、防误删保护、逻辑文件夹与一键引用重建。
+- **TiptapEditor 文档编辑器**：后台文档编辑全量采用 TipTap，提供本地草稿防丢机制、外链图片本地化与无修改不改写原始内容的编辑会话保护。
+- **SEO 友好与规范路由**：首页、博客与文章服务端提供 SEO HTML 外壳，自动生成 `robots.txt` 与 `sitemap.xml`。
 
 ## 技术栈
 
-- 后端：Go 1.26、Gin、`modernc.org/sqlite`、JWT、bcrypt。
-- 前端：React 19、TypeScript 6、Vite 8、Tailwind CSS、React Router。
-- 内容：React Markdown、remark/rehype、DOMPurify、KaTeX。
-- 部署：Go 容器、Nginx 静态前端、SQLite 与上传目录命名卷。
+- **后端**：Go 1.26、Gin、纯 Go SQLite (`modernc.org/sqlite`)、JWT (`golang-jwt/jwt/v5`)、bcrypt (`golang.org/x/crypto`)。
+- **前端**：React 19、TypeScript 6、Vite 8、Tailwind CSS、React Router 7、Lucide React。
+- **富文本与排版**：TipTap 3 全家桶（`@tiptap/core`, `@tiptap/react`, `@tiptap/starter-kit`, Table/Image/TaskList/TextAlign 等扩展）。
+- **内容安全与净化**：DOMPurify 3，结合严格的标签、属性、协议与内联样式白名单过滤。
+- **部署**：Go 1.26 容器、Nginx 1.29 静态前端、Alpine 3.22、SQLite 与上传文件持久化命名卷。
 
 ## 目录
 

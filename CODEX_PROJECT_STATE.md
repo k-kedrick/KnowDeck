@@ -6,7 +6,7 @@
 
 - Lightweight personal blog and read-only knowledge base with an authenticated administration SPA.
 - Backend: Go 1.26.4, Gin, pure-Go SQLite (`modernc.org/sqlite`), local media storage.
-- Frontend: React 19, TypeScript 6, Vite 8, Tailwind CSS; Markdown/HTML rendering with DOMPurify and rehype sanitization.
+- Frontend: React 19, TypeScript 6, Vite 8, Tailwind CSS; Markdown/HTML rendering with DOMPurify and TipTap readonly sanitization/rendering pipeline.
 - Deployment: root `docker-compose.yml` defines two Docker services. Frontend Nginx publishes `${APP_PORT:-8080}` on all host interfaces by default; backend is internal on `8090`; named volumes hold SQLite, generated JWT Secret, and uploads. Local development uses frontend `3788` and backend `3799`.
 - Local Git is initialized on branch `main`; initial project baseline: `1a48894`.
 - Repository-wide Codex behavior is defined by `AGENTS.md`.
@@ -24,15 +24,15 @@
 - Backend entry: `backend/cmd/server/main.go`.
 - Backend flow: Gin route/handler -> service -> repository -> SQLite; media operations additionally use `internal/storage`.
 - Public surface: SEO HTML shells plus read-only `/api/public/*` endpoints. Mutations live under JWT-protected `/api/admin/*` routes.
-- Persistence: users, categories, tags, documents, document-tags, media, media-folders, settings, plus an FTS5 document index and synchronization triggers. SQLite uses WAL and one open connection.
+- Persistence: users, categories, tags, documents, document-tags, media, media-document-refs, media-folders, invite-codes, settings, plus an FTS5 document index and synchronization triggers. SQLite uses WAL and one open connection.
 - Category hierarchy writes reject missing, self, descendant, and cyclic parent relationships; tree responses normalize legacy orphan/cycle links so persisted categories cannot disappear from navigation.
-- Frontend entry/routes: `frontend/src/main.tsx` -> `frontend/src/App.tsx`; public routes are `/`, `/blog`, `/docs/:slug`; admin routes are lazy-loaded under `/wang` (with `/wang/dashboard` overview landing); backend management APIs remain under `/api/admin/*`.
-- User/auth: `users` supports admin/member roles, active/disabled status and auth-version invalidation. Public `/api/auth/register` requires an atomically consumed invite, `/api/auth/login` shares the existing JWT system, and authenticated `/api/auth/me` returns the database-current safe user.
-- Invites: plaintext codes are generated with `crypto/rand`, stored only as SHA-256 hashes, and consumed with a conditional SQLite update in the member-creation transaction.
+- Frontend entry/routes: `frontend/src/main.tsx` -> `frontend/src/App.tsx`; public routes are `/`, `/login`, `/register`, `/account/security`, `/blog`, `/docs/:slug`; admin routes are lazy-loaded under `/wang` (with `/wang/dashboard` overview landing); backend management APIs remain under `/api/admin/*`.
+- User/auth: `users` supports admin/member roles, active/disabled status and auth-version invalidation. Public `/api/auth/register` requires an atomically consumed invite, `/api/auth/login` shares the existing JWT system, authenticated `/api/auth/me` returns the database-current safe user, and `/api/auth/password` allows member self-service password changes.
+- Invites: 8-character alphanumeric codes are generated with `crypto/rand`, stored as plaintext `code` for administrative review/copying and `code_hash` for verification, and conditionally consumed with a SQLite update in the member-creation transaction.
 - User System: **COMPLETED** through U2. Admin user management and admin invite management are **COMPLETED**; `/wang/users` provides Users and Invites tabs backed by `/api/admin/users*` and `/api/admin/invites*`.
-- Document Access Control: **COMPLETED**. Backend enforces `access_level` on `/api/public/documents/:slug` (returning `locked: true` without body) and `/api/public/documents` (clearing `excerpt` for unauthenticated visitors). Frontend `ArticleCard` and `DocViewer` display dedicated locked badges and login/registration prompt cards.
-- Editor: `AdminDocumentEditor` uses `TiptapEditor` exclusively. It reuses drafts from `useDocumentDraft` and the existing persistence/reader content contract.
-- Critical paths: database/schema (`repository/db.go`), auth (`middleware/auth.go`, `service/auth_service.go`), file storage/media, document persistence, and the `DocViewer` sanitization/rendering pipeline.
+- Document Access Control: **COMPLETED** (U3). Backend enforces `access_level` on `/api/public/documents/:slug` (returning `locked: true` without body) and `/api/public/documents` (clearing `excerpt` for unauthenticated visitors). Frontend `ArticleCard` and `DocViewer` display dedicated locked badges and login/registration prompt cards.
+- Editor & Reader: `AdminDocumentEditor` uses `TiptapEditor` exclusively; public `DocViewer` uses `TiptapReadonlyDocument` directly with DOMPurify, eliminating reader/editor divergence.
+- Critical paths: database/schema (`backend/internal/repository/db.go`), auth (`backend/internal/middleware/auth.go`, `backend/internal/service/auth_service.go`), file storage/media, document persistence, and the `DocViewer` sanitization/rendering pipeline.
 
 ## Current Fingerprints
 
@@ -78,20 +78,19 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - Result: **PASS** on 2026-09-10 after production-placeholder validation was added.
 - Invalidate when relevant backend Go source or modules change.
 
-### frontend-build
+#### frontend-build
 
 - Command: `npm.cmd run build`
-- Result: **PASS** on 2026-09-08 after frontend UI modern aesthetic upgrade (`tsc -b && vite build`).
-- Note: Vite reports the lazy Tiptap chunk at 544.26 kB minified, above its 500 kB advisory threshold.
-- Result refreshed: **PASS** on 2026-09-10 after removing obsolete legacy-editor metadata and compatibility-path wording.
+- Result: **PASS** on 2026-09-11 (`tsc -b && vite build`, 1.51s, 0 errors).
+- Note: Vite bundle outputs `dist/assets/extensions-*.js` (458.97 kB) and `TiptapEditor-*.js` (86.28 kB), all within advisory thresholds.
 - Valid for the frontend fingerprint above.
 - Invalidate when relevant frontend source, build configuration, TypeScript configuration, or dependencies change.
 
 ### frontend-lint
 
 - Command: `npm.cmd run lint`
-- Result: **PASS** on 2026-09-10 with 20 warnings and no errors.
-- Warnings: React effect/dependency/manual-memoization diagnostics in existing UI modules, plus `react(refs)` in `TiptapEditor.tsx`; none were introduced by the release cleanup.
+- Result: **PASS** on 2026-09-11 with 12 warnings and 0 errors.
+- Warnings: React effect/dependency diagnostics in existing UI modules; no purity or syntax errors.
 - Valid for the frontend fingerprint above.
 - Invalidate when affected frontend source or lint configuration changes.
 
@@ -99,8 +98,11 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 
 - U2 focused command: `npm.cmd test -- src/pages/admin/AdminUsersPage.test.tsx src/api/index.test.ts --reporter=dot`
 - U2 focused result: **15/15 PASS** on 2026-09-08.
-- Full-suite command: `npm.cmd test -- --reporter=dot`
-- Full-suite result: **226/226 PASS**, 1 skipped (46 test files) on 2026-09-10.
+- Full-suite command: `npm.cmd test`
+- Full-suite result: on 2026-09-11:
+  - **Test Files**: 46 passed, 1 skipped (共 47 个测试套件文件)
+  - **Tests**: 233 passed, 1 skipped (共 234 个具体测试用例)
+  - 注：`src/components/admin/tiptap/largeDocumentBenchmark.test.ts` 中的基准性能测试用例默认 skip。
 
 ### deployment-compose-config
 
@@ -127,17 +129,14 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 - Restore from a backup archive.
 - Native IME composition behavior.
 - Real-server resource usage.
-- Local production-data migration.
 - Race detector: unavailable in the current environment because `go test -race` requires CGO.
 
 ## Known Risks / TODO
 
-1. **P2 - Frontend test reliability:** one async/lazy document-route test in `App.test.tsx` failed in the full suite while U2 focused tests passed; stabilize its synchronization and rerun the full suite.
-2. **P3 - Frontend quality debt:** resolve the 20 lint warnings incrementally in affected modules.
-3. **P3 - Tiptap bundle size:** assess the lazy Tiptap chunk size before making Tiptap the default editor.
-4. **Operational:** production Nginx/domain/TLS integration, persistent-volume migration, backup restore, and native IME composition remain unverified.
-5. **Operational:** manual browser acceptance remains available at `http://127.0.0.1:3788`, with the protected management entry at `/wang`.
-6. **Planned U3+:** article/search/SEO access controls and member login/register frontend UI are not implemented.
+1. **P3 - Frontend quality debt:** resolve the 12 classified React effect warnings incrementally in affected UI modules.
+2. **Operational:** production Nginx/domain/TLS integration, persistent-volume migration, and backup restore from archive remain unverified on production host.
+3. **Operational:** manual browser acceptance remains available at `http://127.0.0.1:3788`, with the protected management entry at `/wang`.
+4. **Environment:** race detector is unavailable in current local Windows environment without CGO toolchain.
 
 ## Incremental Rules
 

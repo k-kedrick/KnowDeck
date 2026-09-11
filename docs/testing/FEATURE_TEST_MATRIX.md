@@ -1,81 +1,82 @@
 # 功能验收矩阵
 
-本文用于按变化范围选择验证，不记录某次运行的 PASS/FAIL。当前验证结果和可复用缓存只记录在 [CODEX_PROJECT_STATE.md](../../CODEX_PROJECT_STATE.md)。
+本文用于按变化范围选择验证策略，不记录某次运行的 PASS/FAIL（当前验证结果和可复用缓存记录在 [CODEX_PROJECT_STATE.md](../../CODEX_PROJECT_STATE.md)）。
 
 ## 使用规则
 
-1. 从改动对应的最小行开始验证，不默认执行全表。
-2. 已有自动化测试覆盖时优先扩展原测试。
-3. 只有 UI、浏览器能力、真实上传/下载或部署行为发生变化时才执行相应人工验收。
+1. 从改动对应的最小测试范围开始验证，不默认执行全量测试套件。
+2. 已有自动化测试覆盖时优先扩展原测试，严格维护已有用例的通过状态。
+3. 标注说明：
+   - `[AUTOMATED]`: 具备已实现的单元/集成自动化测试。
+   - `[MANUAL]`: 需要真实浏览器或人工操作交互验证。
+   - `[NOT COVERED]`: 尚未纳入常规自动化测试覆盖。
 4. 内容格式变更同时参考 [编辑器内容格式](../specs/EDITOR_FORMAT.md)。
 
-## 公共端
+## 公共端能力矩阵
 
-| 能力 | 主要实现 | 自动化证据 | 需要人工验收的变化 |
-| --- | --- | --- | --- |
-| 路由与文档加载 | `App.tsx`、`PublicLayout.tsx` | `App.test.tsx` | 路由跳转、加载/404/网络错误视觉 |
-| 首页与文章列表 | `HomePage.tsx`、`BlogPage.tsx`、`ArticleCard.tsx` | 相关 App/API 测试 | 响应式布局、筛选与分页交互 |
-| 站点导航/主题 | `Header.tsx`、`Footer.tsx`、`theme.ts` | `theme.test.ts`、导航测试 | 移动菜单、主题闪烁与持久化 |
-| 分类树 | `Sidebar.tsx` | `Sidebar.test.tsx` | 深层分类展开、移动端抽屉 |
-| 搜索 | `SearchModal.tsx`、search repository | `SearchModal.test.tsx`、repository tests | Ctrl/Cmd+K、输入法、结果跳转 |
-| 文档正文与安全 | `DocViewer.tsx`、`htmlToMarkdown.ts` | `DocViewer.security.test.tsx` | 真实 Markdown/HTML、媒体、链接和恶意输入 |
-| 大纲/锚点 | `DocViewer.tsx`、`documentHeadings.ts` | `DocViewer.toc.test.tsx`、`documentHeadings.test.ts` | 长文滚动、高亮、移动目录 |
-| KaTeX | `markdownMath.ts`、`DocViewer.tsx` | DocViewer 安全测试 | 首次按需加载与复杂公式 |
-| SEO | `SEOHead.tsx`、`seo_handler.go` | `seo.test.ts`、`seo_handler_test.go` | 生产域名下 canonical、分享卡片、站点地图 |
-| 公开 API 隔离 | public handler/service/repository | `public_handler_test.go`、repository tests | 真实数据下草稿不可见 |
-| 下载/外部图片代理 | public handler、media service | handler/service/storage tests | 大文件、浏览器下载名、上游异常 |
+| 业务能力 | 主要实现源码 | 验证模式与证据文件 | 人工交互验收关注点 |
+| :--- | :--- | :--- | :--- |
+| **路由与页面加载** | `frontend/src/App.tsx`<br>`PublicLayout.tsx` | `[AUTOMATED]` `App.test.tsx` | 路由平滑跳转、加载态、404 与网络异常视觉兜底 |
+| **首页与博客列表** | `HomePage.tsx`<br>`BlogPage.tsx`<br>`ArticleCard.tsx` | `[AUTOMATED]` `App.test.tsx` | 响应式断点排版、标签组合筛选与清空、置顶卡片样式 |
+| **站点导航与主题** | `Header.tsx`<br>`Footer.tsx`<br>`utils/theme.ts` | `[AUTOMATED]` `theme.test.ts`<br>`UserDropdown.test.tsx` | 暗色/亮色切换无闪烁、移动端顶部菜单交互与 LocalStorage 持久化 |
+| **知识库分类侧边栏** | `Sidebar.tsx`<br>`utils/categoryTree.ts` | `[AUTOMATED]` `Sidebar.test.tsx` | 深层父子分类递归展开、移动端遮罩抽屉、当前活动文档项高亮 |
+| **全文检索 (FTS5)** | `SearchModal.tsx`<br>`backend/internal/repository/search_repository.go` | `[AUTOMATED]` `SearchModal.test.tsx`<br>`search_access_test.go` | Ctrl/Cmd + K 快捷键唤醒、中文输入法兼容、高亮匹配摘要、权限过滤与片段清洗 |
+| **文档阅读与安全渲染** | `DocViewer.tsx`<br>`TiptapReadonlyDocument.tsx`<br>`htmlToMarkdown.ts` | `[AUTOMATED]` `DocViewer.security.test.tsx`<br>`htmlToMarkdown.test.ts` | 真实 Markdown/HTML、图片画廊灯箱、视频播放、恶意 XSS 脚本过滤拦截 |
+| **大纲联动与滚动追踪** | `DocViewer.tsx`<br>`documentHeadings.ts` | `[AUTOMATED]` `DocViewer.toc.test.tsx`<br>`documentHeadings.test.ts` | 长文章平滑滚动定位、标题动态 Active 高亮、左侧 TOC 折叠/展开 |
+| **阅读进度指示** | `ReadingProgressBar.tsx` | `[AUTOMATED]` `ReadingProgressBar.test.tsx` | 顶部阅读进度条随页面滚动平滑延伸 |
+| **文章权限访问控制 (U3)**| `DocViewer.tsx`<br>`document_repository.go` | `[AUTOMATED]` `DocViewer.locked.test.tsx`<br>`documentPayload.access.test.ts` | 未登录访客访问 `authenticated` 文章时展示锁卡片与登录/注册引导，正文与摘要被隐藏 |
+| **前台会员登录与注册 (U4)**| `LoginPage.tsx`<br>`RegisterPage.tsx`<br>`auth/AuthContext.tsx` | `[AUTOMATED]` `RegisterPage.test.tsx`<br>`AuthContext.test.tsx`<br>`returnTo.test.ts` | 8 位邀请码注册、登录态无缝恢复、安全 `returnTo` 来源回跳、退出登录清理缓存 |
+| **会员自助修改密码 (U7)**| `AccountSecurityPage.tsx`<br>`service/auth_service.go` | `[AUTOMATED]` `AccountSecurityPage.test.tsx`<br>`auth_service_test.go` | 原密码校验、新密码长度拦截（>= 12 位）、成功后 Token 无缝更新且旧设备失效 |
+| **SEO HTML 外壳与站点地图**| `SEOHead.tsx`<br>`backend/internal/handler/seo_handler.go` | `[AUTOMATED]` `seo.test.ts`<br>`seo_handler_test.go` | 生产域名 Canonical、OpenGraph 卡片、`/sitemap.xml` 排除非公开文章、`/robots.txt` |
+| **外部图片代理与附件下载** | `public_handler.go`<br>`service/media_service.go` | `[AUTOMATED]` `public_handler_test.go`<br>`media_service_test.go` | 外部图片防盗链代理与限流、大附件断点下载名规范化 |
 
-## 管理后台
+## 管理后台能力矩阵
 
-| 能力 | 主要实现 | 自动化证据 | 需要人工验收的变化 |
-| --- | --- | --- | --- |
-| 登录与路由守卫 | `AdminLoginPage.tsx`、`AdminAuthGuard.tsx`、auth service | `auth_service_test.go`、App/导航测试 | Token 过期、刷新和重定向 |
-| 文档列表/状态 | `AdminDocumentList.tsx`、document handler/service/repository | `document_repository_test.go`、service/API tests | 筛选、分页、快速状态切换 |
-| 文档属性与保存 | `AdminDocumentEditor.tsx`、payload/comparison utilities | properties/payload/comparison tests | 新建、更新、发布、降为草稿 |
-| 本地草稿 | `useDocumentDraft.ts`、`AdminDocumentEditor.tsx` | hook 与 draft tests | 刷新恢复、冲突提示、存储满 |
-| 文档编辑器 | `components/admin/tiptap/**`、`htmlToMarkdown.ts` | Tiptap E2–E7、adapter、compatibility、benchmark tests | 真实编辑、焦点、表格和上传 |
-| 分类与标签 | manager pages、handlers/repositories | category/tag handler/repository tests | 层级循环防护、引用计数与删除 |
-| 媒体与文件夹 | `AdminMediaManager.tsx`、media handler/service/storage | media service/storage tests | 拖拽上传、移动、批量操作、引用防删 |
-| 设置与资料 | settings page/handler/service、auth profile | config/auth tests | 修改后即时呈现、密码变更 |
+| 业务能力 | 主要实现源码 | 验证模式与证据文件 | 人工交互验收关注点 |
+| :--- | :--- | :--- | :--- |
+| **管理员鉴权与路由守卫** | `AdminLoginPage.tsx`<br>`AdminAuthGuard.tsx`<br>`service/auth_service.go` | `[AUTOMATED]` `AdminAuthGuard.test.tsx`<br>`auth_service_test.go` | Token 过期拦截、刷新重定向、非 admin 角色越权阻断 |
+| **总览看板 (U5)** | `AdminDashboardPage.tsx` | `[AUTOMATED]` `AdminDashboardPage.test.tsx` | 统计卡片指标呈现、快捷操作入口、最近编辑文章列表链接 |
+| **文档列表与状态流转** | `AdminDocumentList.tsx`<br>`service/document_service.go` | `[AUTOMATED]` `document_repository_test.go`<br>`document_service_test.go` | 列表筛选、快速切换发布/草稿状态、文档删除事务回滚 |
+| **文档属性与草稿保存** | `AdminDocumentEditor.tsx`<br>`useDocumentDraft.ts` | `[AUTOMATED]` `AdminDocumentEditor.draft.test.tsx`<br>`AdminDocumentEditor.properties.test.tsx`<br>`useDocumentDraft.test.ts` | 本地草稿跨刷新恢复、版本冲突提示、分类/标签表单同步保存 |
+| **TipTap 核心编辑器** | `components/admin/tiptap/**`<br>`editorContentAdapter.ts` | `[AUTOMATED]` `TiptapEditor.test.tsx`<br>`TiptapE2~E7` 套件 (`TiptapE2.test.tsx` 等)<br>`editorCompatibility.test.ts` | 划词气泡工具条、富文本表格增删行列、代码块语法高亮、未改动保留原格式 |
+| **分类层级树管理** | `AdminCategoryManager.tsx`<br>`category_service.go` | `[AUTOMATED]` `AdminCategoryManager.data.test.tsx`<br>`category_service_test.go` | 树状折叠展开、新建子分类、排序调整、防自引用与祖先环路循环阻断 |
+| **标签管理** | `AdminTagManager.tsx`<br>`TagCombobox.tsx` | `[AUTOMATED]` `AdminTagManager.test.tsx`<br>`TagCombobox.test.tsx` | 标签创建、同名规范化、文章关联数计数与标签级联解除 |
+| **媒体中心与引用体系 (U8)**| `AdminMediaManager.tsx`<br>`media/MediaWorkspace.tsx`<br>`service/media_service.go` | `[AUTOMATED]` `AdminMediaManager.test.tsx`<br>`media_service_test.go`<br>`media_repository_test.go` | 智能分类切换、逻辑文件夹操作、引用计数 > 0 阻止单删、批量删除保留引用项 |
+| **媒体引用智能修复** | `POST /api/admin/media/rebuild-references` | `[AUTOMATED]` `media_service_test.go` | 幂等重新扫描全量文档并修复历史图片关联 |
+| **分片大文件上传** | `uploadEditorMedia.ts`<br>`admin_media_handler.go` | `[AUTOMATED]` `TiptapE4AsyncUpload.test.tsx`<br>`media_service_test.go` | 超大视频切片上传进度条、网络中断重试、服务端合并一致性 |
+| **用户体系管理 (U2)** | `AdminUsersPage.tsx`<br>`users/UsersTab.tsx`<br>`user_service.go` | `[AUTOMATED]` `AdminUsersPage.test.tsx`<br>`user_service_test.go` | 用户分页查询、启停状态切换、角色分配、重置密码、自操作与最后管理员保护 |
+| **8 位邀请码管理 (U6)** | `AdminUsersPage.tsx`<br>`service/invite_service.go` | `[AUTOMATED]` `AdminUsersPage.test.tsx`<br>`invite_service_test.go` | 8 位邀请码生成与明文展示、一键复制徽章、修改备注/使用限制、查看使用者列表、批量删除/启停 |
+| **站点全局设置** | `AdminSettingsPage.tsx`<br>`service/setting_service.go` | `[NOT COVERED]` 暂无专属自动化测试<br>当前依赖人工验收 | 站点名称、副标题、页脚、公开属性修改后前台即时同步与持久化校验 |
 
-## 编辑器格式生命周期
+## 后端与基础设施验证分级
 
-格式或内容清洗发生变化时，按受影响能力选择以下链路：
+| 变更范围 | 最小建议自动化测试 | 升级验证路径 |
+| :--- | :--- | :--- |
+| **配置与环境变量** | `go test ./internal/config` | 环境变量覆盖与缺省回退验证 |
+| **认证、Token 与密码策略** | `go test ./internal/service -run Auth` | `go test ./internal/handler -run Auth` |
+| **中间件 (CORS/安全头/限流)**| `go test ./internal/middleware` | 模拟恶意 Origin 与高频请求 |
+| **SQL 仓储与事务** | 对应模块 `repository_test.go` | 共享 DB 逻辑全仓储测试并验证 WAL 并发 |
+| **Schema、迁移与 FTS5** | `go test ./internal/repository` | 临时 SQLite 数据库迁移验证 |
+| **媒体存储与分片逻辑** | `go test ./internal/storage` + `media_service_test.go` | 物理文件写入与临时切片清理验证 |
+| **Docker Compose 与部署拓扑** | `docker compose --env-file .env.example config --quiet` | 容器健康检查与数据卷读写权限验证 |
 
-```text
-输入/粘贴
-  -> 编辑器 DOM 或 ProseMirror 文档
-  -> 序列化与清洗
-  -> 本地草稿（如相关）
-  -> API 持久化
-  -> 重新加载编辑
-  -> 公开阅读渲染
-  -> 搜索/大纲（如结构相关）
+## 全量构建与集成指令
+
+在发布新版本或涉及全站基础依赖升级时执行：
+
+```powershell
+# 1. 后端全量测试与静态分析
+cd backend
+go test ./...
+go vet ./...
+
+# 2. 前端代码质量与全量测试
+cd ../frontend
+npm.cmd run lint
+npm.cmd test
+npm.cmd run build
+
+# 3. Docker 编排语法静态校验
+cd ..
+docker compose --env-file .env.example config --quiet
 ```
-
-重点样例：
-
-- Markdown：标题、段落、软换行、列表、任务项、引用、链接、代码、普通表格。
-- 富文本：字体、字号、颜色、高亮、对齐、行距、下划线。
-- 媒体：站内/外链图片、data/blob 临时图片、视频、iframe、附件。
-- 结构：Callout、富表格、空段落、重复标题与非 ASCII 锚点。
-- 安全：脚本、事件属性、危险协议、CSS URL/表达式和越界样式。
-
-## 后端与数据
-
-| 变化范围 | 最小验证 |
-| --- | --- |
-| config/生产校验 | `go test ./internal/config` |
-| JWT/密码 | `go test ./internal/service -run Auth`，必要时 handler |
-| CORS/headers/限流 | 对应 middleware 测试 |
-| SQL 查询或事务 | 对应 repository/service 测试；共享 DB 逻辑再扩大 |
-| Schema/FTS/迁移 | repository 全包测试并使用临时数据库验证升级路径 |
-| 文件上传/路径 | storage + media service 测试 |
-| 路由/响应结构 | handler 测试，随后验证对应前端 API 类型 |
-
-## 构建与全量验证
-
-- 前端共享类型、路由、构建配置或跨模块依赖变化后运行 `npm run build`。
-- 后端共享接口、Schema、认证或跨仓储事务变化后考虑 `go test ./...` 与 `go vet ./...`。
-- 只有广泛变更、发布候选或用户明确要求时运行完整前端测试套件。
-- Docker/Nginx、数据卷或生产环境变量变化时，验证 Compose 配置、健康检查和备份/恢复流程；普通业务改动不需要重复 Docker 构建。
