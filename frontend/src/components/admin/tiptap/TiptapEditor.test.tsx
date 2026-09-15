@@ -33,4 +33,30 @@ describe('TiptapEditor hidden PoC', () => {
     await waitFor(() => expect(ref.current?.getContentForSave()).toBe('# restored draft'));
     expect(ref.current?.isDirty()).toBe(false);
   });
+
+  it('does not snapshot a Chinese IME composition before its candidate is confirmed', async () => {
+    const ref = createRef<TiptapEditorHandle>();
+    const onChange = vi.fn();
+    render(<TiptapEditor ref={ref} content="<p></p>" onChange={onChange} />);
+    await waitFor(() => expect(ref.current?.getEditor()).not.toBeNull());
+
+    vi.useFakeTimers();
+    try {
+      const editor = ref.current!.getEditor()!;
+      act(() => {
+        editor.view.dom.dispatchEvent(new Event('compositionstart'));
+        editor.commands.insertContent('xuan');
+        vi.advanceTimersByTime(400);
+      });
+      expect(onChange).not.toHaveBeenCalled();
+
+      act(() => {
+        editor.view.dom.dispatchEvent(new Event('compositionend'));
+        vi.advanceTimersByTime(400);
+      });
+      expect(onChange).toHaveBeenCalledWith(expect.stringContaining('xuan'));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

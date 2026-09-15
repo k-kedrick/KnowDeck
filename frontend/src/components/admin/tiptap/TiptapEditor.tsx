@@ -51,6 +51,8 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
   const onUploadFileRef = useRef(onUploadFile);
   const programmaticUpdateRef = useRef(false);
   const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const compositionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isComposingRef = useRef(false);
   const lastEmittedContentRef = useRef<string | null>(null);
   const lastExternalContentRef = useRef(content);
   const editorRef = useRef<Editor | null>(null);
@@ -82,6 +84,23 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
         'data-testid': 'tiptap-editor-canvas',
       },
       transformPastedHTML: (html) => sanitizeDocumentHtml(normalizePastedDocumentHtml(html)),
+      handleDOMEvents: {
+        compositionstart: () => {
+          isComposingRef.current = true;
+          if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+          return false;
+        },
+        compositionend: () => {
+          isComposingRef.current = false;
+          if (compositionTimerRef.current) clearTimeout(compositionTimerRef.current);
+          compositionTimerRef.current = setTimeout(() => {
+            if (editorRef.current && !editorRef.current.isDestroyed && !isComposingRef.current) {
+              scheduleDraftSnapshot(editorRef.current);
+            }
+          });
+          return false;
+        },
+      },
       handlePaste: (view, event) => {
         const files = event.clipboardData?.files;
         if (!files || files.length === 0) return false;
@@ -178,7 +197,7 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
       },
     },
     onTransaction: ({ editor: currentEditor, transaction }) => {
-      if (!transaction.docChanged || programmaticUpdateRef.current) return;
+      if (!transaction.docChanged || programmaticUpdateRef.current || isComposingRef.current) return;
       sessionRef.current.markUserDocumentChange(true);
       scheduleDraftSnapshot(currentEditor);
     },
@@ -190,6 +209,7 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
 
   useEffect(() => () => {
     if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+    if (compositionTimerRef.current) clearTimeout(compositionTimerRef.current);
   }, []);
 
   useEffect(() => {

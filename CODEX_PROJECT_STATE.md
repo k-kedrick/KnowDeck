@@ -41,7 +41,7 @@ Aggregate SHA-256 over sorted relevant inputs. The maintained-documentation fing
 | Scope | Fingerprint |
 | --- | --- |
 | Backend Go source + modules | `43712f82001019184213bbe8774e8da6355229e2fa46403046a183e091a27253` |
-| Frontend source/config | `8d08d63cfbcfcf4c75f3cc6b62db1817d2e2317d79d154977843ee7ad1466f1c` |
+| Frontend source/config | `828372187621980d28a05296bc604d20800b85d147b9b09dc13d740a8b1e5de1` |
 | Deployment config | `2a9ecd684abf2ab2f33683fe1d7813ff8d32c9d5bfbcb206183557fb99073770` |
 | Maintained Markdown except this state file | `2de00f471a8063f95fe62291fd133fa345f6f6b2732daa84c9fcc7449739c464` |
 
@@ -81,7 +81,7 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
 #### frontend-build
 
 - Command: `npm.cmd run build`
-- Result: **PASS** on 2026-09-11 (`tsc -b && vite build`, 1.51s, 0 errors).
+- Result: **PASS** on 2026-09-15 (`tsc -b && vite build`, 0 errors).
 - Note: Vite bundle outputs `dist/assets/extensions-*.js` (458.97 kB) and `TiptapEditor-*.js` (86.28 kB), all within advisory thresholds.
 - Valid for the frontend fingerprint above.
 - Invalidate when relevant frontend source, build configuration, TypeScript configuration, or dependencies change.
@@ -103,6 +103,8 @@ Ordinary Codex work starts from `AGENTS.md`, then uses the `project-owner` skill
   - **Test Files**: 46 passed, 1 skipped (共 47 个测试套件文件)
   - **Tests**: 233 passed, 1 skipped (共 234 个具体测试用例)
   - 注：`src/components/admin/tiptap/largeDocumentBenchmark.test.ts` 中的基准性能测试用例默认 skip。
+- Native-IME focused command: `npm.cmd test -- src/components/admin/tiptap/TiptapEditor.test.tsx --run --reporter=verbose`
+- Result: **PASS** on 2026-09-15 (3/3); verifies that a composition session does not emit a draft snapshot until `compositionend`.
 
 ### deployment-compose-config
 
