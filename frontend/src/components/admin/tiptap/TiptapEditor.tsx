@@ -20,7 +20,6 @@ import {
   getUploadAnchorPosition,
   removeUploadAnchorMeta,
 } from './extensions/UploadAnchorPlugin';
-import { TiptapToolbar } from './TiptapToolbar';
 import { TiptapBubbleMenu } from './TiptapBubbleMenu';
 import { TiptapImageMenu } from './TiptapImageMenu';
 import { TiptapTableMenu } from './TiptapTableMenu';
@@ -36,18 +35,17 @@ export interface TiptapEditorHandle {
 interface TiptapEditorProps {
   content: string;
   onChange: (content: string) => void;
+  onEditorReady?: (editor: Editor | null) => void;
   title?: string;
   onTitleChange?: (title: string) => void;
   documentMeta?: ReactNode;
   onUploadFile?: UploadHandler;
-  uploading?: boolean;
-  uploadProgress?: string;
 }
 
 const SNAPSHOT_DEBOUNCE_MS = 320;
 
 export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(function TiptapEditor(
-  { content, onChange, title, onTitleChange, documentMeta, onUploadFile, uploading = false, uploadProgress },
+  { content, onChange, onEditorReady, title, onTitleChange, documentMeta, onUploadFile },
   ref,
 ) {
   const sessionRef = useRef(new EditorContentSession(content));
@@ -211,6 +209,11 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
     editorRef.current = editor;
   }, [editor]);
 
+  useEffect(() => {
+    onEditorReady?.(editor);
+    return () => onEditorReady?.(null);
+  }, [editor, onEditorReady]);
+
   useEffect(() => () => {
     if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
     if (compositionTimerRef.current) clearTimeout(compositionTimerRef.current);
@@ -252,15 +255,7 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
   }
 
   return (
-    <div className="space-y-3" data-editor-engine="tiptap">
-      <div className="sticky top-0 z-30 pb-3">
-        <TiptapToolbar
-          editor={editor}
-          onUploadFile={onUploadFile}
-          uploading={uploading}
-          uploadProgress={uploadProgress}
-        />
-      </div>
+    <div data-editor-engine="tiptap">
 
       {/* Floating Text Selection Bubble Menu */}
       <TiptapBubbleMenu editor={editor} />

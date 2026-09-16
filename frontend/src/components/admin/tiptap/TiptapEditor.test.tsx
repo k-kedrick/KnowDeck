@@ -60,7 +60,7 @@ describe('TiptapEditor hidden PoC', () => {
     }
   });
 
-  it('places the document title in the writing canvas while the toolbar remains sticky', async () => {
+  it('places the document title in the writing canvas', async () => {
     const onTitleChange = vi.fn();
     render(<TiptapEditor content="<p>正文</p>" onChange={() => undefined} title="编辑器标题" onTitleChange={onTitleChange} />);
 
@@ -68,9 +68,6 @@ describe('TiptapEditor hidden PoC', () => {
     expect((title as HTMLInputElement).value).toBe('编辑器标题');
     fireEvent.change(title, { target: { value: '更新标题' } });
     expect(onTitleChange).toHaveBeenCalledWith('更新标题');
-    const toolbarContainer = document.querySelector('[data-testid="tiptap-toolbar"]')?.parentElement;
-    expect(toolbarContainer?.classList.contains('sticky')).toBe(true);
-    expect(toolbarContainer?.classList.contains('top-0')).toBe(true);
   });
 
   it('turns only the selected line into a heading from the floating block menu', async () => {

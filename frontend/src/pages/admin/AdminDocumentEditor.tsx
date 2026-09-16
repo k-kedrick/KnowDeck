@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../api';
 import type { DocumentSaveReq, Category, Media, Tag, DocumentDetail, DocumentAccessLevel, UploadProgress } from '../../api';
+import type { Editor } from '@tiptap/core';
 import { TagCombobox } from '../../components/admin/TagCombobox';
 import type { TiptapEditorHandle } from '../../components/admin/tiptap/TiptapEditor';
 import { detectContentFormat } from '../../components/admin/tiptap/editorContentAdapter';
@@ -39,6 +40,7 @@ import { buildDocumentPayload } from '../../utils/documentPayload';
 import { categoryPath, flattenCategoryTree } from '../../utils/categoryTree';
 
 const TiptapEditor = lazy(() => import('../../components/admin/tiptap/TiptapEditor').then((module) => ({ default: module.TiptapEditor })));
+const TiptapToolbar = lazy(() => import('../../components/admin/tiptap/TiptapToolbar').then((module) => ({ default: module.TiptapToolbar })));
 
 const EDITOR_LAYOUT_PREFERENCE_VERSION = 'kb_admin_editor_layout_v2';
 
@@ -141,6 +143,7 @@ export const AdminDocumentEditor: React.FC = () => {
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tiptapEditorRef = useRef<TiptapEditorHandle>(null);
+  const [tiptapEditor, setTiptapEditor] = useState<Editor | null>(null);
 
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
@@ -940,6 +943,18 @@ export const AdminDocumentEditor: React.FC = () => {
 
         {/* 2. Center Main Editor Workspace */}
         <div className="admin-editor-main-scroll flex min-h-0 min-w-0 flex-col space-y-4">
+          {tiptapEditor && (
+            <Suspense fallback={null}>
+              <div className="admin-editor-toolbar-sticky">
+                <TiptapToolbar
+                  editor={tiptapEditor}
+                  onUploadFile={handleUploadFile}
+                  uploading={uploading}
+                  uploadProgress={uploadProgressLabel(uploadProgress)}
+                />
+              </div>
+            </Suspense>
+          )}
           {showProperties && (
             <section
               id="editor-document-properties"
@@ -1057,6 +1072,7 @@ export const AdminDocumentEditor: React.FC = () => {
                 ref={tiptapEditorRef}
                 content={content}
                 onChange={setContent}
+                onEditorReady={setTiptapEditor}
                 title={title}
                 onTitleChange={setTitle}
                 documentMeta={(
@@ -1075,8 +1091,6 @@ export const AdminDocumentEditor: React.FC = () => {
                   </>
                 )}
                 onUploadFile={handleUploadFile}
-                uploading={uploading}
-                uploadProgress={uploadProgressLabel(uploadProgress)}
               />
             </Suspense>
           </div>

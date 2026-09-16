@@ -256,6 +256,17 @@
     scrollbar-gutter: stable;
   }
 
+  .admin-editor-toolbar-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    flex: none;
+    padding-bottom: 0.75rem;
+    background: var(--color-canvas, #f8fafc);
+  }
+
+  .dark .admin-editor-toolbar-sticky { background: #0f172a; }
+
   .admin-editor-panel-slot {
     min-width: 0;
     min-height: 0;
