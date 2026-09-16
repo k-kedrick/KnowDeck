@@ -163,6 +163,31 @@ describe('public document routing', () => {
     expect(new URL(window.location.href).search).toBe('');
   });
 
+  it('uses 20 articles per page and keeps active filters when navigating numbered pages', async () => {
+    window.history.replaceState(null, '', '/blog?category=1&tag=react&page=5');
+    apiMocks.getDocuments.mockResolvedValue({
+      total: 200,
+      page: 5,
+      page_size: 20,
+      list: [{ ...summary(1, 'a', '文章 A'), status: 'published', category_id: 1, author_id: 1, sort_order: 0, is_pinned: false, created_at: '2026-01-01T00:00:00Z' }],
+    });
+    render(<App />);
+
+    await waitFor(() => expect(apiMocks.getDocuments).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 5, page_size: 20, category_id: 1, tags: ['react'] }),
+      expect.any(AbortSignal),
+    ));
+    expect(screen.getByRole('button', { name: '第 5 页' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getAllByText('…')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: '第 6 页' }));
+    await waitFor(() => expect(apiMocks.getDocuments).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 6, page_size: 20, category_id: 1, tags: ['react'] }),
+      expect.any(AbortSignal),
+    ));
+    expect(new URL(window.location.href).search).toBe('?category=1&tag=react&page=6');
+  });
+
   it('updates route-specific metadata from home to blog and article', async () => {
     apiMocks.getSiteInfo.mockResolvedValue({
       site_name: '测试知识库',

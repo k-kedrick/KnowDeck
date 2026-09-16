@@ -291,7 +291,7 @@ export const HomePage = () => {
             )}
           </section>
 
-          <aside className="space-y-6">
+          <aside className="self-start space-y-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto lg:pr-1">
             <section id="categories" className="scroll-mt-24 rounded-2xl border border-border-subtle bg-surface p-5 shadow-xs" aria-labelledby="categories-heading">
               <div className="flex items-center justify-between border-b border-border-subtle pb-3">
                 <h2 id="categories-heading" className="flex items-center gap-2 text-sm font-bold text-text-primary">

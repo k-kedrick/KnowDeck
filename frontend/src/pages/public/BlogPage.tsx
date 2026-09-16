@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, FolderTree, Tags, X } from 'lucide-react';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { api } from '../../api';
@@ -101,6 +101,12 @@ const CategoryFilterTree = ({ nodes, activeCategory, onSelect, compact = false }
   );
 };
 
+const paginationItems = (currentPage: number, pageCount: number): Array<number | 'ellipsis'> => {
+  const pages = new Set([1, pageCount, currentPage - 1, currentPage, currentPage + 1]);
+  const ordered = [...pages].filter((page) => page >= 1 && page <= pageCount).sort((left, right) => left - right);
+  return ordered.flatMap((page, index) => index > 0 && page - ordered[index - 1] > 1 ? ['ellipsis' as const, page] : [page]);
+};
+
 export const BlogPage = () => {
   const { tree, siteInfo } = useOutletContext<PublicOutletContext>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -109,6 +115,7 @@ export const BlogPage = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const resultsRef = useRef<HTMLElement>(null);
 
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
   const category = Number(searchParams.get('category')) || undefined;
@@ -120,7 +127,7 @@ export const BlogPage = () => {
     ...initialDesktopTags,
     ...tags.filter((item) => selectedTagSet.has(item.slug) && !initialDesktopTags.some((visible) => visible.id === item.id)),
   ];
-  const pageSize = 10;
+  const pageSize = 20;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const siteName = siteInfo?.site_name || '知识库';
 
@@ -171,6 +178,7 @@ export const BlogPage = () => {
     if (value) next.set(key, value); else next.delete(key);
     if (key !== 'page') next.delete('page');
     setSearchParams(next);
+    if (key === 'page') requestAnimationFrame(() => resultsRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }));
   };
 
   const toggleTag = (slug: string) => {
@@ -294,7 +302,7 @@ export const BlogPage = () => {
         {/* Content Stream & Sidebar Grid */}
         <div className="grid gap-10 pt-8 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
           {/* Left Sidebar Filter */}
-          <aside className="relative z-20 hidden space-y-6 lg:block">
+          <aside className="relative z-20 hidden self-start space-y-6 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto lg:pr-1">
             <div className="glass-card rounded-2xl p-5 shadow-sm space-y-6">
               {/* Category Filter */}
               <div>
@@ -357,7 +365,7 @@ export const BlogPage = () => {
           </aside>
 
           {/* Right Content Stream */}
-          <section aria-live="polite" className="min-w-0">
+          <section ref={resultsRef} aria-live="polite" className="min-w-0 scroll-mt-20">
             {/* Stream Header */}
             <div className="mb-4 flex items-center justify-between border-b border-border-subtle pb-3 text-xs text-text-tertiary">
               <span className="font-semibold text-text-secondary">{loading ? '正在检索文章…' : `共找到 ${total} 篇文章`}</span>
@@ -415,29 +423,37 @@ export const BlogPage = () => {
 
             {/* Pagination */}
             {!loading && !error && pageCount > 1 && (
-              <nav
-                aria-label="文章分页"
-                className="mt-8 flex items-center justify-between border-t border-slate-200/80 pt-5 dark:border-slate-800"
-              >
+              <nav aria-label="文章分页" className="mt-8 flex flex-wrap items-center justify-center gap-1.5 border-t border-slate-200/80 pt-5 dark:border-slate-800">
                 <button
                   type="button"
                   disabled={page <= 1}
                   onClick={() => updateFilter('page', String(page - 1))}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200/80 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                  aria-label="上一页"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/80 bg-white text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  上一页
                 </button>
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  第 {page} 页 / 共 {pageCount} 页
-                </span>
+                {paginationItems(page, pageCount).map((item, index) => item === 'ellipsis' ? (
+                  <span key={`ellipsis-${index}`} className="inline-flex h-9 w-6 items-center justify-center text-sm text-slate-400" aria-hidden="true">…</span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => updateFilter('page', String(item))}
+                    aria-label={`第 ${item} 页`}
+                    aria-current={item === page ? 'page' : undefined}
+                    className={`h-9 min-w-9 rounded-lg px-2 text-sm font-medium transition-colors ${item === page ? 'border border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200' : 'border border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+                  >
+                    {item}
+                  </button>
+                ))}
                 <button
                   type="button"
                   disabled={page >= pageCount}
                   onClick={() => updateFilter('page', String(page + 1))}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200/80 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                  aria-label="下一页"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/80 bg-white text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
-                  下一页
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </nav>
