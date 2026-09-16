@@ -80,6 +80,7 @@ const documentSnapshot = (document: DocumentDetail): LocalDraftData => ({
   cover: document.cover || '',
   status: document.status,
   categoryId: document.category_id || 0,
+  sortOrder: document.sort_order || 0,
   isPinned: Boolean(document.is_pinned),
   tags: document.tags || [],
   updatedAt: Date.now(),
@@ -106,6 +107,7 @@ export const AdminDocumentEditor: React.FC = () => {
   const [status, setStatus] = useState<string>('draft');
   const [accessLevel, setAccessLevel] = useState<DocumentAccessLevel>('public');
   const [categoryId, setCategoryId] = useState<number>(0);
+  const [sortOrder, setSortOrder] = useState<number>(0);
   const [isPinned, setIsPinned] = useState<boolean>(false);
   const [tags, setTags] = useState<string[]>([]);
 
@@ -138,6 +140,7 @@ export const AdminDocumentEditor: React.FC = () => {
   const coverRef = useRef(cover);
   const statusRef = useRef(status);
   const categoryIdRef = useRef(categoryId);
+  const sortOrderRef = useRef(sortOrder);
   const isPinnedRef = useRef(isPinned);
   const tagsRef = useRef(tags);
 
@@ -365,6 +368,7 @@ export const AdminDocumentEditor: React.FC = () => {
         setStatus(doc.status || 'draft');
         setAccessLevel(doc.access_level || 'public');
         setCategoryId(doc.category_id || 0);
+        setSortOrder(doc.sort_order || 0);
         setIsPinned(doc.is_pinned || false);
         setTags(doc.tags || []);
         initialLoadedRef.current = true;
@@ -410,6 +414,7 @@ export const AdminDocumentEditor: React.FC = () => {
     coverRef.current = cover;
     statusRef.current = status;
     categoryIdRef.current = categoryId;
+    sortOrderRef.current = sortOrder;
     isPinnedRef.current = isPinned;
     tagsRef.current = tags;
     loadingRef.current = loading;
@@ -433,6 +438,7 @@ export const AdminDocumentEditor: React.FC = () => {
         cover,
         status,
         categoryId,
+        sortOrder,
         isPinned,
         tags,
         updatedAt: Date.now(),
@@ -459,7 +465,7 @@ export const AdminDocumentEditor: React.FC = () => {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [categoryId, content, cover, currentDraftKey, excerpt, id, isEdit, isPinned, loading, localDraftId, pendingDraft, removeDraft, slug, status, tags, title, writeDraft]);
+  }, [categoryId, content, cover, currentDraftKey, excerpt, id, isEdit, isPinned, loading, localDraftId, pendingDraft, removeDraft, slug, sortOrder, status, tags, title, writeDraft]);
 
   // 🌟 Synchronous Flush on BeforeUnload
   useEffect(() => {
@@ -478,6 +484,7 @@ export const AdminDocumentEditor: React.FC = () => {
         cover: coverRef.current,
         status: statusRef.current,
         categoryId: categoryIdRef.current,
+        sortOrder: sortOrderRef.current,
         isPinned: isPinnedRef.current,
         tags: tagsRef.current,
         updatedAt: Date.now(),
@@ -508,6 +515,7 @@ export const AdminDocumentEditor: React.FC = () => {
       cover: coverRef.current,
       status: statusRef.current,
       categoryId: categoryIdRef.current,
+      sortOrder: sortOrderRef.current,
       isPinned: isPinnedRef.current,
       tags: tagsRef.current,
       updatedAt: Date.now(),
@@ -533,6 +541,7 @@ export const AdminDocumentEditor: React.FC = () => {
       cover,
       status,
       categoryId,
+      sortOrder,
       isPinned,
       tags,
       updatedAt: Date.now(),
@@ -555,7 +564,7 @@ export const AdminDocumentEditor: React.FC = () => {
       setDraftStorageError('本地草稿暂存失败，请检查浏览器存储空间或隐私设置。');
     }
     return saved;
-  }, [categoryId, content, cover, currentDraftKey, excerpt, id, isEdit, isPinned, localDraftId, removeDraft, slug, status, tags, title, writeDraft]);
+  }, [categoryId, content, cover, currentDraftKey, excerpt, id, isEdit, isPinned, localDraftId, removeDraft, slug, sortOrder, status, tags, title, writeDraft]);
 
   // 🌟 Apply & Discard Draft Handlers
   const handleApplyDraft = () => {
@@ -567,6 +576,7 @@ export const AdminDocumentEditor: React.FC = () => {
     setCover(pendingDraft.cover);
     setStatus(pendingDraft.status);
     setCategoryId(pendingDraft.categoryId);
+    setSortOrder(pendingDraft.sortOrder || 0);
     setIsPinned(pendingDraft.isPinned);
     setTags(pendingDraft.tags);
     setLastDraftSavedAt(pendingDraft.updatedAt);
@@ -653,6 +663,7 @@ export const AdminDocumentEditor: React.FC = () => {
       status: docStatus,
       accessLevel,
       categoryId,
+      sortOrder,
       isPinned,
       tags,
     });
@@ -669,6 +680,7 @@ export const AdminDocumentEditor: React.FC = () => {
       cover: payload.cover || '',
       status: docStatus,
       categoryId: payload.category_id || 0,
+      sortOrder: payload.sort_order || 0,
       isPinned: Boolean(payload.is_pinned),
       tags: payload.tags || [],
       updatedAt: Date.now(),
@@ -1014,6 +1026,20 @@ export const AdminDocumentEditor: React.FC = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label htmlFor="document-sort-order" className="font-semibold text-slate-700 dark:text-slate-300">文档排序</label>
+                  <input
+                    id="document-sort-order"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={sortOrder}
+                    onChange={(event) => setSortOrder(Math.max(0, Number(event.target.value) || 0))}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                  <p className="text-[11px] text-slate-400">数字越小越靠前；相同排序按发布时间排列。</p>
                 </div>
 
                 <div className="space-y-1">

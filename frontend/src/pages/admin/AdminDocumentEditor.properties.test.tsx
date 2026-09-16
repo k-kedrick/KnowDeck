@@ -92,6 +92,7 @@ describe('AdminDocumentEditor compact properties', () => {
     fireEvent.change(slug, { target: { value: 'updated-slug' } });
     expect(screen.getByRole('option', { name: /参考/ })).toBeTruthy();
     fireEvent.change(screen.getByRole('combobox', { name: '所属分类' }), { target: { value: '2' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: '文档排序' }), { target: { value: '1' } });
     fireEvent.focus(screen.getByRole('combobox', { name: '' }));
     fireEvent.click(await screen.findByRole('option', { name: /#React/ }));
     fireEvent.change(screen.getByRole('textbox', { name: /内容描述/ }), { target: { value: '更新后的描述' } });
@@ -103,6 +104,7 @@ describe('AdminDocumentEditor compact properties', () => {
     fireEvent.click(trigger);
     expect((screen.getByRole('textbox', { name: 'URL Slug' }) as HTMLInputElement).value).toBe('updated-slug');
     expect((screen.getByRole('combobox', { name: '所属分类' }) as HTMLSelectElement).value).toBe('2');
+    expect((screen.getByRole('spinbutton', { name: '文档排序' }) as HTMLInputElement).value).toBe('1');
     expect((screen.getByRole('textbox', { name: /内容描述/ }) as HTMLTextAreaElement).value).toBe('更新后的描述');
     expect(screen.getAllByRole('textbox', { name: '文档标题' })).toHaveLength(1);
     expect(screen.getAllByRole('textbox', { name: 'URL Slug' })).toHaveLength(1);
@@ -116,6 +118,7 @@ describe('AdminDocumentEditor compact properties', () => {
         title: '线上文档',
         slug: 'updated-slug',
         category_id: 2,
+        sort_order: 1,
         tags: ['GPT', 'React'],
         excerpt: '更新后的描述',
         status: 'published',

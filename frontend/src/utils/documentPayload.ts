@@ -9,6 +9,7 @@ export interface DocumentPayloadInput {
   status: string;
   accessLevel?: DocumentAccessLevel;
   categoryId: number;
+  sortOrder?: number;
   isPinned: boolean;
   tags: string[];
 }
@@ -22,6 +23,7 @@ export const buildDocumentPayload = ({
   status,
   accessLevel,
   categoryId,
+  sortOrder,
   isPinned,
   tags,
 }: DocumentPayloadInput): DocumentSaveReq => ({
@@ -33,6 +35,7 @@ export const buildDocumentPayload = ({
   status,
   access_level: accessLevel || 'public',
   category_id: categoryId,
+  sort_order: sortOrder || 0,
   is_pinned: isPinned,
   tags,
 });

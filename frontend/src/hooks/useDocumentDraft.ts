@@ -11,6 +11,7 @@ export interface LocalDraftData {
   cover: string;
   status: string;
   categoryId: number;
+  sortOrder?: number;
   isPinned: boolean;
   tags: string[];
   updatedAt: number;
@@ -33,6 +34,7 @@ export interface ServerDocumentSnapshot {
   cover: string;
   status: string;
   category_id: number;
+  sort_order?: number;
   is_pinned: boolean;
   tags?: string[];
 }
@@ -58,6 +60,7 @@ export const localDraftDiffersFromDocument = (draft: LocalDraftData, document: S
       cover: draft.cover,
       status: draft.status,
       categoryId: draft.categoryId,
+      sortOrder: draft.sortOrder,
       isPinned: draft.isPinned,
       tags: draft.tags,
     },
@@ -69,6 +72,7 @@ export const localDraftDiffersFromDocument = (draft: LocalDraftData, document: S
       cover: document.cover,
       status: document.status,
       categoryId: document.category_id,
+      sortOrder: document.sort_order,
       isPinned: document.is_pinned,
       tags: document.tags || [],
     },
@@ -118,6 +122,7 @@ const normalizeDraft = (value: unknown, key: string): LocalDraftData | null => {
     cover: typeof parsed.cover === 'string' ? parsed.cover : '',
     status: typeof parsed.status === 'string' ? parsed.status : 'draft',
     categoryId: typeof parsed.categoryId === 'number' ? parsed.categoryId : 0,
+    sortOrder: typeof parsed.sortOrder === 'number' ? parsed.sortOrder : 0,
     isPinned: Boolean(parsed.isPinned),
     tags: Array.isArray(parsed.tags) ? parsed.tags.filter((tag): tag is string => typeof tag === 'string') : [],
     updatedAt: parsed.updatedAt,

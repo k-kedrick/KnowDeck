@@ -6,6 +6,7 @@ export interface EditableDocumentSnapshot {
   cover: string;
   status: string;
   categoryId: number;
+  sortOrder?: number;
   isPinned: boolean;
   tags: string[];
 }
@@ -27,6 +28,7 @@ export const documentSnapshotsEqual = (
   && normalizedText(left.cover) === normalizedText(right.cover)
   && (left.status || '') === (right.status || '')
   && (left.categoryId || 0) === (right.categoryId || 0)
+  && (left.sortOrder || 0) === (right.sortOrder || 0)
   && Boolean(left.isPinned) === Boolean(right.isPinned)
   && sameTags(left.tags || [], right.tags || [])
 );

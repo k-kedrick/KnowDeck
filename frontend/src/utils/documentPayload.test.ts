@@ -22,6 +22,7 @@ describe('buildDocumentPayload', () => {
       status: 'published',
       access_level: 'public',
       category_id: 2,
+      sort_order: 0,
       is_pinned: true,
       tags: ['GPT', 'React'],
     });
@@ -47,6 +48,7 @@ describe('buildDocumentPayload', () => {
       status: 'draft',
       access_level: 'public',
       category_id: 0,
+      sort_order: 0,
       is_pinned: false,
       tags: [],
     });
