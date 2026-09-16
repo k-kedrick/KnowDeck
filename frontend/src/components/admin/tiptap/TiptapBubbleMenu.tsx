@@ -9,10 +9,6 @@ import {
   Strikethrough,
   Code as CodeIcon,
   ChevronDown,
-  Heading1,
-  Heading2,
-  Heading3,
-  Pilcrow,
   Palette,
   AlignLeft,
   AlignCenter,
@@ -59,6 +55,7 @@ export const TiptapBubbleMenu: React.FC<TiptapBubbleMenuProps> = ({ editor }) =>
   >(null);
   const [, setUpdateTick] = useState(0);
   const menuContainerRef = useRef<HTMLDivElement>(null);
+  const blockMenuSelectionRef = useRef<number | null>(null);
 
   // Sync state on editor transactions
   useEffect(() => {
@@ -92,12 +89,26 @@ export const TiptapBubbleMenu: React.FC<TiptapBubbleMenuProps> = ({ editor }) =>
     setActiveMenu((prev) => (prev === menu ? null : menu));
   };
 
+  const toggleBlockMenu = () => {
+    blockMenuSelectionRef.current = editor.state.selection.from;
+    toggleMenu('block');
+  };
+
+  const applyBlockType = (command: 'paragraph' | 1 | 2 | 3) => {
+    const position = blockMenuSelectionRef.current ?? editor.state.selection.from;
+    const chain = editor.chain().focus().setTextSelection(position);
+    if (command === 'paragraph') chain.setParagraph().run();
+    else chain.toggleHeading({ level: command }).run();
+    blockMenuSelectionRef.current = null;
+    setActiveMenu(null);
+  };
+
   // Block Type
   const getBlockTypeInfo = () => {
-    if (editor.isActive('heading', { level: 1 })) return { label: 'H1', icon: Heading1 };
-    if (editor.isActive('heading', { level: 2 })) return { label: 'H2', icon: Heading2 };
-    if (editor.isActive('heading', { level: 3 })) return { label: 'H3', icon: Heading3 };
-    return { label: '正文', icon: Pilcrow };
+    if (editor.isActive('heading', { level: 1 })) return { label: 'H1' };
+    if (editor.isActive('heading', { level: 2 })) return { label: 'H2' };
+    if (editor.isActive('heading', { level: 3 })) return { label: 'H3' };
+    return { label: '正文' };
   };
 
   // Current Font Family
@@ -144,7 +155,7 @@ export const TiptapBubbleMenu: React.FC<TiptapBubbleMenuProps> = ({ editor }) =>
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => toggleMenu('block')}
+          onClick={toggleBlockMenu}
           className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
             editor.isActive('heading') ? buttonActive : buttonInactive
           }`}
@@ -159,54 +170,38 @@ export const TiptapBubbleMenu: React.FC<TiptapBubbleMenuProps> = ({ editor }) =>
           <div className={`${dropdownContainer} w-32`} onMouseDown={(e) => e.preventDefault()}>
             <button
               type="button"
-              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-left ${
+              className={`flex w-full items-center rounded-lg px-2.5 py-1.5 text-xs text-left ${
                 editor.isActive('paragraph') ? buttonActive : buttonInactive
               }`}
-              onClick={() => {
-                editor.chain().focus().setParagraph().run();
-                setActiveMenu(null);
-              }}
+              onClick={() => applyBlockType('paragraph')}
             >
-              <Pilcrow size={13} />
               <span>正文</span>
             </button>
             <button
               type="button"
-              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-left ${
+              className={`flex w-full items-center rounded-lg px-2.5 py-1.5 text-xs text-left ${
                 editor.isActive('heading', { level: 1 }) ? buttonActive : buttonInactive
               }`}
-              onClick={() => {
-                editor.chain().focus().toggleHeading({ level: 1 }).run();
-                setActiveMenu(null);
-              }}
+              onClick={() => applyBlockType(1)}
             >
-              <Heading1 size={13} />
               <span>标题 1 (H1)</span>
             </button>
             <button
               type="button"
-              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-left ${
+              className={`flex w-full items-center rounded-lg px-2.5 py-1.5 text-xs text-left ${
                 editor.isActive('heading', { level: 2 }) ? buttonActive : buttonInactive
               }`}
-              onClick={() => {
-                editor.chain().focus().toggleHeading({ level: 2 }).run();
-                setActiveMenu(null);
-              }}
+              onClick={() => applyBlockType(2)}
             >
-              <Heading2 size={13} />
               <span>标题 2 (H2)</span>
             </button>
             <button
               type="button"
-              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-left ${
+              className={`flex w-full items-center rounded-lg px-2.5 py-1.5 text-xs text-left ${
                 editor.isActive('heading', { level: 3 }) ? buttonActive : buttonInactive
               }`}
-              onClick={() => {
-                editor.chain().focus().toggleHeading({ level: 3 }).run();
-                setActiveMenu(null);
-              }}
+              onClick={() => applyBlockType(3)}
             >
-              <Heading3 size={13} />
               <span>标题 3 (H3)</span>
             </button>
           </div>

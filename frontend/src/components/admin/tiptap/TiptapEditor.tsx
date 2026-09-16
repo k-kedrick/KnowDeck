@@ -5,6 +5,7 @@ import {
   useImperativeHandle,
   useRef,
 } from 'react';
+import type { ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { normalizePastedDocumentHtml, sanitizeDocumentHtml } from '../../../utils/htmlToMarkdown';
@@ -35,6 +36,9 @@ export interface TiptapEditorHandle {
 interface TiptapEditorProps {
   content: string;
   onChange: (content: string) => void;
+  title?: string;
+  onTitleChange?: (title: string) => void;
+  documentMeta?: ReactNode;
   onUploadFile?: UploadHandler;
   uploading?: boolean;
   uploadProgress?: string;
@@ -43,7 +47,7 @@ interface TiptapEditorProps {
 const SNAPSHOT_DEBOUNCE_MS = 320;
 
 export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(function TiptapEditor(
-  { content, onChange, onUploadFile, uploading = false, uploadProgress },
+  { content, onChange, title, onTitleChange, documentMeta, onUploadFile, uploading = false, uploadProgress },
   ref,
 ) {
   const sessionRef = useRef(new EditorContentSession(content));
@@ -249,12 +253,14 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
 
   return (
     <div className="space-y-3" data-editor-engine="tiptap">
-      <TiptapToolbar
-        editor={editor}
-        onUploadFile={onUploadFile}
-        uploading={uploading}
-        uploadProgress={uploadProgress}
-      />
+      <div className="sticky top-0 z-30 pb-3">
+        <TiptapToolbar
+          editor={editor}
+          onUploadFile={onUploadFile}
+          uploading={uploading}
+          uploadProgress={uploadProgress}
+        />
+      </div>
 
       {/* Floating Text Selection Bubble Menu */}
       <TiptapBubbleMenu editor={editor} />
@@ -265,7 +271,25 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
       {/* Floating Table Action Menu */}
       <TiptapTableMenu editor={editor} />
 
-      <div className="mx-auto min-h-[680px] w-full max-w-4xl overflow-x-hidden rounded-3xl border border-slate-200/90 bg-white p-8 shadow-xl dark:border-slate-700/80 dark:bg-slate-900 md:p-14">
+      <div className="mx-auto min-h-[680px] w-full max-w-[70rem] overflow-x-hidden rounded-3xl border border-slate-200/90 bg-white p-7 shadow-xl dark:border-slate-700/80 dark:bg-slate-900 md:p-10 xl:p-12">
+        {onTitleChange && (
+          <header className="mb-8 border-b border-slate-100 pb-6 dark:border-slate-800">
+            <label htmlFor="document-title" className="sr-only">文档标题</label>
+            <input
+              id="document-title"
+              type="text"
+              value={title || ''}
+              onChange={(event) => onTitleChange(event.target.value)}
+              placeholder="输入文档标题"
+              className="w-full bg-transparent text-3xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-300 focus:ring-0 dark:text-white dark:placeholder:text-slate-600 md:text-4xl"
+            />
+            {documentMeta && (
+              <div aria-label="文档属性摘要" className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                {documentMeta}
+              </div>
+            )}
+          </header>
+        )}
         <EditorContent editor={editor} />
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { act, createRef } from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TiptapEditor } from './TiptapEditor';
 import type { TiptapEditorHandle } from './TiptapEditor';
@@ -58,5 +58,33 @@ describe('TiptapEditor hidden PoC', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('places the document title in the writing canvas while the toolbar remains sticky', async () => {
+    const onTitleChange = vi.fn();
+    render(<TiptapEditor content="<p>正文</p>" onChange={() => undefined} title="编辑器标题" onTitleChange={onTitleChange} />);
+
+    const title = await screen.findByRole('textbox', { name: '文档标题' });
+    expect((title as HTMLInputElement).value).toBe('编辑器标题');
+    fireEvent.change(title, { target: { value: '更新标题' } });
+    expect(onTitleChange).toHaveBeenCalledWith('更新标题');
+    const toolbarContainer = document.querySelector('[data-testid="tiptap-toolbar"]')?.parentElement;
+    expect(toolbarContainer?.classList.contains('sticky')).toBe(true);
+    expect(toolbarContainer?.classList.contains('top-0')).toBe(true);
+  });
+
+  it('turns only the selected line into a heading from the floating block menu', async () => {
+    const ref = createRef<TiptapEditorHandle>();
+    render(<TiptapEditor ref={ref} content="<p>第一行</p><p>第二行</p><p>第三行</p>" onChange={() => undefined} />);
+    await waitFor(() => expect(ref.current?.getEditor()).not.toBeNull());
+    vi.spyOn(ref.current!.getEditor()!.view, 'coordsAtPos').mockReturnValue({ left: 0, right: 0, top: 0, bottom: 0 });
+
+    act(() => {
+      ref.current!.getEditor()!.commands.setTextSelection({ from: 1, to: 4 });
+    });
+    fireEvent.click(await screen.findByTestId('bubble-block-selector'));
+    fireEvent.click(await screen.findByText('标题 1 (H1)'));
+
+    expect(ref.current!.getEditor()!.getHTML()).toBe('<h1>第一行</h1><p>第二行</p><p>第三行</p>');
   });
 });

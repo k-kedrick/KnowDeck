@@ -35,10 +35,12 @@ vi.mock('../../api', async (importOriginal) => {
 });
 
 vi.mock('../../components/admin/tiptap/TiptapEditor', () => ({
-  TiptapEditor: forwardRef(({ content, onChange }: { content: string; onChange: (value: string) => void }, ref) => {
+  TiptapEditor: forwardRef(({ content, onChange, title, onTitleChange }: { content: string; onChange: (value: string) => void; title?: string; onTitleChange?: (value: string) => void }, ref) => {
     useImperativeHandle(ref, () => ({ getContentForSave: () => content, markSaved: () => undefined }));
     return (
     <div data-testid="editor-content">
+      <label htmlFor="document-title">文档标题</label>
+      <input id="document-title" value={title || ''} onChange={(event) => onTitleChange?.(event.target.value)} />
       {content}
       <button type="button" onClick={() => onChange(`${content}\n正文修改`)}>模拟正文编辑</button>
     </div>
@@ -120,5 +122,23 @@ describe('AdminDocumentEditor compact properties', () => {
         content: '# 线上正文\n正文修改',
       }));
     });
+  });
+
+  it('migrates existing panel preferences to the focused writing default', async () => {
+    localStorage.setItem('kb_admin_show_doctree', 'true');
+    localStorage.setItem('kb_admin_show_toc', 'true');
+
+    render(
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('textbox', { name: '文档标题' });
+    expect(localStorage.getItem('kb_admin_editor_layout_v2')).toBe('1');
+    expect(localStorage.getItem('kb_admin_show_doctree')).toBe('false');
+    expect(localStorage.getItem('kb_admin_show_toc')).toBe('false');
+    expect(document.querySelector('.admin-editor-workspace-body')?.getAttribute('data-tree-open')).toBe('false');
+    expect(document.querySelector('.admin-editor-workspace-body')?.getAttribute('data-outline-open')).toBe('false');
   });
 });

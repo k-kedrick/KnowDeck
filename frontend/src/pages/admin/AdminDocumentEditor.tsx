@@ -40,6 +40,17 @@ import { categoryPath, flattenCategoryTree } from '../../utils/categoryTree';
 
 const TiptapEditor = lazy(() => import('../../components/admin/tiptap/TiptapEditor').then((module) => ({ default: module.TiptapEditor })));
 
+const EDITOR_LAYOUT_PREFERENCE_VERSION = 'kb_admin_editor_layout_v2';
+
+const getEditorPanelPreference = (key: 'kb_admin_show_doctree' | 'kb_admin_show_toc') => {
+  if (localStorage.getItem(EDITOR_LAYOUT_PREFERENCE_VERSION) !== '1') {
+    localStorage.setItem(EDITOR_LAYOUT_PREFERENCE_VERSION, '1');
+    localStorage.setItem('kb_admin_show_doctree', 'false');
+    localStorage.setItem('kb_admin_show_toc', 'false');
+  }
+  return localStorage.getItem(key) === 'true';
+};
+
 const formatTransferRate = (bytesPerSecond: number) => `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
 
 const formatRemainingTime = (seconds: number) => {
@@ -141,14 +152,8 @@ export const AdminDocumentEditor: React.FC = () => {
   }, [isEdit, localDraftId, navigate, requestedDraftId]);
 
   // 🌟 Navigation Sidebar States (Knowledge Base Tree & Live Outline TOC)
-  const [showDocTree, setShowDocTree] = useState<boolean>(() => {
-    const saved = localStorage.getItem('kb_admin_show_doctree');
-    return saved !== null ? saved === 'true' : true;
-  });
-  const [showToc, setShowToc] = useState<boolean>(() => {
-    const saved = localStorage.getItem('kb_admin_show_toc');
-    return saved !== null ? saved === 'true' : true;
-  });
+  const [showDocTree, setShowDocTree] = useState<boolean>(() => getEditorPanelPreference('kb_admin_show_doctree'));
+  const [showToc, setShowToc] = useState<boolean>(() => getEditorPanelPreference('kb_admin_show_toc'));
   const [tocItems, setTocItems] = useState<{ id: string; text: string; level: number }[]>([]);
   const [outlineSearch, setOutlineSearch] = useState<string>('');
   const [outlineWrapText, setOutlineWrapText] = useState<boolean>(true);
@@ -780,33 +785,6 @@ export const AdminDocumentEditor: React.FC = () => {
           </button>
 
           <h1 className="sr-only">{isEdit ? '编辑 Markdown 文档' : '新建 Markdown 文档'}</h1>
-          <div className="flex min-w-0 items-center gap-2">
-            <label htmlFor="document-title" className="sr-only">文档标题</label>
-            <input
-              id="document-title"
-              type="text"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="输入文档标题"
-              className="h-9 w-40 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold tracking-tight text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white sm:w-52 lg:w-48 xl:w-56"
-            />
-            <span className={`hidden shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold md:inline-flex ${
-              status === 'published'
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-            }`}>
-              {status === 'published' ? '已发布' : '草稿'}
-            </span>
-          </div>
-
-          <div className="hidden min-w-0 items-center gap-1.5 truncate text-xs text-slate-500 dark:text-slate-400 xl:flex" aria-label="文档属性摘要">
-            <span className="truncate">{categories.find((category) => category.id === categoryId)?.name || '未设置分类'}</span>
-            <span aria-hidden="true">·</span>
-            <span className="truncate">{tags.length > 0 ? tags.slice(0, 2).map((tag) => `#${tag}`).join(' ') : '未添加标签'}</span>
-            {tags.length > 2 && <span className="shrink-0">+{tags.length - 2}</span>}
-            <span aria-hidden="true">·</span>
-            <span className="truncate font-mono">{slug ? `/${slug}` : '未设置 Slug'}</span>
-          </div>
         </div>
 
         {/* Action Buttons & View Switcher */}
@@ -1079,6 +1057,23 @@ export const AdminDocumentEditor: React.FC = () => {
                 ref={tiptapEditorRef}
                 content={content}
                 onChange={setContent}
+                title={title}
+                onTitleChange={setTitle}
+                documentMeta={(
+                  <>
+                    <span className={`rounded-full px-2 py-1 font-semibold ${
+                      status === 'published'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                    }`}>
+                      {status === 'published' ? '已发布' : '草稿'}
+                    </span>
+                    <span>{categories.find((category) => category.id === categoryId)?.name || '未设置分类'}</span>
+                    <span>{tags.length > 0 ? tags.slice(0, 2).map((tag) => `#${tag}`).join(' ') : '未添加标签'}</span>
+                    {tags.length > 2 && <span>+{tags.length - 2}</span>}
+                    <span className="font-mono">{slug ? `/${slug}` : '未设置 Slug'}</span>
+                  </>
+                )}
                 onUploadFile={handleUploadFile}
                 uploading={uploading}
                 uploadProgress={uploadProgressLabel(uploadProgress)}

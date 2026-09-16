@@ -769,12 +769,6 @@
 [contenteditable] h2 { margin: 1.5rem 0 0.75rem; font-size: 1.5rem; font-weight: 700; }
 [contenteditable] h3 { margin: 1.25rem 0 0.5rem; font-size: 1.25rem; font-weight: 600; }
 [contenteditable] p { margin-bottom: 0.5rem; line-height: 1.75; }
-.tiptap-poc-editor > p:only-child:empty::before,
-.tiptap-poc-editor > p:only-child:has(> br)::before {
-  color: #94a3b8;
-  content: '开始输入文档内容…';
-  pointer-events: none;
-}
 .tiptap-poc-editor iframe {
   display: block;
   max-width: 100%;
@@ -823,22 +817,39 @@
 .dark [contenteditable] td { border-color: #334155; }
 
 .tiptap-poc-editor .tableWrapper {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
   overflow-x: auto;
   margin: 1.25rem 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+.dark .tiptap-poc-editor .tableWrapper {
+  border-color: #334155;
+  background: #0f172a;
 }
 .tiptap-poc-editor table {
-  width: 100%;
+  width: max-content;
+  min-width: 0;
+  max-width: none;
   table-layout: fixed;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .tiptap-poc-editor th,
 .tiptap-poc-editor td {
-  border: 1px solid #cbd5e1;
+  border: 0;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
   padding: 0.6rem 0.85rem;
   vertical-align: top;
   position: relative;
   min-width: 60px;
 }
+.tiptap-poc-editor tr > :last-child { border-right: 0; }
+.tiptap-poc-editor tr:last-child > * { border-bottom: 0; }
 .tiptap-poc-editor th {
   background-color: #f8fafc;
   font-weight: 600;
