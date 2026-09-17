@@ -54,9 +54,6 @@ export const AdminSettingsPage: React.FC = () => {
 
     try {
       await api.saveSettings(settings);
-      try {
-        localStorage.removeItem('cached_site_info');
-      } catch {}
       setSuccessMsg('系统全局配置已成功保存并立即生效');
     } catch (err: any) {
       setErrorMsg(err.message || '保存系统配置失败');

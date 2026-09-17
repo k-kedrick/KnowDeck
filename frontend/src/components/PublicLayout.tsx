@@ -9,29 +9,11 @@ import type { PublicOutletContext } from './publicLayoutContext';
 
 const SearchModal = lazy(() => import('./SearchModal').then((module) => ({ default: module.SearchModal })));
 
-const getCachedSiteInfo = (): SiteInfo | null => {
-  try {
-    const raw = localStorage.getItem('cached_site_info');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const getCachedTree = (): CategoryTreeNode[] => {
-  try {
-    const raw = localStorage.getItem('cached_site_tree');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-
 export const PublicLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(() => getCachedSiteInfo());
-  const [tree, setTree] = useState<CategoryTreeNode[]>(() => getCachedTree());
+  const [siteInfo, setSiteInfo] = useState<SiteInfo | null>(null);
+  const [tree, setTree] = useState<CategoryTreeNode[]>([]);
   const [darkMode, setDarkMode] = useState(() => getInitialTheme() === 'dark');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [tocItems, setTocItems] = useState<{ id: string; text: string; level: number }[]>([]);
@@ -50,21 +32,11 @@ export const PublicLayout = () => {
     api.getSiteInfo(controller.signal).then((info) => {
       if (!controller.signal.aborted) {
         setSiteInfo(info);
-        if (info) {
-          try {
-            localStorage.setItem('cached_site_info', JSON.stringify(info));
-          } catch {}
-        }
       }
     }).catch(() => undefined);
     api.getKnowledgeTree(controller.signal).then((treeData) => {
       if (!controller.signal.aborted) {
         setTree(treeData || []);
-        if (treeData) {
-          try {
-            localStorage.setItem('cached_site_tree', JSON.stringify(treeData || []));
-          } catch {}
-        }
       }
     }).catch(() => undefined);
     return () => controller.abort();
