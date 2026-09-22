@@ -34,6 +34,25 @@ describe('TiptapEditor hidden PoC', () => {
     expect(ref.current?.isDirty()).toBe(false);
   });
 
+  it('keeps localized content dirty until document persistence succeeds', async () => {
+    const ref = createRef<TiptapEditorHandle>();
+    const external = '<p><img src="https://images.example.test/a.png"></p>';
+    const localized = '<p><img src="/uploads/images/a.png"></p>';
+    render(<TiptapEditor ref={ref} content={external} onChange={() => undefined} />);
+    await waitFor(() => expect(ref.current?.getEditor()).not.toBeNull());
+    act(() => ref.current?.getEditor()?.commands.setTextSelection(1));
+
+    act(() => ref.current?.replaceContentForSave(localized));
+
+    expect(ref.current?.getEditor()?.getHTML()).toContain('/uploads/images/a.png');
+    expect(ref.current?.getEditor()?.state.selection.from).toBe(1);
+    expect(ref.current?.getContentForSave()).toContain('/uploads/images/a.png');
+    expect(ref.current?.isDirty()).toBe(true);
+
+    act(() => ref.current?.markSaved(localized));
+    expect(ref.current?.isDirty()).toBe(false);
+  });
+
   it('does not snapshot a Chinese IME composition before its candidate is confirmed', async () => {
     const ref = createRef<TiptapEditorHandle>();
     const onChange = vi.fn();

@@ -27,6 +27,8 @@ const apiMocks = vi.hoisted(() => ({
   getAdminTags: vi.fn(),
   getAdminDocument: vi.fn(),
   updateDocument: vi.fn(),
+  localizeDocumentImages: vi.fn(),
+  replaceContentForSave: vi.fn(),
 }));
 
 vi.mock('../../api', async (importOriginal) => {
@@ -36,7 +38,7 @@ vi.mock('../../api', async (importOriginal) => {
 
 vi.mock('../../components/admin/tiptap/TiptapEditor', () => ({
   TiptapEditor: forwardRef(({ content, onChange }: { content: string; onChange: (value: string) => void }, ref) => {
-    useImperativeHandle(ref, () => ({ getContentForSave: () => content, markSaved: () => undefined }));
+    useImperativeHandle(ref, () => ({ getContentForSave: () => content, replaceContentForSave: apiMocks.replaceContentForSave, markSaved: () => undefined }));
     return <div data-testid="editor-content">{content}<button type="button" onClick={() => onChange(`${content}\n本地修改`)}>模拟编辑</button></div>;
   }),
 }));
@@ -61,6 +63,8 @@ describe('AdminDocumentEditor published draft behavior', () => {
       ...publishedDocument,
       updated_at: '2026-09-02T01:00:00Z',
     });
+    apiMocks.localizeDocumentImages.mockReset();
+    apiMocks.replaceContentForSave.mockReset();
   });
 
   afterEach(cleanup);
@@ -110,6 +114,27 @@ describe('AdminDocumentEditor published draft behavior', () => {
       expect.objectContaining({ status: 'published' }),
     ));
     await waitFor(() => expect(localStorage.getItem(getDraftKey(9))).toBeNull());
+  });
+
+  it('keeps localized editor content unsaved when document persistence fails', async () => {
+    const external = 'https://images.example.test/a.png';
+    const localized = '/uploads/images/a.png';
+    apiMocks.getAdminDocument.mockResolvedValue({ ...publishedDocument, content: `<p><img src="${external}"></p>` });
+    apiMocks.localizeDocumentImages.mockResolvedValue({ content: `<p><img src="${localized}"></p>`, localized_count: 1 });
+    apiMocks.updateDocument.mockRejectedValue(new Error('server failure'));
+
+    render(
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '保存修改' }));
+    await waitFor(() => expect(apiMocks.updateDocument).toHaveBeenCalled());
+
+    expect(apiMocks.replaceContentForSave).toHaveBeenCalledWith(expect.stringContaining(localized));
+    expect(screen.getByTestId('editor-content').textContent).toContain(localized);
+    expect(screen.getByText('server failure')).toBeTruthy();
   });
 
   it('shows a visible error when browser draft storage fails', async () => {

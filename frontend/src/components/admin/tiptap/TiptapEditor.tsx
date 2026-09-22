@@ -29,6 +29,7 @@ export interface TiptapEditorHandle {
   getContentForSave: () => string;
   getEditor: () => Editor | null;
   isDirty: () => boolean;
+  replaceContentForSave: (content: string) => void;
   markSaved: (content: string) => void;
 }
 
@@ -239,6 +240,18 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(fu
     getContentForSave: () => (editor ? sessionRef.current.resolveSaveContent(editor) : content),
     getEditor: () => editor,
     isDirty: () => sessionRef.current.isDirty(),
+    replaceContentForSave: (nextContent: string) => {
+      if (!editor || editor.isDestroyed) return;
+      const { from, to } = editor.state.selection;
+      programmaticUpdateRef.current = true;
+      editor.commands.setContent(prepareContentForEditor(nextContent), { emitUpdate: false });
+      const size = editor.state.doc.content.size;
+      editor.commands.setTextSelection({ from: Math.min(from, size), to: Math.min(to, size) });
+      programmaticUpdateRef.current = false;
+      sessionRef.current.markUserDocumentChange(true);
+      lastExternalContentRef.current = nextContent;
+      lastEmittedContentRef.current = nextContent;
+    },
     markSaved: (savedContent: string) => {
       sessionRef.current.markSaved(savedContent);
       lastExternalContentRef.current = savedContent;

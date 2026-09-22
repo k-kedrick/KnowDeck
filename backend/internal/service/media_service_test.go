@@ -3,16 +3,118 @@ package service
 import (
 	"bytes"
 	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"knowledge-base/backend/internal/config"
 	"knowledge-base/backend/internal/model"
 	"knowledge-base/backend/internal/repository"
 	"knowledge-base/backend/internal/storage"
 )
+
+func newLocalizeTestService(t *testing.T) (*MediaService, *repository.DB) {
+	t.Helper()
+	db := newTestDB(t)
+	dir := t.TempDir()
+	return NewMediaService(repository.NewMediaRepository(db), repository.NewMediaFolderRepository(db), repository.NewDocumentRepository(db), storage.NewLocalStorage(dir, "/uploads"), &config.Config{UploadDir: dir, MaxImageMB: 20, MaxVideoMB: 1024, MaxFileMB: 100, MaxUploadMB: 1024}), db
+}
+
+func TestLocalizeContentImagesDeduplicatesAndKeepsPartialFailures(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		if r.URL.Path == "/fail.png" {
+			http.Error(w, "fixture failure", http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte("fixture-image"))
+	}))
+	defer server.Close()
+
+	svc, db := newLocalizeTestService(t)
+	defer db.Close()
+	good := server.URL + "/good.png"
+	bad := server.URL + "/fail.png"
+	content := `<p><img src="` + good + `"><img src="` + good + `"><img src="` + bad + `"></p>`
+	localized, count, err := svc.LocalizeContentImages(content, 0, "")
+	if err != nil || count != 1 {
+		t.Fatalf("localized count=%d err=%v", count, err)
+	}
+	if requests.Load() != 2 {
+		t.Fatalf("requests=%d, want 2 unique URLs", requests.Load())
+	}
+	if strings.Count(localized, good) != 0 || strings.Count(localized, bad) != 1 {
+		t.Fatalf("unexpected localized content: %s", localized)
+	}
+	var mediaCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM media`).Scan(&mediaCount); err != nil || mediaCount != 1 {
+		t.Fatalf("media=%d err=%v", mediaCount, err)
+	}
+}
+
+func TestLocalizeContentImagesUsesBoundedConcurrency(t *testing.T) {
+	var active, peak atomic.Int32
+	var delay = 75 * time.Millisecond
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		current := active.Add(1)
+		for {
+			previous := peak.Load()
+			if current <= previous || peak.CompareAndSwap(previous, current) {
+				break
+			}
+		}
+		defer active.Add(-1)
+		time.Sleep(delay)
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte("fixture-image"))
+	}))
+	defer server.Close()
+
+	for _, sample := range []struct {
+		delay  time.Duration
+		images int
+	}{{75 * time.Millisecond, 1}, {75 * time.Millisecond, 3}, {75 * time.Millisecond, 5}, {75 * time.Millisecond, 10}, {500 * time.Millisecond, 1}, {500 * time.Millisecond, 3}, {500 * time.Millisecond, 5}} {
+		delay = sample.delay
+		active.Store(0)
+		peak.Store(0)
+		svc, db := newLocalizeTestService(t)
+		var content strings.Builder
+		for i := 0; i < sample.images; i++ {
+			content.WriteString(`<img src="` + server.URL + `/image-` + string(rune('a'+i)) + `.png">`)
+		}
+		start := time.Now()
+		localized, count, err := svc.LocalizeContentImages(content.String(), 0, "")
+		elapsed := time.Since(start)
+		db.Close()
+		if err != nil || count != sample.images || strings.Contains(localized, server.URL) {
+			t.Fatalf("count=%d err=%v content=%s", count, err, localized)
+		}
+		if peak.Load() != int32(min(3, sample.images)) {
+			t.Fatalf("peak concurrency=%d", peak.Load())
+		}
+		if elapsed >= time.Duration((sample.images+2)/3)*sample.delay+100*time.Millisecond {
+			t.Fatalf("elapsed=%s indicates serial localization", elapsed)
+		}
+		t.Logf("localize delay=%s images=%d elapsed=%s", sample.delay, sample.images, elapsed)
+	}
+}
+
+func TestLocalizeContentImagesSkipsExistingLocalURLs(t *testing.T) {
+	svc, db := newLocalizeTestService(t)
+	defer db.Close()
+	content := `<img src="/uploads/images/local.png"><img src="./uploads/images/local.png"><video src="https://example.invalid/video.mp4"></video>`
+	localized, count, err := svc.LocalizeContentImages(content, 0, "")
+	if err != nil || count != 0 || localized != content {
+		t.Fatalf("content=%q count=%d err=%v", localized, count, err)
+	}
+}
 
 func TestMimeForVerifiedContent(t *testing.T) {
 	tests := []struct {

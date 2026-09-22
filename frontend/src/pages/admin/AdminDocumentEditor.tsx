@@ -623,6 +623,7 @@ export const AdminDocumentEditor: React.FC = () => {
         const locRes = await api.localizeDocumentImages(contentToSave, id ? Number(id) : 0, title.trim());
         if (locRes && locRes.content) {
           contentToSave = locRes.content;
+          tiptapEditorRef.current?.replaceContentForSave(locRes.content);
           setContent(locRes.content);
         }
       } catch (locErr) {

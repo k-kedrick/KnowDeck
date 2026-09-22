@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -545,9 +546,8 @@ func (s *MediaService) LocalizeContentImages(content string, documentID int64, d
 		return content, 0, nil
 	}
 
-	folderID := s.ResolveFolderID(0, documentID, docTitle)
-	localizedCount := 0
-	urlMap := make(map[string]string)
+	urls := make([]string, 0, len(matches))
+	seen := make(map[string]struct{})
 
 	for _, match := range matches {
 		var rawURL string
@@ -560,21 +560,46 @@ func (s *MediaService) LocalizeContentImages(content string, documentID int64, d
 		if rawURL == "" || strings.HasPrefix(rawURL, "/uploads/") || strings.HasPrefix(rawURL, "./uploads/") {
 			continue
 		}
-		if _, seen := urlMap[rawURL]; seen {
+		if _, exists := seen[rawURL]; exists {
 			continue
 		}
-
-		media, err := s.SaveExternalImage(rawURL, folderID, documentID, docTitle)
-		if err == nil && media != nil {
-			urlMap[rawURL] = media.URL
-			localizedCount++
-		}
+		seen[rawURL] = struct{}{}
+		urls = append(urls, rawURL)
 	}
+
+	if len(urls) == 0 {
+		return content, 0, nil
+	}
+
+	folderID := s.ResolveFolderID(0, documentID, docTitle)
+	urlMap := make(map[string]string, len(urls))
+	var mu sync.Mutex
+	jobs := make(chan string)
+	var workers sync.WaitGroup
+	for range min(3, len(urls)) {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for rawURL := range jobs {
+				media, err := s.SaveExternalImage(rawURL, folderID, documentID, docTitle)
+				if err == nil && media != nil {
+					mu.Lock()
+					urlMap[rawURL] = media.URL
+					mu.Unlock()
+				}
+			}
+		}()
+	}
+	for _, rawURL := range urls {
+		jobs <- rawURL
+	}
+	close(jobs)
+	workers.Wait()
 
 	newContent := content
 	for oldURL, newURL := range urlMap {
 		newContent = strings.ReplaceAll(newContent, oldURL, newURL)
 	}
 
-	return newContent, localizedCount, nil
+	return newContent, len(urlMap), nil
 }
