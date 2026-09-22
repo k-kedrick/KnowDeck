@@ -44,9 +44,9 @@
 | **媒体中心与引用体系 (U8)**| `AdminMediaManager.tsx`<br>`media/MediaWorkspace.tsx`<br>`service/media_service.go` | `[AUTOMATED]` `AdminMediaManager.test.tsx`<br>`media_service_test.go`<br>`media_repository_test.go` | 智能分类切换、逻辑文件夹操作、引用计数 > 0 阻止单删、批量删除保留引用项 |
 | **媒体引用智能修复** | `POST /api/admin/media/rebuild-references` | `[AUTOMATED]` `media_service_test.go` | 幂等重新扫描全量文档并修复历史图片关联 |
 | **分片大文件上传** | `uploadEditorMedia.ts`<br>`admin_media_handler.go` | `[AUTOMATED]` `TiptapE4AsyncUpload.test.tsx`<br>`media_service_test.go` | 超大视频切片上传进度条、网络中断重试、服务端合并一致性 |
-| **用户体系管理 (U2)** | `AdminUsersPage.tsx`<br>`users/UsersTab.tsx`<br>`user_service.go` | `[AUTOMATED]` `AdminUsersPage.test.tsx`<br>`user_service_test.go` | 用户分页查询、启停状态切换、角色分配、重置密码、自操作与最后管理员保护 |
+| **用户体系管理 (U2)** | `AdminUsersPage.tsx`<br>`users/UsersTab.tsx`<br>`admin_user_service.go` | `[AUTOMATED]` `AdminUsersPage.test.tsx`<br>`admin_user_service_test.go` | 用户分页查询、启停状态切换、角色分配、重置密码、自操作与最后管理员保护 |
 | **8 位邀请码管理 (U6)** | `AdminUsersPage.tsx`<br>`service/invite_service.go` | `[AUTOMATED]` `AdminUsersPage.test.tsx`<br>`invite_service_test.go` | 8 位邀请码生成与明文展示、一键复制徽章、修改备注/使用限制、查看使用者列表、批量删除/启停 |
-| **站点全局设置** | `AdminSettingsPage.tsx`<br>`service/setting_service.go` | `[NOT COVERED]` 暂无专属自动化测试<br>当前依赖人工验收 | 站点名称、副标题、页脚、公开属性修改后前台即时同步与持久化校验 |
+| **站点全局设置** | `AdminSettingsPage.tsx`<br>`service/setting_service.go` | `[AUTOMATED / PARTIAL]` `AdminSettingsPage.test.tsx` 覆盖保存调用与移除旧 public cache 后的行为；公开展示与持久化全链路仍需人工验收 | 站点名称、副标题、页脚、公开属性修改后前台即时同步与持久化校验 |
 
 ## 后端与基础设施验证分级
 

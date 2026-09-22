@@ -91,7 +91,7 @@ sanitizeDocumentHtml()
 - **图片**: 仅放行 `http:`、`https:`、`blob:` 以及特定规范的 Base64 `data:image/*`；前台强制附加 `referrerpolicy="no-referrer"`；支持点击呼出大图画廊灯箱预览。
 - **视频**: 仅放行 `http:`、`https:`、`blob:`；自动包裹响应式自适应样式。
 - **IFrame**: 仅放行安全的 `https:` 协议（本地开发放行 localhost）；前台自动附加 `sandbox` 隔离属性。
-- **外链图片本地化**: 后台保存文章前，会自动检测内容中的外部图片链接并调用 `/api/admin/media/save-external` 下载至本地持久化目录，防止外链失效裂图。
+- **外链图片本地化**: 后台保存文章前，编辑器调用 `/api/admin/media/localize-images`；后端的 `MediaService.LocalizeImages` 在需要时复用 `SaveExternalImage` 下载至本地持久化目录，防止外链失效裂图。`/api/admin/media/save-external` 仍保留为独立兼容 API，但当前前端保存流程不直接调用它。
 
 ## 结构兼容与历史降级
 

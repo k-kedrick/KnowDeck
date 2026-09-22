@@ -6,6 +6,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- 删除已验证无消费者的 `VideoLightbox` 与 `VideoLightboxProps`，保留 `ImageLightbox` 运行路径。
+- 移除 public site info/tree 的 localStorage 缓存及设置页对应的失效逻辑；公开界面改为由后端 Public API 与 React 页面状态直接驱动。
+
 ## [v1.0.3] - 2026-09-12
 
 ### Fixed
@@ -270,7 +274,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `tsc -b && vite build` 生产构建 100% 零错误。
 - `go test ./...` 与 `npx vitest run` 自动化全量测试 100% 全部通过。
 
-## Unreleased
+## Historical Unreleased Notes (pre-v1.0.0)
 
 ### Changed
 - Added public/authenticated document access levels, viewer-aware public/search/SEO ACLs, and locked document UI.

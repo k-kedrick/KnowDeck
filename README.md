@@ -45,9 +45,7 @@ boke/
 │   │   └── EDITOR_FORMAT.md          # 编辑器内容格式契约
 │   └── testing/
 │       └── FEATURE_TEST_MATRIX.md     # 功能与验证选择矩阵
-├── scripts/                          # 项目维护脚本
-├── data/                             # 根目录预留数据目录
-├── uploads/                          # 根目录预留上传目录
+├── data/                             # 根目录预留数据目录（非默认本地运行路径）
 ├── .dockerignore
 ├── .env.example
 ├── docker-compose.yml                 # Docker production deployment
@@ -67,7 +65,7 @@ boke/
 
 普通开发任务不需要默认加载全部项目文档；Codex 根据 `AGENTS.md` 和 `project-owner` 工作流，只读取当前任务所需的源码、测试和专项文档。
 
-本地开发数据默认位于 `backend/data/` 与 `backend/uploads/`；根目录的 `data/`、`uploads/` 当前仅为预留目录。
+本地开发数据默认位于 `backend/data/` 与 `backend/uploads/`；根目录的 `data/` 为预留目录。
 
 ## 本地运行
 
@@ -137,6 +135,7 @@ ADMIN_PASSWORD=CHANGE_ME_choose_a_strong_admin_password
 - `JWT_SECRET`：留空时后端首次启动以 `crypto/rand` 生成，并以 `0600` 权限写入数据卷的 `/data/.jwt_secret`；后续启动复用。已有用户显式配置的 `JWT_SECRET` 始终优先。
 - `APP_BIND_ADDRESS=127.0.0.1`：仅在使用宿主反向代理时限制监听地址；默认公开在所有宿主网卡。
 - `CORS_ALLOWED_ORIGINS`：仅跨域前端场景需要；同源 `/api` 部署无需设置。
+- 其余高级运行参数（`TRUSTED_PROXIES`、`JWT_EXPIRE_HOURS` 与上传大小上限等）以根目录 [`.env.example`](.env.example) 和 `backend/.env.example` 为准；最终读取规则见 `backend/internal/config/config.go`。
 
 Docker 使用两个持久化命名卷：`docker_kb-data` 保存 SQLite 和自动 JWT Secret，`docker_kb-uploads` 保存上传文件。升级时不要使用 `docker compose down -v`。
 

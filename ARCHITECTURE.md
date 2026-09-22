@@ -47,7 +47,7 @@ Go/Gin backend (:8090, 仅 Compose 内部网络访问，不对外暴露)
 - `AdminAuthGuard`: 守卫 `/wang/*` 受保护路由，验证 `localStorage` 中的 JWT Token 与角色权限，非管理员重定向至 `/wang/login`。
 - `AdminLayout`: 提供桌面端固宽侧边栏导航与响应式移动抽屉。
 - `AdminDashboardPage`: 呈现站点概览数据、快捷操作入口与近期编辑文章。
-- `AdminDocumentList` & `AdminDocumentEditor`: 文档列表支持状态/分类筛选、置顶与批量操作；编辑器使用统一的 `TiptapEditor`。
+- `AdminDocumentList` & `AdminDocumentEditor`: 文档列表支持状态/分类筛选与置顶；编辑器使用统一的 `TiptapEditor`。
 - `AdminCategoryManager` & `AdminTagManager`: 分类层级树维护（带防环校验）与标签多对多关联。
 - `AdminMediaManager`: 媒体资产中心，包含智能分类视图（全部/未分类/未使用）、文档关联树、逻辑文件夹与分片上传控制。
 - `AdminUsersPage`: 包含 Users 与 Invites 两个 Tab，负责用户启停/角色分配/密码重置，以及 8 位邀请码生成、明文展示复制、有效期限修改、使用记录反查与批量管理。
@@ -63,7 +63,7 @@ Go/Gin backend (:8090, 仅 Compose 内部网络访问，不对外暴露)
 HTTP Request
   -> Gin Recovery / CORS / SecurityHeaders / IP RateLimiter / AuthMiddleware
   -> Handler: 参数绑定、权限前置校验与 HTTP 状态码映射
-  -> Service: 领域业务规则编排、跨仓储事务协同与文件系统调度
+  -> Service（复杂业务路径）: 领域业务规则编排、跨仓储事务协同与文件系统调度
   -> Repository: 参数化 SQL 执行、SQLite 单写事务控制
   -> SQLite DB (WAL 模式) / Storage 驱动
 ```
@@ -136,7 +136,7 @@ SQLite 数据库通过 `backend/internal/repository/db.go` 进行初始化与版
 `docker-compose.yml` 编排两项独立服务：
 
 - **backend**:
-  - 非 root 运行（容器用户 `app:app`，UID/GID 1000）。
+  - 非 root 运行（镜像创建的系统用户 `app:app`；Dockerfile 未固定 UID/GID 数值）。
   - 挂载 `docker_kb-data`（读写）与 `docker_kb-uploads`（读写）。
   - 仅暴露在 Docker 内部网络 `8090` 端口，不映射宿主端口。
 - **frontend**:
@@ -149,7 +149,7 @@ SQLite 数据库通过 `backend/internal/repository/db.go` 进行初始化与版
 
 ## 架构核心原则与约束
 
-1. **分层严格隔离**: 请求必须沿 `handler -> service -> repository` 流转，禁止 handler 穿透直连数据库。
+1. **职责分层**: Handler 负责 HTTP 绑定、认证上下文与响应映射；复杂业务通常经 Service 编排后访问 Repository。部分简单 CRUD 或查询 Handler 直接使用 Repository，这是当前实现的一部分。
 2. **读写分离与只读防线**: 公开端仅允许 GET 查询已发布且符合权限的内容；任何写操作必须通过 `/api/admin/*` 或特定认证中间件。
 3. **真实单写原则**: SQLite 保持单写连接池配置，跨表写入由仓储层显式管理事务。
 4. **备份一致性边界**: 数据库与上传文件构成强一致性业务单元，备份与恢复必须同时对 `docker_kb-data` 和 `docker_kb-uploads` 进行打包与还原。
