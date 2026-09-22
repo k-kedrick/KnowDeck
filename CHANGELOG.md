@@ -10,6 +10,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - 修复管理端首次进入文档编辑页时，TipTap 编辑器尚未完成渲染就回退按 Markdown 解析 HTML 正文，导致文章大纲为空的问题。
 
 ### Changed
+- 外链图片本地化改为最多 3 路并发，保留重复 URL 去重；本地化结果同步回编辑器，后续保存不再重复下载，保存失败仍保持正确的未保存状态。
+- 媒体库搜索改为显式提交，避免逐键请求；同数据集的后台刷新保留媒体网格，数据集切换使用正确加载状态，图片与视频缩略图采用 lazy loading/async decoding。
+- 公开文档切换在新文档加载期间保留当前阅读上下文并显示轻量提示；新文档原子提交，错误、404 与受限内容状态保持正确。
 - 删除已验证无消费者的 `VideoLightbox` 与 `VideoLightboxProps`，保留 `ImageLightbox` 运行路径。
 - 移除 public site info/tree 的 localStorage 缓存及设置页对应的失效逻辑；公开界面改为由后端 Public API 与 React 页面状态直接驱动。
 

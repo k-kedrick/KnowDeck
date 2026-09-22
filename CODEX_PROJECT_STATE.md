@@ -4,7 +4,7 @@
 
 ## Current Project Facts
 
-- Git baseline before the uncommitted Phase 2 documentation/metadata changes: `1365186` (`main`, equal to `origin/main`). No commit has been created for Phase 2.
+- Verified performance-code baseline: `16438afb5da76645eae576b46fe570c40c27ae6f` (`main`, equal to `origin/main`) before this documentation-only closeout commit.
 - Frontend: React 19, TypeScript 6, Vite 8, React Router 7, Tailwind CSS, TipTap 3, DOMPurify.
 - Backend: Go 1.26.4, Gin, `modernc.org/sqlite`, SQLite WAL with one open connection, local media storage.
 - Deployment: root `docker-compose.yml` runs an internal backend on `8090` and an Nginx frontend published at `${APP_BIND_ADDRESS:-0.0.0.0}:${APP_PORT:-8080}`. Named volumes `docker_kb-data` and `docker_kb-uploads` persist data.
@@ -37,32 +37,32 @@ Aggregate SHA-256 over sorted tracked paths. For each path, the calculation feed
 | Deployment | `4f9f00e286a8544aa35232f3a8a14f70af4ceb351b9450dfa9ef7d367a62b674` | Compose, root environment example, Dockerfiles, Nginx config |
 | Maintained Markdown | `c9be4ba1c720fb878c2a46e048e1b8e1da043164b80ec34fc1656430f1d5c873` | README, architecture, security, changelog, AGENTS, health audit, `docs/**` |
 
-These fingerprints describe the Phase 2 working tree before commit. Recompute a scope after changing any listed input.
+These fingerprints predate the performance-code baseline and are retained only as historical evidence. Recompute a scope before reusing them.
 
 ## Verification Evidence
 
-Historical evidence below is explicitly not a Phase 2 rerun.
+Final performance regression acceptance at `16438af` on 2026-09-23 (Asia/Shanghai):
 
-| Scope | Latest actual result | Commit / date | Reuse condition |
-| --- | --- | --- | --- |
-| Backend tests and vet | `go test ./...` PASS; `go vet ./...` PASS | `1365186`, 2026-09-17 | Backend Go/modules/schema/callers unchanged |
-| Frontend tests | `npm.cmd test` PASS: 48 test files passed, 1 skipped; 254 tests passed, 1 skipped | `1365186`, 2026-09-17 | Frontend source, resolved dependencies, test configuration, and callers unchanged |
-| Frontend lint | `npm.cmd run lint` PASS: 0 errors, 12 existing warnings | `1365186`, 2026-09-17 | Frontend source/lint config unchanged |
-| Frontend build | `npm.cmd run build` PASS | `1365186`, 2026-09-17 | Frontend source/build config/resolved dependencies unchanged |
-| Compose syntax | `docker compose --env-file .env.example config --quiet` PASS | `1365186`, 2026-09-17 | Compose, Dockerfiles, Nginx, root environment example unchanged |
-| Diff integrity | `git diff --check` PASS | `1365186`, 2026-09-17 | Re-run after any text/code change |
+| Scope | Latest actual result | Reuse condition |
+| --- | --- | --- |
+| Backend tests | `go test ./...` PASS | Backend source/modules/schema/callers unchanged |
+| Frontend tests | `npm.cmd test -- --run` PASS: 48 test files passed, 1 skipped; 266 tests passed, 1 skipped | Frontend source, dependencies, test configuration, and callers unchanged |
+| Frontend build | `npm.cmd run build` PASS | Frontend source/build config/resolved dependencies unchanged |
+| Frontend lint | `npm.cmd run lint` PASS: 0 errors, 11 existing warnings | Frontend source/lint config unchanged |
+| Diff integrity | `git diff --check` PASS | Re-run after any text/code change |
 
-Phase 2 changes only Markdown and the lockfile root-package version (`1.0.2` → `1.0.3`); dependency resolutions are unchanged. The prior behavior tests are retained as historical evidence, not restated as a new run. Phase 2 must run `npm ci --dry-run` and `git diff --check`.
+Completed performance work:
+- B1 external image localization uses bounded concurrency of 3; repeated saves do not re-download localized images, and save failure preserves dirty state.
+- C1 media search does not request per keystroke; same-dataset mutation refresh preserves the grid, while dataset changes avoid stale content.
+- D1 public reader navigation retains the committed document with a subtle pending state, atomically commits the next document, and preserves error/404/ACL correctness.
+
+Deferred — do not optimize without new evidence: `SyncDocumentReferences`, `ReconcileDocumentLocalMedia`, editor full serialization/draft persistence, TOC scans, and a thumbnail pipeline. Current measurements do not demonstrate user benefit sufficient to justify compatibility risk.
 
 ## Current Verification Gaps / Risks
 
-- Browser/E2E behavior was not rerun during the 2026-09-17 final code-health closure.
-- Docker daemon/runtime is not available in the current environment; Compose/runtime deployment is not rerun in Phase 2.
-- Backup restoration from an archive and production domain/TLS integration remain unverified.
-- The race detector is unavailable in this Windows environment without a CGO toolchain.
-- Native IME behavior has focused component evidence but no real-browser IME simulation.
-- Existing frontend lint baseline: 12 warnings, 0 errors; resolve only in affected modules.
-- `POST /api/admin/media/save-external` has no current frontend caller but remains a potential compatibility API. Do not remove without external-consumer verification.
+- MANUAL / NOT VERIFIED: Chinese IME; real-browser focus/selection; long-document scroll; anchor navigation; Back/Forward; visual transition/layout shift; repeated external-download Network inspection; real login/logout/register/password and admin save/publish/upload/delete flows.
+- Docker runtime: NOT REVALIDATED. Deployment files were unchanged; `docker compose --env-file .env.example config --quiet` requires an unsupplied `ADMIN_PASSWORD`.
+- PRE-EXISTING SECURITY FOLLOW-UP: external image fetching has no independent SSRF allowlist review.
 
 ## Maintenance Rules
 
