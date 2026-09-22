@@ -91,9 +91,12 @@ export const AdminMediaManager: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(40);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<string>('');
+  // 输入值只更新控件；确认搜索后才进入列表请求参数。
   const [keyword, setKeyword] = useState<string>('');
+  const [submittedKeyword, setSubmittedKeyword] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('latest');
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
@@ -142,8 +145,16 @@ export const AdminMediaManager: React.FC = () => {
   const [showBatchDeleteModal, setShowBatchDeleteModal] = useState<boolean>(false);
   const [isBatchDeleting, setIsBatchDeleting] = useState<boolean>(false);
 
-  // 请求防抖/竞态控制器
+  // 请求竞态控制器；切换视图需要新快照，其余刷新保留已显示的卡片。
   const abortControllerRef = useRef<AbortController | null>(null);
+  const hasMediaSnapshotRef = useRef(false);
+  const clearMediaOnNextLoadRef = useRef(false);
+
+  const beginDatasetChange = () => {
+    clearMediaOnNextLoadRef.current = true;
+    setMediaList([]);
+    setTotal(0);
+  };
 
   const closeMediaPreview = useCallback(() => {
     setPreviewingMedia(null);
@@ -195,7 +206,14 @@ export const AdminMediaManager: React.FC = () => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    setLoading(true);
+    const requiresFreshSnapshot = clearMediaOnNextLoadRef.current || !hasMediaSnapshotRef.current;
+    clearMediaOnNextLoadRef.current = false;
+    setLoading(requiresFreshSnapshot);
+    setRefreshing(!requiresFreshSnapshot);
+    if (requiresFreshSnapshot && hasMediaSnapshotRef.current) {
+      setMediaList([]);
+      setTotal(0);
+    }
     setErrorMsg(null);
 
     try {
@@ -203,7 +221,7 @@ export const AdminMediaManager: React.FC = () => {
         page,
         page_size: pageSize,
         media_type: mediaTypeFilter || undefined,
-        keyword: keyword.trim() || undefined,
+        keyword: submittedKeyword || undefined,
         sort_by: sortBy,
       };
 
@@ -219,14 +237,21 @@ export const AdminMediaManager: React.FC = () => {
       if (controller.signal.aborted || abortControllerRef.current !== controller) return;
       setMediaList(res.list || []);
       setTotal(res.total || 0);
+      hasMediaSnapshotRef.current = true;
     } catch (err: any) {
       if (err.name === 'AbortError' || controller.signal.aborted || abortControllerRef.current !== controller) return;
       setErrorMsg(err.message || '加载媒体文件库失败');
-      setMediaList([]);
+      if (requiresFreshSnapshot) {
+        setMediaList([]);
+        setTotal(0);
+      }
     } finally {
-      if (abortControllerRef.current === controller) setLoading(false);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [viewMode, page, pageSize, mediaTypeFilter, keyword, sortBy]);
+  }, [viewMode, page, pageSize, mediaTypeFilter, submittedKeyword, sortBy]);
 
   useEffect(() => {
     loadFolders();
@@ -240,6 +265,7 @@ export const AdminMediaManager: React.FC = () => {
 
   // 切换视图时清空选择与页码
   const handleSwitchView = (newView: ViewMode) => {
+    beginDatasetChange();
     setViewMode(newView);
     setPage(1);
     setSelectedIds(new Set());
@@ -483,12 +509,13 @@ export const AdminMediaManager: React.FC = () => {
     try {
       await api.deleteMediaFolder(deletingFolder.id, true);
       setSuccessMsg(`🗑️ 文件夹《${deletingFolder.name}》已删除，内含文件已安全保留在「未分类」中`);
-      if (viewMode.type === 'folder' && viewMode.folderId === deletingFolder.id) {
+      const wasCurrentFolder = viewMode.type === 'folder' && viewMode.folderId === deletingFolder.id;
+      if (wasCurrentFolder) {
         handleSwitchView({ type: 'all' });
       }
       setDeletingFolder(null);
       loadFolders();
-      loadMedia();
+      if (!wasCurrentFolder) loadMedia();
     } catch (err: any) {
       setErrorMsg(err.message || '删除文件夹失败');
     } finally {
@@ -630,19 +657,22 @@ export const AdminMediaManager: React.FC = () => {
           isCurrentPageAllSelected={isCurrentPageAllSelected}
           keyword={keyword}
           loading={loading}
+          refreshing={refreshing}
           mediaList={mediaList}
           mediaTypeFilter={mediaTypeFilter}
           onClearSelection={clearSelection}
-          onKeywordChange={(value) => { setKeyword(value); setPage(1); }}
-          onMediaTypeFilterChange={(value) => { setMediaTypeFilter(value); setPage(1); }}
+          onKeywordChange={setKeyword}
+          onSubmitSearch={() => { beginDatasetChange(); setSubmittedKeyword(keyword.trim()); setPage(1); }}
+          onClearKeyword={() => { beginDatasetChange(); setKeyword(''); setSubmittedKeyword(''); setPage(1); }}
+          onMediaTypeFilterChange={(value) => { beginDatasetChange(); setMediaTypeFilter(value); setPage(1); }}
           onOpenBatchDelete={() => setShowBatchDeleteModal(true)}
           onOpenBatchMove={() => { setTargetFolderId(0); setShowBatchMoveModal(true); }}
           onOpenDetail={setDetailedMedia}
           onOpenMove={(media) => { setMovingMedia(media); setTargetFolderId(media.folder_id || 0); }}
-          onPageChange={setPage}
-          onPageSizeChange={(value) => { setPageSize(value); setPage(1); }}
+          onPageChange={(value) => { beginDatasetChange(); setPage(value); }}
+          onPageSizeChange={(value) => { beginDatasetChange(); setPageSize(value); setPage(1); }}
           onRequestDelete={handleRequestDelete}
-          onSortByChange={(value) => { setSortBy(value); setPage(1); }}
+          onSortByChange={(value) => { beginDatasetChange(); setSortBy(value); setPage(1); }}
           onSwitchView={handleSwitchView}
           onToggleSelect={toggleSelectOne}
           onToggleSelectAllCurrentPage={toggleSelectAllCurrentPage}

@@ -155,6 +155,108 @@ describe('AdminMediaManager', () => {
     });
   });
 
+  it('only requests search results on submit and restores the unfiltered list on clear', async () => {
+    renderPage();
+    await screen.findByText('gemini_diagram.png');
+    expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(1);
+
+    const search = screen.getByPlaceholderText('搜索资源名称、原始文件名、关联文档...');
+    fireEvent.change(search, { target: { value: 'logo' } });
+    fireEvent.change(search, { target: { value: 'logo-final' } });
+    expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(1);
+
+    fireEvent.submit(search.closest('form')!);
+    await waitFor(() => {
+      expect(apiMocks.getAdminMedia).toHaveBeenLastCalledWith(
+        expect.objectContaining({ keyword: 'logo-final', page: 1 }),
+        expect.any(AbortSignal),
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '清空搜索' }));
+    await waitFor(() => {
+      expect(apiMocks.getAdminMedia).toHaveBeenLastCalledWith(
+        expect.objectContaining({ keyword: undefined, page: 1 }),
+        expect.any(AbortSignal),
+      );
+    });
+  });
+
+  it('keeps the current cards visible while a successful delete refresh is pending', async () => {
+    let resolveRefresh!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;
+    apiMocks.getAdminMedia
+      .mockResolvedValueOnce({ list: mockMediaList, total: 2, page: 1, page_size: 40 })
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; }));
+    apiMocks.deleteMedia.mockResolvedValue(undefined);
+    renderPage();
+    await screen.findByText('unused_logo.png');
+
+    fireEvent.click(screen.getAllByRole('button', { name: '删除资源' })[1]);
+    fireEvent.click(await screen.findByRole('button', { name: '确认彻底删除' }));
+    await waitFor(() => expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(2));
+
+    expect(screen.getByText('unused_logo.png')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('正在刷新资源列表');
+    resolveRefresh({ list: [mockMediaList[0]], total: 1, page: 1, page_size: 40 });
+    await waitFor(() => expect(screen.queryByText('unused_logo.png')).toBeNull());
+  });
+
+  it('keeps cards available when a delete mutation fails', async () => {
+    apiMocks.deleteMedia.mockRejectedValue(new Error('删除失败'));
+    renderPage();
+    await screen.findByText('unused_logo.png');
+
+    fireEvent.click(screen.getAllByRole('button', { name: '删除资源' })[1]);
+    fireEvent.click(await screen.findByRole('button', { name: '确认彻底删除' }));
+
+    expect(await screen.findByText('删除失败')).toBeTruthy();
+    expect(screen.getByText('unused_logo.png')).toBeTruthy();
+    expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a fresh loading state for pagination and folder dataset changes', async () => {
+    let resolvePageTwo!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;
+    const pageTwoMedia = { ...mockMediaList[1], id: 3, original_name: 'page_two.png' };
+    apiMocks.getAdminMedia
+      .mockResolvedValueOnce({ list: mockMediaList, total: 80, page: 1, page_size: 40 })
+      .mockImplementationOnce(() => new Promise((resolve) => { resolvePageTwo = resolve; }))
+      .mockResolvedValueOnce({ list: [mockMediaList[1]], total: 1, page: 1, page_size: 40 });
+    renderPage();
+    await screen.findByText('gemini_diagram.png');
+
+    fireEvent.click(screen.getByRole('button', { name: '下一页' }));
+    await waitFor(() => expect(apiMocks.getAdminMedia).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }), expect.any(AbortSignal),
+    ));
+    expect(screen.queryByText('gemini_diagram.png')).toBeNull();
+    resolvePageTwo({ list: [pageTwoMedia], total: 80, page: 2, page_size: 40 });
+    await screen.findByText('page_two.png');
+
+    fireEvent.click(screen.getByRole('button', { name: '产品截图' }));
+    await waitFor(() => expect(apiMocks.getAdminMedia).toHaveBeenLastCalledWith(
+      expect.objectContaining({ folder_id: 1, page: 1 }), expect.any(AbortSignal),
+    ));
+    expect(screen.queryByText('page_two.png')).toBeNull();
+  });
+
+  it('does not let a late folder request overwrite the selected folder', async () => {
+    let resolveAll!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;
+    let resolveFolder!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;
+    apiMocks.getAdminMedia
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveAll = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFolder = resolve; }));
+    renderPage();
+    await waitFor(() => expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole('button', { name: '产品截图' }));
+    await waitFor(() => expect(apiMocks.getAdminMedia).toHaveBeenCalledTimes(2));
+    resolveFolder({ list: [mockMediaList[1]], total: 1, page: 1, page_size: 40 });
+    expect(await screen.findByText('unused_logo.png')).toBeTruthy();
+
+    resolveAll({ list: [mockMediaList[0]], total: 1, page: 1, page_size: 40 });
+    await Promise.resolve();
+    expect(screen.queryByText('gemini_diagram.png')).toBeNull();
+  });
   it('does not let an aborted media request overwrite the latest view', async () => {
     let resolveFirst!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;
     let resolveSecond!: (value: { list: Media[]; total: number; page: number; page_size: number }) => void;

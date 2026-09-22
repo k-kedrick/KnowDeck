@@ -19,10 +19,13 @@ interface MediaWorkspaceProps {
   isCurrentPageAllSelected: boolean;
   keyword: string;
   loading: boolean;
+  refreshing: boolean;
   mediaList: Media[];
   mediaTypeFilter: string;
+  onClearKeyword: () => void;
   onClearSelection: () => void;
   onKeywordChange: (keyword: string) => void;
+  onSubmitSearch: () => void;
   onMediaTypeFilterChange: (mediaType: string) => void;
   onOpenBatchDelete: () => void;
   onOpenBatchMove: () => void;
@@ -44,8 +47,8 @@ interface MediaWorkspaceProps {
 }
 
 export function MediaWorkspace({
-  currentViewInfo, folders, isCurrentPageAllSelected, keyword, loading, mediaList,
-  mediaTypeFilter, onClearSelection, onKeywordChange, onMediaTypeFilterChange,
+  currentViewInfo, folders, isCurrentPageAllSelected, keyword, loading, refreshing, mediaList,
+  mediaTypeFilter, onClearKeyword, onClearSelection, onKeywordChange, onSubmitSearch, onMediaTypeFilterChange,
   onOpenBatchDelete, onOpenBatchMove, onOpenDetail, onOpenMove, onPageChange,
   onPageSizeChange, onRequestDelete, onSortByChange, onSwitchView, onToggleSelect,
   onToggleSelectAllCurrentPage, page, pageSize, selectedIds, sortBy, total, viewMode,
@@ -86,7 +89,7 @@ export function MediaWorkspace({
                   {viewMode.type === 'all' && <Layers className="w-4 h-4 text-indigo-500 shrink-0" />}
                   <span className="truncate max-w-sm">{currentViewInfo.title}</span>
                   <span className="text-xs font-normal text-text-tertiary">
-                    ({loading ? '加载中…' : `共 ${total} 项`})
+                    ({loading ? '加载中…' : refreshing ? '刷新中…' : `共 ${total} 项`})
                   </span>
                 </h2>
 
@@ -99,27 +102,32 @@ export function MediaWorkspace({
           {/* Filter & Search & Sort Bar */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] xl:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
             {/* Search Input */}
-            <div className="relative">
+            <form className="relative" onSubmit={(event) => { event.preventDefault(); onSubmitSearch(); }}>
               <Search className="pointer-events-none absolute left-3 top-3 z-10 h-3.5 w-3.5 text-text-tertiary" />
               <input
-                type="text"
+                type="search"
                 value={keyword}
-                onChange={(e) => {
-                  onKeywordChange(e.target.value);
-                }}
+                onChange={(e) => onKeywordChange(e.target.value)}
                 placeholder="搜索资源名称、原始文件名、关联文档..."
-                className="h-9 w-full rounded-lg border border-border-default bg-surface pl-10 pr-3 text-xs text-text-primary outline-none transition focus:border-brand focus:ring-1 focus:ring-brand"
+                className="h-9 w-full rounded-lg border border-border-default bg-surface pl-10 pr-16 text-xs text-text-primary outline-none transition focus:border-brand focus:ring-1 focus:ring-brand"
               />
               {keyword && (
                 <button
                   type="button"
-                  onClick={() => onKeywordChange('')}
-                  className="absolute right-2.5 top-2.5 text-text-tertiary hover:text-text-primary"
+                  onClick={onClearKeyword}
+                  className="absolute right-9 top-2.5 text-text-tertiary hover:text-text-primary"
+                  aria-label="清空搜索"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
-            </div>
+              <button
+                type="submit"
+                className="absolute right-2 top-1.5 rounded px-1.5 py-1 text-xs font-medium text-brand hover:bg-brand/10"
+              >
+                搜索
+              </button>
+            </form>
 
             {/* Media Type Filter */}
             <div className="flex items-center space-x-1.5">
@@ -246,7 +254,13 @@ export function MediaWorkspace({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <>
+              {refreshing && (
+                <div role="status" aria-live="polite" className="flex items-center gap-1.5 text-xs text-text-tertiary">
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> 正在刷新资源列表…
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {mediaList.map((m) => {
                 const isSelected = selectedIds.has(m.id);
                 const displayName = m.original_name?.trim() || m.filename;
@@ -309,6 +323,7 @@ export function MediaWorkspace({
                           src={m.url}
                           alt={m.original_name}
                           loading="lazy"
+                          decoding="async"
                           className="h-full w-full object-contain p-1.5 transition-transform duration-200 group-hover/thumb:scale-105"
                         />
                       ) : isVid ? (
@@ -317,6 +332,8 @@ export function MediaWorkspace({
                             <img
                               src={m.thumbnail}
                               alt={m.original_name}
+                              loading="lazy"
+                              decoding="async"
                               className="h-full w-full object-cover opacity-75"
                             />
                           ) : (
@@ -428,7 +445,8 @@ export function MediaWorkspace({
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
 
           {/* Pagination */}
