@@ -11,7 +11,7 @@ testing, deployment, review, and long-term maintenance:
 1. Read and follow `.agents/skills/project-owner/SKILL.md`.
 2. Read `CODEX_PROJECT_STATE.md` before broad repository discovery.
 3. Inspect `git status --short` and relevant existing diffs before modifying files.
-4. Preserve user changes. Do not revert, overwrite, format, or modify unrelated work.
+4. Preserve user changes. Do not revert, overwrite, format, or modify unrelated work. Never use destructive forms such as `reset --hard`, `checkout .`, `restore .`, `clean -fd`, force-push, or shared-history rewriting without explicit user instruction and verified scope; distinguish pre-existing user changes from the current task's changes.
 5. Map the current request to affected entry points, callers, dependencies,
    configuration, schema, tests, and runtime effects.
 6. Search symbols and references before reading large files.
@@ -70,6 +70,39 @@ Load additional documentation only when relevant:
 - `docs/testing/FEATURE_TEST_MATRIX.md` — verification selection
 - `docs/operations/BACKUP.md` — deployment, migration, backup, restore
 - `CHANGELOG.md` — durable release-level changes
+
+## Documentation Impact
+
+Documentation follows the implementation; it is not a reason to reinterpret
+source, configuration, schema, runtime behavior, tests, or Git history. For
+each change, identify whether a documented fact changed. If not, do not create
+a documentation diff or scan every Markdown file.
+
+| Change scope | Review only when applicable |
+| --- | --- |
+| Public usage, local startup, common configuration, deployment entry | `README.md` |
+| Module boundary, data flow, frontend/backend architecture | `ARCHITECTURE.md`, `CODEX_PROJECT_STATE.md` when a durable maintenance fact changes |
+| Auth, ACL, JWT, CORS, secrets, trusted proxies, upload/content security | `SECURITY.md`; `ARCHITECTURE.md` or state only if their facts change |
+| TipTap, Markdown/HTML, serialization, rendering, image localization | `docs/specs/EDITOR_FORMAT.md`; architecture/state only when their respective facts change |
+| Docker, Compose, Nginx, volumes, backup, restore, deployment | `README.md`, relevant `docs/operations/*`; security/architecture only when affected |
+| Test files, coverage, verification strategy | `docs/testing/FEATURE_TEST_MATRIX.md` — never place one-off PASS/FAIL there |
+| User-visible feature, meaningful bug fix/refactor, formal feature removal | assess `CHANGELOG.md` → `Unreleased`; exclude formatting and non-behavioral micro-cleanup |
+| Fingerprint, reusable verification, compatibility constraint, current risk | `CODEX_PROJECT_STATE.md` only when durable |
+
+`CODEX_PROJECT_STATE.md` contains current baseline, fingerprints, reusable
+verification, active constraints, risks, and pending manual verification. Do
+not turn it into a changelog, an audit archive, or an architecture/security
+duplicate. Preserve historical descriptions in `CHANGELOG.md` and
+`PROJECT_CODE_HEALTH_AUDIT.md`; do not rewrite them to match current code.
+
+At task close: inspect the final diff, verify affected behavior and references,
+update only applicable documentation, state what was run now versus reused or
+not run, and then report the remaining verification gap.
+
+Use a release gate only when the user explicitly requests a release, tag, or
+version upgrade. Then verify working tree, relevant tests/build, version
+metadata, `CHANGELOG.md`, applicable README/deployment facts, documentation
+links, tag, and `origin/main`. Ordinary changes do not create releases.
 
 ## Change Discipline
 
