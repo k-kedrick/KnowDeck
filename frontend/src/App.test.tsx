@@ -228,6 +228,70 @@ describe('public document routing', () => {
     expect(document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href.endsWith('/docs/a')).toBe(true);
   });
 
+  it('uses a skeleton for an initial document load without retained content', async () => {
+    const initial = deferred<ReturnType<typeof detail>>();
+    apiMocks.getDocumentBySlug.mockReturnValue(initial.promise);
+    window.history.replaceState(null, '', '/docs/a');
+    render(<App />);
+
+    await waitFor(() => expect(apiMocks.getDocumentBySlug).toHaveBeenCalledWith('a', expect.any(AbortSignal)));
+    expect(document.querySelector('.layout-reading.animate-pulse')).toBeTruthy();
+    await act(async () => initial.resolve(detail(1, 'a', '文章 A')));
+    await expectDocumentTitle('文章 A');
+  });
+
+  it('keeps the current document visible while the next document is pending', async () => {
+    const next = deferred<ReturnType<typeof detail>>();
+    apiMocks.getDocumentBySlug.mockImplementation((slug: string) =>
+      slug === 'a'
+        ? Promise.resolve({ ...detail(1, 'a', '文章 A'), neighbor: { next: summary(2, 'b', '文章 B') } })
+        : next.promise,
+    );
+    window.history.replaceState(null, '', '/docs/a');
+    render(<App />);
+
+    await expectDocumentTitle('文章 A');
+    fireEvent.click(screen.getByRole('link', { name: /下一篇.*文章 B/ }));
+    await waitFor(() => expect(apiMocks.getDocumentBySlug).toHaveBeenCalledWith('b', expect.any(AbortSignal)));
+    expect((await screen.findByRole('status')).textContent).toContain('正在打开文章');
+    await expectDocumentTitle('文章 A');
+    expect(document.title).toBe('文章 A - 技术知识库');
+    expect(document.querySelector('.layout-reading.animate-pulse')).toBeNull();
+
+    await act(async () => next.resolve(detail(2, 'b', '文章 B')));
+    await expectDocumentTitle('文章 B');
+  });
+
+  it('replaces retained content with an error when navigation fails', async () => {
+    apiMocks.getDocumentBySlug.mockImplementation((slug: string) =>
+      slug === 'a'
+        ? Promise.resolve({ ...detail(1, 'a', '文章 A'), neighbor: { next: summary(2, 'b', '文章 B') } })
+        : Promise.reject(new ApiError('not found', 404)),
+    );
+    window.history.replaceState(null, '', '/docs/a');
+    render(<App />);
+
+    await expectDocumentTitle('文章 A');
+    fireEvent.click(screen.getByRole('link', { name: /下一篇.*文章 B/ }));
+    expect(await screen.findByRole('heading', { name: '文章不存在' })).toBeTruthy();
+    expect(screen.queryByText('文章 A')).toBeNull();
+  });
+
+  it('replaces retained public content with the locked state after ACL navigation', async () => {
+    apiMocks.getDocumentBySlug.mockImplementation((slug: string) =>
+      slug === 'a'
+        ? Promise.resolve({ ...detail(1, 'a', '文章 A'), neighbor: { next: summary(2, 'b', '文章 B') } })
+        : Promise.resolve({ ...detail(2, 'b', '文章 B'), locked: true }),
+    );
+    window.history.replaceState(null, '', '/docs/a');
+    render(<App />);
+
+    await expectDocumentTitle('文章 A');
+    fireEvent.click(screen.getByRole('link', { name: /下一篇.*文章 B/ }));
+    expect(await screen.findByTestId('document-locked')).toBeTruthy();
+    expect(screen.queryByText('文章 A')).toBeNull();
+  });
+
   it('does not let an older request overwrite the latest document', async () => {
     const first = deferred<ReturnType<typeof detail>>();
     const second = deferred<ReturnType<typeof detail>>();

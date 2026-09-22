@@ -59,7 +59,7 @@ export const DocumentPage = () => {
   const { user, loading: authLoading } = useAuth();
   const { slug = '' } = useParams<{ slug: string }>();
   const [docDetail, setDocDetail] = useState<DocDetailData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<DocumentLoadError>(null);
   const requestSequence = useRef(0);
   const siteName = siteInfo?.site_name || '技术知识库';
@@ -74,7 +74,6 @@ export const DocumentPage = () => {
 
     queueMicrotask(async () => {
       if (controller.signal.aborted) return;
-      setDocDetail(null);
       setError(null);
       setLoading(true);
       try {
@@ -94,7 +93,7 @@ export const DocumentPage = () => {
 
   return (
     <Suspense fallback={<RouteFallback />}>
-      {document && <SEOHead
+      {document && !loading && !error && <SEOHead
         title={`${document.title} - ${siteName}`}
         description={description || document.title}
         canonicalPath={canonicalPath}
@@ -123,9 +122,9 @@ export const DocumentPage = () => {
       />}
       {error && <SEOHead title={`${error === 'not-found' ? '文章不存在' : '文章加载失败'} - ${siteName}`} description={error === 'not-found' ? '该文章不存在、未发布或地址有误。' : '文章暂时无法加载。'} canonicalPath={null} siteName={siteName} robots="noindex,nofollow" />}
       <DocViewer
-        key={slug}
         data={docDetail}
         loading={loading}
+        navigationPending={loading && docDetail !== null && !error}
         error={error}
       />
     </Suspense>

@@ -26,6 +26,7 @@ import { TiptapReadonlyDocument } from './admin/tiptap/TiptapReadonlyDocument';
 interface DocViewerProps {
   data: DocDetailData | null;
   loading: boolean;
+  navigationPending?: boolean;
   error?: DocumentLoadError;
 }
 
@@ -109,7 +110,7 @@ const TocNav = ({ items, activeId, onSelect, filterText = '' }: TocNavProps) => 
   );
 };
 
-export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = null }) => {
+export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, navigationPending = false, error = null }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const outletContext = useOutletContext<PublicOutletContext | null>();
@@ -147,7 +148,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   const documentId = doc?.id;
   const documentSlug = doc?.slug;
   const documentContent = doc?.content;
-  const rendered = Boolean(doc) && !loading && !error && !locked;
+  const rendered = Boolean(doc) && (!loading || navigationPending) && !error && !locked;
   // Bind DOM-derived state and asynchronous callbacks to the current document render.
   const headingScope = React.useMemo<HeadingScope>(() => ({
     documentId, slug: documentSlug, content: documentContent, title: docTitle, rendered, readerRevision,
@@ -348,7 +349,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
     handleArticleLinkClick(event);
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="layout-reading mx-auto w-full animate-pulse space-y-6 px-4 py-8 sm:px-8">
         <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
@@ -463,6 +464,11 @@ export const DocViewer: React.FC<DocViewerProps> = ({ data, loading, error = nul
   return (
     <div className="relative w-full min-h-full flex-1 flex justify-center">
       <ReadingProgressBar />
+      {navigationPending && (
+        <div role="status" aria-live="polite" className="fixed top-20 z-30 rounded-full border border-slate-200 bg-white/95 px-3 py-1 text-xs font-medium text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-300">
+          正在打开文章…
+        </div>
+      )}
       {/* Mobile TOC Drawer Trigger */}
       {allTocItems.length > 0 && (
         <>
