@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -35,17 +35,27 @@ vi.mock('../../api', async (importOriginal) => {
 });
 
 vi.mock('../../components/admin/tiptap/TiptapEditor', () => ({
-  TiptapEditor: forwardRef(({ content, onChange, title, onTitleChange }: { content: string; onChange: (value: string) => void; title?: string; onTitleChange?: (value: string) => void }, ref) => {
+  TiptapEditor: forwardRef(({ content, onChange, onEditorReady, title, onTitleChange }: { content: string; onChange: (value: string) => void; onEditorReady?: (editor: { view: { dom: HTMLDivElement } } | null) => void; title?: string; onTitleChange?: (value: string) => void }, ref) => {
+    const editorCanvasRef = useRef<HTMLDivElement>(null);
     useImperativeHandle(ref, () => ({ getContentForSave: () => content, markSaved: () => undefined }));
+    useEffect(() => {
+      if (!editorCanvasRef.current) return undefined;
+      onEditorReady?.({ view: { dom: editorCanvasRef.current } });
+      return () => onEditorReady?.(null);
+    }, [onEditorReady]);
     return (
     <div data-testid="editor-content">
       <label htmlFor="document-title">文档标题</label>
       <input id="document-title" value={title || ''} onChange={(event) => onTitleChange?.(event.target.value)} />
-      {content}
+      <div ref={editorCanvasRef} dangerouslySetInnerHTML={{ __html: content }} />
       <button type="button" onClick={() => onChange(`${content}\n正文修改`)}>模拟正文编辑</button>
     </div>
     );
   }),
+}));
+
+vi.mock('../../components/admin/tiptap/TiptapToolbar', () => ({
+  TiptapToolbar: () => null,
 }));
 
 vi.mock('../../components/admin/AdminDocTreeSidebar', () => ({
@@ -143,5 +153,26 @@ describe('AdminDocumentEditor compact properties', () => {
     expect(localStorage.getItem('kb_admin_show_toc')).toBe('false');
     expect(document.querySelector('.admin-editor-workspace-body')?.getAttribute('data-tree-open')).toBe('false');
     expect(document.querySelector('.admin-editor-workspace-body')?.getAttribute('data-outline-open')).toBe('false');
+  });
+
+  it('collects an HTML document outline after the editor becomes ready on first entry', async () => {
+    localStorage.setItem('kb_admin_editor_layout_v2', '1');
+    localStorage.setItem('kb_admin_show_toc', 'true');
+    apiMocks.getAdminDocument.mockResolvedValueOnce({
+      ...documentFixture,
+      content: '<h1>首次加载标题</h1><p>正文</p><h2>二级标题</h2>',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/wang/documents/9']}>
+        <Routes><Route path="/wang/documents/:id" element={<AdminDocumentEditor />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('textbox', { name: '文档标题' });
+    await waitFor(() => {
+      expect(screen.getAllByText('首次加载标题')).toHaveLength(2);
+      expect(screen.getAllByText('二级标题')).toHaveLength(2);
+    });
   });
 });

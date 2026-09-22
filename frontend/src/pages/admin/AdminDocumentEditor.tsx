@@ -256,55 +256,32 @@ export const AdminDocumentEditor: React.FC = () => {
     setShowToc(false);
   };
 
-  // 🌟 Live TOC Extraction from Editor Content / DOM
+  // 🌟 Live TOC Extraction from the rendered TipTap document
   useEffect(() => {
-    if (!content) {
+    if (!content || !tiptapEditor) {
       setTocItems([]);
       return;
     }
 
-    const timer = setTimeout(() => {
-      // 1. Scan DOM if in visual or preview mode
-      const domHeadings = document.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4');
-      if (domHeadings.length > 0) {
-        const items: { id: string; text: string; level: number }[] = [];
-        domHeadings.forEach((h, index) => {
-          const text = (h.textContent || '').trim();
-          if (!text) return;
-          const level = parseInt(h.tagName.substring(1), 10) || 1;
-          let id = h.id;
-          if (!id) {
-            id = `editor-heading-${index}-${text.slice(0, 20).replace(/[^\w\u4e00-\u9fa5]+/g, '-')}`;
-            h.id = id;
-          }
-          items.push({ id, text, level });
-        });
-        setTocItems(items);
-        return;
-      }
-
-      // 2. Parse Markdown headings directly from content
-      const lines = content.split('\n');
+    const frame = window.requestAnimationFrame(() => {
+      const domHeadings = tiptapEditor.view.dom.querySelectorAll('h1, h2, h3, h4');
       const items: { id: string; text: string; level: number }[] = [];
-      lines.forEach((line, index) => {
-        const match = line.match(/^(#{1,4})\s+(.+)$/);
-        if (match) {
-          const level = match[1].length;
-          const text = match[2].replace(/[#*`_~]/g, '').trim();
-          if (text) {
-            items.push({
-              id: `line-h-${index}-${text.slice(0, 20).replace(/[^\w\u4e00-\u9fa5]+/g, '-')}`,
-              text,
-              level,
-            });
-          }
+      domHeadings.forEach((heading, index) => {
+        const text = (heading.textContent || '').trim();
+        if (!text) return;
+        const level = parseInt(heading.tagName.substring(1), 10) || 1;
+        let id = heading.id;
+        if (!id) {
+          id = `editor-heading-${index}-${text.slice(0, 20).replace(/[^\w\u4e00-\u9fa5]+/g, '-')}`;
+          heading.id = id;
         }
+        items.push({ id, text, level });
       });
       setTocItems(items);
-    }, 150);
+    });
 
-    return () => clearTimeout(timer);
-  }, [content]);
+    return () => window.cancelAnimationFrame(frame);
+  }, [content, tiptapEditor]);
 
   const handleTocClick = (item: { id: string; text: string }) => {
     let el = document.getElementById(item.id);

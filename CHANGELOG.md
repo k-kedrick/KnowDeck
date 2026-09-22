@@ -6,6 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- 修复管理端首次进入文档编辑页时，TipTap 编辑器尚未完成渲染就回退按 Markdown 解析 HTML 正文，导致文章大纲为空的问题。
+
 ### Changed
 - 删除已验证无消费者的 `VideoLightbox` 与 `VideoLightboxProps`，保留 `ImageLightbox` 运行路径。
 - 移除 public site info/tree 的 localStorage 缓存及设置页对应的失效逻辑；公开界面改为由后端 Public API 与 React 页面状态直接驱动。
